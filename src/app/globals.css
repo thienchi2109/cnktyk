@@ -1,0 +1,122 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  
+  /* Healthcare theme colors */
+  --medical-blue: #0066CC;
+  --medical-green: #00A86B;
+  --medical-amber: #F59E0B;
+  --medical-red: #DC2626;
+  
+  /* Glass effect variables */
+  --glass-light: rgba(255, 255, 255, 0.25);
+  --glass-dark: rgba(15, 23, 42, 0.25);
+  --glass-border: rgba(255, 255, 255, 0.3);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  
+  /* Healthcare colors */
+  --color-medical-blue: var(--medical-blue);
+  --color-medical-green: var(--medical-green);
+  --color-medical-amber: var(--medical-amber);
+  --color-medical-red: var(--medical-red);
+  
+  /* Primary colors (medical blue) */
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-500: var(--medical-blue);
+  --color-primary-600: #0052A3;
+  --color-primary-900: #1e3a8a;
+  
+  /* Secondary colors (medical green) */
+  --color-secondary-500: var(--medical-green);
+  --color-secondary-600: #008A56;
+  
+  /* Glass colors */
+  --color-glass-light: var(--glass-light);
+  --color-glass-dark: var(--glass-dark);
+  --color-glass-border: var(--glass-border);
+  
+  /* Border radius */
+  --radius: 0.75rem;
+  
+  /* Backdrop blur utilities */
+  --backdrop-blur-xs: blur(2px);
+  --backdrop-blur-sm: blur(4px);
+  --backdrop-blur: blur(8px);
+  --backdrop-blur-md: blur(12px);
+  --backdrop-blur-lg: blur(16px);
+  --backdrop-blur-xl: blur(24px);
+  
+  /* Glass animation */
+  --animate-glass-shimmer: glass-shimmer 2s ease-in-out infinite alternate;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    --glass-border: rgba(148, 163, 184, 0.3);
+  }
+}
+
+@keyframes glass-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Glass utility classes */
+.glass {
+  backdrop-filter: var(--backdrop-blur-md);
+  background: var(--glass-light);
+  border: 1px solid var(--glass-border);
+}
+
+.glass-card {
+  backdrop-filter: var(--backdrop-blur-md);
+  background: var(--glass-light);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.glass-button {
+  backdrop-filter: var(--backdrop-blur-md);
+  background: var(--glass-light);
+  border: 1px solid var(--glass-border);
+  border-radius: 0.5rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.glass-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.glass-button:active {
+  transform: scale(0.95);
+}
+
+.glass-input {
+  backdrop-filter: var(--backdrop-blur-md);
+  background: var(--glass-light);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 0.5rem;
+}
+
+.glass-input:focus {
+  border-color: rgba(0, 102, 204, 0.5);
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
