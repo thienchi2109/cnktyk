@@ -1,11 +1,6 @@
 # Implementation Plan
 
 - [x] 1. Set up project foundation and core infrastructure
-
-
-
-
-
   - Initialize Next.js 15 project with App Router and TypeScript configuration
   - Configure Tailwind CSS with glasscn-ui preset and custom healthcare theme
   - Set up project structure with proper folder organization (app/, lib/, components/, types/)
@@ -13,25 +8,20 @@
   - _Requirements: 6.1, 6.2, 6.3_
 
 - [x] 2. Implement database connection and schema validation
-
-
-
-
-
   - Create Neon PostgreSQL connection utilities with proper error handling: Use Neon MCP tools
   - Implement database client with connection pooling for Cloudflare Workers
   - Create Zod schemas for all database entities (TaiKhoan, NhanVien, GhiNhanHoatDong, etc.)
   - Set up database migration system and apply existing v_1_init_schema.sql
   - _Requirements: 1.1, 2.1, 8.1_
 
-- [ ] 3. Build authentication system with NextAuth.js
+- [x] 3. Build authentication system with NextAuth.js
   - Configure NextAuth.js with credentials provider and JWT strategy
   - Implement bcryptjs password hashing for Cloudflare Workers compatibility
   - Create login/logout API routes with proper session management
   - Build middleware for route protection based on user roles
   - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
-- [ ] 4. Create core UI components with glassmorphism design
+- [x] 4. Create core UI components with glassmorphism design
   - Implement GlassCard, GlassButton, and other base glass components
   - Create layout components (Sidebar, Header, Footer) with glass effects
   - Build form components (Input, Select, TextArea) with glass styling

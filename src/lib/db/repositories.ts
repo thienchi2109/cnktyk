@@ -39,12 +39,8 @@ abstract class BaseRepository<T, CreateT, UpdateT> {
     // Use a more generic ordering that works for all tables
     let query = `SELECT * FROM "${this.tableName}"`;
     const params: any[] = [];
-
-    // Try to order by common timestamp columns, fallback to primary key
-    const orderColumns = ['"CreatedAt"', '"TaoLuc"', '"UpdatedAt"'];
-    let orderBy = '';
     
-    // For now, just use a simple order by the primary key
+    // Order by the primary key
     const pkColumn = this.getPrimaryKeyColumn();
     query += ` ORDER BY "${pkColumn}" DESC`;
 
@@ -306,7 +302,7 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
     approved: number;
     rejected: number;
   }> {
-    let baseQuery = `
+    const baseQuery = `
       FROM "${this.tableName}" g
       JOIN "NhanVien" n ON g."MaNhanVien" = n."MaNhanVien"
     `;
@@ -492,7 +488,7 @@ export class NhatKyHeThongRepository extends BaseRepository<NhatKyHeThong, Creat
     table: string,
     primaryKey: string,
     content: Record<string, any>,
-    ipAddress?: string
+    ipAddress?: string | null
   ): Promise<NhatKyHeThong> {
     return this.create({
       MaTaiKhoan: userId,
@@ -500,7 +496,7 @@ export class NhatKyHeThongRepository extends BaseRepository<NhatKyHeThong, Creat
       Bang: table,
       KhoaChinh: primaryKey,
       NoiDung: content,
-      DiaChiIP: ipAddress || null,
+      DiaChiIP: ipAddress ?? null,
     });
   }
 

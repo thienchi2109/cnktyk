@@ -2,10 +2,6 @@
 export { sql, connectToDatabase, executeQuery, executeTransaction, checkDatabaseHealth } from './connection';
 export { db, DatabaseClient } from './client';
 
-// Import for internal use
-import { checkDatabaseHealth } from './connection';
-import { db } from './client';
-
 // Schemas and types
 export * from './schemas';
 
@@ -55,6 +51,9 @@ export async function initializeDatabase() {
 // Health check function
 export async function getDatabaseStatus() {
   try {
+    const { checkDatabaseHealth } = await import('./connection');
+    const { db } = await import('./client');
+    
     const health = await checkDatabaseHealth();
     const info = await db.getDatabaseInfo();
     

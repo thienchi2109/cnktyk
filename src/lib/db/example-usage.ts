@@ -10,7 +10,7 @@ export async function handleHealthCheck() {
       status: 200,
       data: health
     };
-  } catch (error) {
+  } catch {
     return {
       status: 500,
       error: 'Health check failed'
@@ -37,7 +37,7 @@ export async function handleLogin(username: string, password: string) {
         message: 'Login successful'
       }
     };
-  } catch (error) {
+  } catch {
     return {
       status: 500,
       error: 'Authentication failed'
