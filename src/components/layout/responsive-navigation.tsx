@@ -119,6 +119,12 @@ const getNavigationItems = (userRole?: string): NavigationItem[] => {
         label: 'Import',
         icon: <Upload className="h-4 w-4" />,
         href: '/import'
+      },
+      {
+        id: 'user-management',
+        label: 'Users',
+        icon: <Users className="h-4 w-4" />,
+        href: '/users'
       }
     ];
   }
@@ -167,7 +173,7 @@ const getNavigationItems = (userRole?: string): NavigationItem[] => {
             id: 'user-management',
             label: 'Users',
             icon: <Users className="h-4 w-4" />,
-            href: '/admin/users'
+            href: '/users'
           },
           {
             id: 'activity-catalog',

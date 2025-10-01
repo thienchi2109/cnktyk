@@ -28,7 +28,9 @@
   - Implement responsive navigation with mobile drawer functionality
   - _Requirements: 3.1, 3.2, 5.3_
 
-- [ ] 5. Develop user management system
+- [x] 5. Develop user management system
+
+
   - Create user registration API route (admin-only) with role assignment
   - Build user profile management components and API endpoints
   - Implement role-based access control in API routes and components
