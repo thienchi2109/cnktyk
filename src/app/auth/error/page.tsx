@@ -1,11 +1,12 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, ArrowLeft } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Loader2 } from "lucide-react";
 
 const ERROR_MESSAGES = {
   Configuration: "Có lỗi cấu hình hệ thống. Vui lòng liên hệ quản trị viên.",
@@ -14,7 +15,7 @@ const ERROR_MESSAGES = {
   Default: "Đã xảy ra lỗi không xác định. Vui lòng thử lại sau.",
 } as const;
 
-export default function AuthErrorPage() {
+function AuthErrorContent() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error") as keyof typeof ERROR_MESSAGES;
   
@@ -66,5 +67,22 @@ export default function AuthErrorPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AuthErrorPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50 flex items-center justify-center">
+        <GlassCard className="p-8">
+          <div className="flex items-center gap-3">
+            <Loader2 className="h-5 w-5 animate-spin text-red-500" />
+            <span className="text-slate-600">Loading...</span>
+          </div>
+        </GlassCard>
+      </div>
+    }>
+      <AuthErrorContent />
+    </Suspense>
   );
 }

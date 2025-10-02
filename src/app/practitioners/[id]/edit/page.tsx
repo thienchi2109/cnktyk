@@ -59,10 +59,7 @@ export default async function EditPractitionerPage({ params }: PageProps) {
   return (
     <div className="container mx-auto py-6">
       <PractitionerForm
-        initialData={{
-          ...practitioner,
-          MaNhanVien: practitioner.MaNhanVien
-        }}
+        initialData={practitioner}
         units={units}
         mode="edit"
       />

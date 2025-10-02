@@ -169,7 +169,7 @@ export function UserList({
             <Label htmlFor="role-filter" className="text-sm font-medium text-gray-700">Quyền hạn</Label>
             <Select
               value={selectedRole}
-              onValueChange={handleRoleFilter}
+              onChange={(e) => handleRoleFilter(e.target.value)}
             >
               <option value="">Tất cả quyền hạn</option>
               {Object.entries(roleLabels).map(([value, label]) => (
@@ -182,7 +182,7 @@ export function UserList({
             <Label htmlFor="unit-filter" className="text-sm font-medium text-gray-700">Đơn vị</Label>
             <Select
               value={selectedUnit}
-              onValueChange={handleUnitFilter}
+              onChange={(e) => handleUnitFilter(e.target.value)}
             >
               <option value="">Tất cả đơn vị</option>
               {units.map((unit) => (
@@ -291,7 +291,7 @@ export function UserList({
                               
                               <GlassButton
                                 size="sm"
-                                variant="destructive"
+                                variant="danger"
                                 onClick={() => onDeleteUser(user)}
                               >
                                 <Trash2 className="h-4 w-4" />

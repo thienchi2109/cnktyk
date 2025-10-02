@@ -66,7 +66,7 @@ export function UserForm({
     } catch (error) {
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
-        error.errors.forEach((err) => {
+        error.issues.forEach((err) => {
           if (err.path.length > 0) {
             newErrors[err.path[0] as string] = err.message;
           }
@@ -177,7 +177,7 @@ export function UserForm({
           <Label htmlFor="role">Quyền Hạn</Label>
           <Select
             value={formData.QuyenHan}
-            onValueChange={(value) => handleInputChange('QuyenHan', value)}
+            onChange={(e) => handleInputChange('QuyenHan', e.target.value)}
           >
             {availableRoles.map((role) => (
               <option key={role.value} value={role.value}>
@@ -194,7 +194,7 @@ export function UserForm({
           <Label htmlFor="unit">Đơn Vị</Label>
           <Select
             value={formData.MaDonVi || ''}
-            onValueChange={(value) => handleInputChange('MaDonVi', value || null)}
+            onChange={(e) => handleInputChange('MaDonVi', e.target.value || null)}
           >
             <option value="">-- Chọn đơn vị --</option>
             {units.map((unit) => (

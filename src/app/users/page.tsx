@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { z } from 'zod';
 import { useAuth } from '@/lib/auth/hooks';
 import { UserList } from '@/components/users/user-list';
 import { UserForm } from '@/components/forms/user-form';
@@ -8,6 +9,7 @@ import { GlassModal } from '@/components/ui/glass-modal';
 import { GlassCard } from '@/components/ui/glass-card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { CreateTaiKhoanSchema, UpdateTaiKhoanSchema } from '@/lib/db/schemas';
 
 interface User {
   MaTaiKhoan: string;
@@ -24,16 +26,10 @@ interface Unit {
   CapQuanLy: string;
 }
 
-interface UserFormData {
-  TenDangNhap: string;
-  MatKhau: string;
-  QuyenHan: string;
-  MaDonVi: string | null;
-  TrangThai: boolean;
-}
+type UserFormData = z.infer<typeof CreateTaiKhoanSchema>;
 
 export default function UsersPage() {
-  const { session, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -57,7 +53,7 @@ export default function UsersPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Check permissions
-  const canManageUsers = session?.quyenHan && ['SoYTe', 'DonVi'].includes(session.quyenHan);
+  const canManageUsers = user?.role && ['SoYTe', 'DonVi'].includes(user.role);
 
   // Fetch users
   const fetchUsers = async () => {
@@ -102,14 +98,14 @@ export default function UsersPage() {
   };
 
   useEffect(() => {
-    if (session && canManageUsers) {
+    if (user && canManageUsers) {
       fetchUsers();
       fetchUnits();
     }
-  }, [session, currentPage, searchTerm, roleFilter, unitFilter, canManageUsers]);
+  }, [user, currentPage, searchTerm, roleFilter, unitFilter, canManageUsers]);
 
   // Handle user creation
-  const handleCreateUser = async (userData: UserFormData) => {
+  const handleCreateUser = async (userData: UserFormData | z.infer<typeof UpdateTaiKhoanSchema>) => {
     try {
       setIsSubmitting(true);
       const response = await fetch('/api/users', {
@@ -231,7 +227,7 @@ export default function UsersPage() {
     );
   }
 
-  if (!session) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
         <GlassCard className="p-8 max-w-md">
@@ -288,8 +284,9 @@ export default function UsersPage() {
           onEditUser={handleEditClick}
           onViewUser={handleViewClick}
           onDeleteUser={handleDeleteUser}
-          currentUserRole={session.quyenHan}
+          currentUserRole={user.role}
         />
+      </div>
 
       {/* Create User Modal */}
       <GlassModal
@@ -304,7 +301,7 @@ export default function UsersPage() {
           onSubmit={handleCreateUser}
           onCancel={() => setShowCreateModal(false)}
           isLoading={isSubmitting}
-          currentUserRole={session.quyenHan}
+          currentUserRole={user.role}
         />
       </GlassModal>
 
@@ -321,7 +318,7 @@ export default function UsersPage() {
         {selectedUser && (
           <UserForm
             mode="edit"
-            initialData={selectedUser}
+            initialData={selectedUser as Partial<UserFormData>}
             units={units}
             onSubmit={handleUpdateUser}
             onCancel={() => {
@@ -329,7 +326,7 @@ export default function UsersPage() {
               setSelectedUser(null);
             }}
             isLoading={isSubmitting}
-            currentUserRole={session.quyenHan}
+            currentUserRole={user?.role || 'NguoiHanhNghe'}
           />
         )}
       </GlassModal>

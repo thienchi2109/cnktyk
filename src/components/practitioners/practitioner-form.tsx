@@ -17,6 +17,7 @@ import { CreateNhanVienSchema, type CreateNhanVien } from '@/lib/db/schemas';
 
 // Form schema with additional client-side validation
 const PractitionerFormSchema = CreateNhanVienSchema.extend({
+  TrangThaiLamViec: z.enum(['DangLamViec', 'DaNghi', 'TamHoan']).default('DangLamViec'),
   Email: z.string().email('Invalid email format').optional().or(z.literal('')),
   DienThoai: z.string().regex(/^[0-9+\-\s()]*$/, 'Invalid phone number format').optional().or(z.literal('')),
 });
@@ -24,7 +25,7 @@ const PractitionerFormSchema = CreateNhanVienSchema.extend({
 type PractitionerFormData = z.infer<typeof PractitionerFormSchema>;
 
 interface PractitionerFormProps {
-  initialData?: Partial<CreateNhanVien>;
+  initialData?: Partial<CreateNhanVien & { MaNhanVien?: string }>;
   unitId?: string;
   units?: Array<{ MaDonVi: string; TenDonVi: string }>;
   onSuccess?: () => void;
@@ -44,8 +45,8 @@ export function PractitionerForm({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const form = useForm<PractitionerFormData>({
-    resolver: zodResolver(PractitionerFormSchema),
+  const form = useForm<z.infer<typeof PractitionerFormSchema>>({
+    resolver: zodResolver(PractitionerFormSchema) as any,
     defaultValues: {
       HoVaTen: initialData?.HoVaTen || '',
       SoCCHN: initialData?.SoCCHN || '',
@@ -58,7 +59,7 @@ export function PractitionerForm({
     },
   });
 
-  const onSubmit = async (data: PractitionerFormData) => {
+  const onSubmit = async (data: z.infer<typeof PractitionerFormSchema>) => {
     setIsLoading(true);
     setError(null);
 
@@ -117,7 +118,7 @@ export function PractitionerForm({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
@@ -211,7 +212,7 @@ export function PractitionerForm({
                   id="NgayCapCCHN"
                   type="date"
                   {...form.register('NgayCapCCHN', {
-                    setValueAs: (value) => value ? new Date(value) : undefined
+                    setValueAs: (value: string) => value ? new Date(value) : undefined
                   })}
                 />
               </div>

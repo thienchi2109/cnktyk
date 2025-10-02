@@ -7,14 +7,14 @@ import { z } from 'zod';
 // GET /api/users/[id] - Get user by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await requireAuth();
-    const userId = params.id;
+    const { id: userId } = await params;
 
     // Check permissions
-    if (session.quyenHan === 'NguoiHanhNghe' && session.sub !== userId) {
+    if (session.user.role === 'NguoiHanhNghe' && session.user.id !== userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -24,7 +24,7 @@ export async function GET(
     }
 
     // Unit admins can only see users in their unit
-    if (session.quyenHan === 'DonVi' && user.MaDonVi !== session.maDonVi) {
+    if (session.user.role === 'DonVi' && user.MaDonVi !== session.user.unitId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -51,11 +51,11 @@ export async function GET(
 // PUT /api/users/[id] - Update user
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await requireAuth();
-    const userId = params.id;
+    const { id: userId } = await params;
     const body = await request.json();
 
     // Check if user exists
@@ -65,31 +65,50 @@ export async function PUT(
     }
 
     // Permission checks
-    const isSelfUpdate = session.sub === userId;
-    const isAdmin = ['SoYTe', 'DonVi'].includes(session.quyenHan);
-    const isUnitAdmin = session.quyenHan === 'DonVi' && existingUser.MaDonVi === session.maDonVi;
+    const isSelfUpdate = session.user.id === userId;
+    const isAdmin = ['SoYTe', 'DonVi'].includes(session.user.role);
+    const isUnitAdmin = session.user.role === 'DonVi' && existingUser.MaDonVi === session.user.unitId;
 
     if (!isSelfUpdate && !isAdmin && !isUnitAdmin) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
     // Validate input - different schemas for self vs admin updates
-    let validatedData;
-    
     if (isSelfUpdate && !isAdmin) {
       // Regular users can only update their password
       const SelfUpdateSchema = z.object({
         MatKhau: z.string().min(6, 'Password must be at least 6 characters').optional(),
       });
-      validatedData = SelfUpdateSchema.parse(body);
+      const validatedData = SelfUpdateSchema.parse(body);
+      
+      // Handle password update for self-update
+      if (validatedData.MatKhau) {
+        await taiKhoanRepo.updatePassword(userId, validatedData.MatKhau);
+      }
+      
+      // Get updated user data
+      const updatedUser = await taiKhoanRepo.findById(userId);
+      if (!updatedUser) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        user: {
+          MaTaiKhoan: updatedUser.MaTaiKhoan,
+          TenDangNhap: updatedUser.TenDangNhap,
+          QuyenHan: updatedUser.QuyenHan,
+          MaDonVi: updatedUser.MaDonVi,
+          TrangThai: updatedUser.TrangThai,
+        },
+      });
     } else {
       // Admins can update more fields
-      validatedData = UpdateTaiKhoanSchema.parse(body);
+      const validatedData = UpdateTaiKhoanSchema.parse(body);
       
       // Unit admins have restrictions
-      if (session.quyenHan === 'DonVi') {
+      if (session.user.role === 'DonVi') {
         // Cannot change unit to outside their jurisdiction
-        if (validatedData.MaDonVi && validatedData.MaDonVi !== session.maDonVi) {
+        if (validatedData.MaDonVi && validatedData.MaDonVi !== session.user.unitId) {
           return NextResponse.json(
             { error: 'You can only assign users to your own unit' },
             { status: 403 }
@@ -104,57 +123,51 @@ export async function PUT(
           );
         }
       }
-    }
 
-    // Verify unit exists if being changed
-    if (validatedData.MaDonVi) {
-      const unit = await donViRepo.findById(validatedData.MaDonVi);
-      if (!unit) {
-        return NextResponse.json(
-          { error: 'Unit not found' },
-          { status: 400 }
-        );
+      // Verify unit exists if being changed
+      if (validatedData.MaDonVi) {
+        const unit = await donViRepo.findById(validatedData.MaDonVi);
+        if (!unit) {
+          return NextResponse.json(
+            { error: 'Unit not found' },
+            { status: 400 }
+          );
+        }
       }
-    }
 
-    // Check username uniqueness if being changed
-    if (validatedData.TenDangNhap && validatedData.TenDangNhap !== existingUser.TenDangNhap) {
-      const userWithSameUsername = await taiKhoanRepo.findByUsername(validatedData.TenDangNhap);
-      if (userWithSameUsername) {
-        return NextResponse.json(
-          { error: 'Username already exists' },
-          { status: 400 }
-        );
+      // Check username uniqueness if being changed
+      if (validatedData.TenDangNhap && validatedData.TenDangNhap !== existingUser.TenDangNhap) {
+        const userWithSameUsername = await taiKhoanRepo.findByUsername(validatedData.TenDangNhap);
+        if (userWithSameUsername) {
+          return NextResponse.json(
+            { error: 'Username already exists' },
+            { status: 400 }
+          );
+        }
       }
+
+      // Update user
+      const updatedUser = await taiKhoanRepo.update(userId, validatedData);
+      if (!updatedUser) {
+        return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
+      }
+
+      // Return updated user without sensitive data
+      return NextResponse.json({
+        user: {
+          MaTaiKhoan: updatedUser.MaTaiKhoan,
+          TenDangNhap: updatedUser.TenDangNhap,
+          QuyenHan: updatedUser.QuyenHan,
+          MaDonVi: updatedUser.MaDonVi,
+          TrangThai: updatedUser.TrangThai,
+          TaoLuc: updatedUser.TaoLuc,
+        },
+      });
     }
-
-    // Handle password update separately
-    if (validatedData.MatKhau) {
-      await taiKhoanRepo.updatePassword(userId, validatedData.MatKhau);
-      delete validatedData.MatKhau;
-    }
-
-    // Update user
-    const updatedUser = await taiKhoanRepo.update(userId, validatedData);
-    if (!updatedUser) {
-      return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
-    }
-
-    // Return updated user without sensitive data
-    const safeUser = {
-      MaTaiKhoan: updatedUser.MaTaiKhoan,
-      TenDangNhap: updatedUser.TenDangNhap,
-      QuyenHan: updatedUser.QuyenHan,
-      MaDonVi: updatedUser.MaDonVi,
-      TrangThai: updatedUser.TrangThai,
-      TaoLuc: updatedUser.TaoLuc,
-    };
-
-    return NextResponse.json(safeUser);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Validation error', details: error.errors },
+        { error: 'Validation error', details: error.issues },
         { status: 400 }
       );
     }
@@ -170,13 +183,13 @@ export async function PUT(
 // DELETE /api/users/[id] - Deactivate user (soft delete)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await requireAuth();
     await requireRole(['SoYTe', 'DonVi']);
     
-    const userId = params.id;
+    const { id: userId } = await params;
 
     // Check if user exists
     const existingUser = await taiKhoanRepo.findById(userId);
@@ -185,12 +198,12 @@ export async function DELETE(
     }
 
     // Unit admins can only deactivate users in their unit
-    if (session.quyenHan === 'DonVi' && existingUser.MaDonVi !== session.maDonVi) {
+    if (session.user.role === 'DonVi' && existingUser.MaDonVi !== session.user.unitId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
     // Prevent self-deactivation
-    if (session.sub === userId) {
+    if (session.user.id === userId) {
       return NextResponse.json(
         { error: 'You cannot deactivate your own account' },
         { status: 400 }

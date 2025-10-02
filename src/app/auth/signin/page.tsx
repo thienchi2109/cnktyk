@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { signIn, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -23,7 +23,7 @@ import {
   FileText
 } from "lucide-react";
 
-export default function SignInPage() {
+function SignInForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
@@ -304,4 +304,21 @@ function getDashboardUrl(role: string): string {
     default:
       return "/dashboard";
   }
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
+        <GlassCard className="p-8">
+          <div className="flex items-center gap-3">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <span className="text-slate-600">Loading...</span>
+          </div>
+        </GlassCard>
+      </div>
+    }>
+      <SignInForm />
+    </Suspense>
+  );
 }

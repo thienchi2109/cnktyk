@@ -177,9 +177,9 @@ const getNavigationItems = (userRole?: string): NavigationItem[] => {
           },
           {
             id: 'activity-catalog',
-            label: 'Catalog',
+            label: 'Activities',
             icon: <FileText className="h-4 w-4" />,
-            href: '/admin/catalog'
+            href: '/activities'
           },
           {
             id: 'system-settings',

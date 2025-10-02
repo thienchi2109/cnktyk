@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     // Build query conditions based on user role and filters
     let users;
     
-    if (session.quyenHan === 'SoYTe') {
+    if (session.user.role === 'SoYTe') {
       // SoYTe can see all users
       if (role) {
         users = await taiKhoanRepo.findByRole(role);
@@ -29,9 +29,9 @@ export async function GET(request: NextRequest) {
       } else {
         users = await taiKhoanRepo.findAll();
       }
-    } else if (session.quyenHan === 'DonVi' && session.maDonVi) {
+    } else if (session.user.role === 'DonVi' && session.user.unitId) {
       // DonVi can only see users in their unit
-      users = await taiKhoanRepo.findByUnit(session.maDonVi);
+      users = await taiKhoanRepo.findByUnit(session.user.unitId);
     } else {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
@@ -88,9 +88,9 @@ export async function POST(request: NextRequest) {
     const validatedData = CreateTaiKhoanSchema.parse(body);
 
     // Additional validation for unit administrators
-    if (session.quyenHan === 'DonVi') {
+    if (session.user.role === 'DonVi') {
       // Unit admins can only create users in their own unit
-      if (validatedData.MaDonVi !== session.maDonVi) {
+      if (validatedData.MaDonVi !== session.user.unitId) {
         return NextResponse.json(
           { error: 'You can only create users in your own unit' },
           { status: 403 }
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Validation error', details: error.errors },
+        { error: 'Validation error', details: error.issues },
         { status: 400 }
       );
     }

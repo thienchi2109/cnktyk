@@ -11,14 +11,14 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
 
     // Get units based on user role
-    let units;
+    let units: any[] = [];
     
-    if (session.quyenHan === 'SoYTe') {
+    if (session.user.role === 'SoYTe') {
       // SoYTe can see all units
       units = await donViRepo.findAll();
-    } else if (session.quyenHan === 'DonVi' && session.maDonVi) {
+    } else if (session.user.role === 'DonVi' && session.user.unitId) {
       // DonVi can only see their own unit
-      const unit = await donViRepo.findById(session.maDonVi);
+      const unit = await donViRepo.findById(session.user.unitId);
       units = unit ? [unit] : [];
     } else {
       // Other roles get limited access

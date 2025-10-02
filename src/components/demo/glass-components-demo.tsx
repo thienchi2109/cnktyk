@@ -260,7 +260,7 @@ export const GlassComponentsDemo = () => {
           <div className="space-y-4">
             <p className="text-slate-600 dark:text-slate-400">
               This modal demonstrates the glassmorphism design with proper backdrop blur
-              and smooth animations. It's fully accessible with keyboard navigation
+              and smooth animations. It&apos;s fully accessible with keyboard navigation
               and focus management.
             </p>
             

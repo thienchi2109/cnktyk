@@ -5,16 +5,16 @@ import { UpdateNhanVienSchema } from '@/lib/db/schemas';
 import { z } from 'zod';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 // GET /api/practitioners/[id] - Get practitioner details
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await requireAuth();
-    const practitionerId = params.id;
+    const { id: practitionerId } = await params;
 
     // Find practitioner
     const practitioner = await nhanVienRepo.findById(practitionerId);
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await requireAuth();
-    const practitionerId = params.id;
+    const { id: practitionerId } = await params;
 
     // Find practitioner
     const practitioner = await nhanVienRepo.findById(practitionerId);
@@ -148,7 +148,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Validation error', details: error.errors },
+        { error: 'Validation error', details: error.issues },
         { status: 400 }
       );
     }
@@ -167,7 +167,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const session = await requireAuth();
     await requireRole(['SoYTe', 'DonVi']);
     
-    const practitionerId = params.id;
+    const { id: practitionerId } = await params;
 
     // Find practitioner
     const practitioner = await nhanVienRepo.findById(practitionerId);

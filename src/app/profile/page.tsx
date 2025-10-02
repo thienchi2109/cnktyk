@@ -22,7 +22,7 @@ interface UserProfileData {
 }
 
 export default function ProfilePage() {
-  const { session, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [profile, setProfile] = useState<UserProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
@@ -68,10 +68,10 @@ export default function ProfilePage() {
   };
 
   useEffect(() => {
-    if (session) {
+    if (user) {
       fetchProfile();
     }
-  }, [session]);
+  }, [user]);
 
   if (authLoading || isLoading) {
     return (
@@ -86,7 +86,7 @@ export default function ProfilePage() {
     );
   }
 
-  if (!session) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
         <GlassCard className="p-8 max-w-md">
