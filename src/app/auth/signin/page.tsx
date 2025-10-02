@@ -23,13 +23,15 @@ import {
   FileText,
   Building2,
   UserCog,
-  ShieldCheck
+  ShieldCheck,
+  ChevronDown
 } from "lucide-react";
 import Image from "next/image";
 
 function SignInForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showDevAccounts, setShowDevAccounts] = useState(false);
   const [formData, setFormData] = useState({
     TenDangNhap: "",
     MatKhau: "",
@@ -90,85 +92,147 @@ function SignInForm() {
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-      {/* Softer Animated Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-gray-50 to-blue-50/30">
-        {/* Subtle Animated Gradient Orbs */}
-        <div className="absolute top-20 left-20 w-72 h-72 bg-gradient-to-r from-blue-200/15 to-cyan-200/15 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-gradient-to-r from-green-200/10 to-emerald-200/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-gradient-to-r from-purple-200/8 to-pink-200/8 rounded-full blur-3xl animate-pulse delay-2000"></div>
-        
-        {/* Subtle Floating Medical Elements */}
-        <div className="absolute top-1/4 left-1/4 animate-float">
-          <HeartPulse className="h-8 w-8 text-red-300/20" />
-        </div>
-        <div className="absolute top-3/4 right-1/4 animate-float-delayed">
-          <Microscope className="h-6 w-6 text-blue-300/20" />
-        </div>
-        <div className="absolute bottom-1/4 left-1/3 animate-float-slow">
-          <Stethoscope className="h-7 w-7 text-green-300/20" />
-        </div>
+      {/* Simple Premium Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
+        {/* Clean Gradient Orbs */}
+        <div className="absolute top-16 left-16 w-96 h-96 bg-gradient-to-r from-blue-300/15 to-cyan-300/15 rounded-full blur-3xl animate-pulse-glow"></div>
+        <div className="absolute bottom-16 right-16 w-[28rem] h-[28rem] bg-gradient-to-r from-green-300/12 to-emerald-300/12 rounded-full blur-3xl animate-pulse-glow" style={{animationDelay: '1s'}}></div>
+        <div className="absolute top-1/3 right-1/4 w-80 h-80 bg-gradient-to-r from-purple-300/10 to-indigo-300/10 rounded-full blur-3xl animate-pulse-glow" style={{animationDelay: '2s'}}></div>
+        <div className="absolute bottom-1/3 left-1/4 w-72 h-72 bg-gradient-to-r from-amber-300/8 to-orange-300/8 rounded-full blur-3xl animate-pulse-glow" style={{animationDelay: '3s'}}></div>
       </div>
 
       <div className="relative z-10 min-h-screen flex max-w-7xl mx-auto">
         {/* Left Panel - Information (Desktop) */}
-        <div className="hidden lg:flex lg:w-1/2 flex-col justify-center p-6 xl:p-8 pr-4 xl:pr-6">
-          <div className="max-w-md xl:max-w-lg">
-            {/* Branding */}
-            <div className="mb-6">
-              <h1 className="text-2xl xl:text-3xl font-bold text-slate-800 leading-tight mb-2">
-                Hệ thống Quản lý Đào tạo Nhân lực Y tế Cần Thơ (CT-HTMS)
-              </h1>
-              <p className="text-slate-500 font-medium text-base">Can Tho Healthcare Training Management System</p>
-            </div>
+        <div className="hidden lg:flex lg:w-1/2 flex-col justify-center p-8 xl:p-12 pr-6 xl:pr-8">
+          <div className="max-w-lg xl:max-w-xl">
+            {/* Premium Header Section */}
+            <div className="mb-8">
+              {/* Inline Status Badges */}
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-200/30">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-green-700 text-sm font-medium">Realtime</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-200/30">
+                  <ShieldCheck className="h-3 w-3 text-blue-600" />
+                  <span className="text-blue-700 text-sm font-medium">Verified</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-200/30">
+                  <BarChart3 className="h-3 w-3 text-purple-600" />
+                  <span className="text-purple-700 text-sm font-medium">Analytics</span>
+                </div>
+              </div>
 
-            {/* Feature Cards */}
-            <div className="space-y-3 mb-6">
-              <GlassCard className="p-3 hover:scale-[1.02] transition-all duration-300 cursor-pointer group bg-white/60 backdrop-blur-sm">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 rounded-lg bg-blue-500/15 group-hover:bg-blue-500/25 transition-colors">
+              {/* Balanced, Impactful Typography */}
+              <h1 className="text-3xl xl:text-4xl font-bold text-slate-800 leading-tight mb-4">
+                Hệ thống Quản lý Đào tạo<br />
+                <span className="bg-gradient-to-r from-blue-600 via-cyan-600 to-green-600 bg-clip-text text-transparent">
+                  Nhân lực Y tế Cần Thơ
+                </span>
+              </h1>
+              <p className="text-slate-600 font-medium text-lg xl:text-xl leading-relaxed">
+                Can Tho Healthcare Training Management System
+              </p>
+
+              {/* Quick Stats */}
+              <div className="flex items-center gap-6 mt-6 text-slate-600">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center">
                     <Users className="h-4 w-4 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-slate-800 text-base">Quản lý đào tạo</h3>
-                    <p className="text-sm text-slate-500">Theo dõi và quản lý chương trình đào tạo</p>
+                    <div className="text-2xl font-bold text-slate-800">2,847</div>
+                    <div className="text-sm text-slate-500">Người dùng</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center">
+                    <FileText className="h-4 w-4 text-green-600" />
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-slate-800">156</div>
+                    <div className="text-sm text-slate-500">Chương trình</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500/20 to-indigo-500/20 flex items-center justify-center">
+                    <Building2 className="h-4 w-4 text-purple-600" />
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-slate-800">42</div>
+                    <div className="text-sm text-slate-500">Đơn vị</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Sophisticated Feature Cards */}
+            <div className="space-y-4 mb-8">
+              <GlassCard className="p-6 hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 cursor-pointer group bg-white/70 backdrop-blur-xl border-white/40 relative overflow-hidden">
+                {/* Gradient Glow Effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-transparent to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="relative flex items-center space-x-4">
+                  {/* Icon Badge with Gradient and Scale Animation */}
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500/15 to-cyan-500/15 group-hover:from-blue-500/25 group-hover:to-cyan-500/25 group-hover:scale-110 transition-all duration-300 border border-blue-200/30">
+                    <Users className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-bold text-slate-800 text-lg">Quản lý đào tạo</h3>
+                      <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded-full">Core</span>
+                    </div>
+                    <p className="text-slate-600 leading-relaxed">Theo dõi và quản lý chương trình đào tạo chuyên nghiệp</p>
                   </div>
                 </div>
               </GlassCard>
 
-              <GlassCard className="p-3 hover:scale-[1.02] transition-all duration-300 cursor-pointer group bg-white/60 backdrop-blur-sm">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 rounded-lg bg-green-500/15 group-hover:bg-green-500/25 transition-colors">
-                    <BarChart3 className="h-4 w-4 text-green-600" />
+              <GlassCard className="p-6 hover:scale-[1.02] hover:shadow-2xl hover:shadow-green-500/10 transition-all duration-500 cursor-pointer group bg-white/70 backdrop-blur-xl border-white/40 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 via-transparent to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="relative flex items-center space-x-4">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-green-500/15 to-emerald-500/15 group-hover:from-green-500/25 group-hover:to-emerald-500/25 group-hover:scale-110 transition-all duration-300 border border-green-200/30">
+                    <BarChart3 className="h-6 w-6 text-green-600" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-800 text-base">Báo cáo tiến độ</h3>
-                    <p className="text-sm text-slate-500">Phân tích và báo cáo đào tạo</p>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-bold text-slate-800 text-lg">Báo cáo tiến độ</h3>
+                      <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded-full">Analytics</span>
+                    </div>
+                    <p className="text-slate-600 leading-relaxed">Phân tích và báo cáo đào tạo thời gian thực</p>
                   </div>
                 </div>
               </GlassCard>
 
-              <GlassCard className="p-3 hover:scale-[1.02] transition-all duration-300 cursor-pointer group bg-white/60 backdrop-blur-sm">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 rounded-lg bg-purple-500/15 group-hover:bg-purple-500/25 transition-colors">
-                    <FileText className="h-4 w-4 text-purple-600" />
+              <GlassCard className="p-6 hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/10 transition-all duration-500 cursor-pointer group bg-white/70 backdrop-blur-xl border-white/40 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 via-transparent to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="relative flex items-center space-x-4">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500/15 to-indigo-500/15 group-hover:from-purple-500/25 group-hover:to-indigo-500/25 group-hover:scale-110 transition-all duration-300 border border-purple-200/30">
+                    <FileText className="h-6 w-6 text-purple-600" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-800 text-base">Quản lý nhân lực</h3>
-                    <p className="text-sm text-slate-500">Kết nối đa cấp quản lý nhân lực y tế</p>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-bold text-slate-800 text-lg">Quản lý nhân lực</h3>
+                      <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 rounded-full">Enterprise</span>
+                    </div>
+                    <p className="text-slate-600 leading-relaxed">Kết nối đa cấp quản lý nhân lực y tế toàn diện</p>
                   </div>
                 </div>
               </GlassCard>
             </div>
 
-            {/* Status Indicators */}
-            <div className="flex items-center space-x-4 text-sm">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-slate-500">Hệ thống hoạt động</span>
+            {/* Enhanced Status Indicators */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-6">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full animate-pulse shadow-lg shadow-green-500/30"></div>
+                  <span className="text-slate-600 font-medium">Hệ thống hoạt động</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <span className="text-slate-600 font-medium">Bảo mật cao</span>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span className="text-slate-500">Bảo mật cao</span>
+              <div className="text-sm text-slate-500">
+                Uptime: <span className="font-semibold text-green-600">99.9%</span>
               </div>
             </div>
           </div>
@@ -176,52 +240,57 @@ function SignInForm() {
 
         {/* Right Panel - Login Form */}
         <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-6 xl:p-8 pl-4 xl:pl-6">
-          <div className="w-full max-w-sm">
-            {/* Mobile Logo */}
-            <div className="lg:hidden text-center mb-8">
-              <div className="flex justify-center mb-4">
-                <div className="relative w-20 h-20 flex-shrink-0 rounded-full overflow-hidden bg-white shadow-lg border-2 border-white/50 aspect-square">
-                  <Image
-                    src="/logo.png"
-                    alt="CT-HTMS Logo"
-                    fill
-                    className="object-contain p-2.5"
-                  />
-                </div>
-              </div>
-              <h1 className="text-2xl font-bold text-slate-800 mb-2">
-                CT-HTMS Platform
-              </h1>
-              <p className="text-slate-500 text-base">
-                Đăng nhập để truy cập hệ thống quản lý đào tạo
-              </p>
-            </div>
+          <div className="w-full max-w-md lg:max-w-lg">
 
-            {/* Desktop Header with Logo */}
-            <div className="hidden lg:block text-center mb-6">
-              <div className="flex justify-center mb-4">
-                <div className="relative w-24 h-24 flex-shrink-0 rounded-full overflow-hidden bg-white shadow-lg border-2 border-white/50 aspect-square">
-                  <Image
-                    src="/logo.png"
-                    alt="CT-HTMS Logo"
-                    fill
-                    className="object-contain p-3"
-                  />
-                </div>
-              </div>
-              <h2 className="text-3xl font-bold text-slate-800 mb-2">Chào mừng trở lại</h2>
-              <p className="text-slate-500 text-base">Đăng nhập để tiếp tục sử dụng hệ thống</p>
-            </div>
 
-            {/* Login Form */}
-            <GlassCard className="p-6 shadow-xl border-white/50 bg-white/70 backdrop-blur-md">
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div className="space-y-2">
-                  <Label htmlFor="TenDangNhap" className="text-slate-600 font-medium text-base">
+            {/* Enhanced Login Form with Logo */}
+            <GlassCard className="p-8 shadow-2xl shadow-slate-900/10 border-white/60 bg-white/70 backdrop-blur-xl">
+              {/* Mobile Logo and Header inside card */}
+              <div className="lg:hidden text-center mb-8">
+                <div className="flex justify-center mb-6">
+                  <div className="relative w-20 h-20 flex-shrink-0 rounded-2xl overflow-hidden bg-white shadow-xl shadow-slate-900/10 border border-white/60 aspect-square backdrop-blur-sm">
+                    <Image
+                      src="/logo.png"
+                      alt="CT-HTMS Logo"
+                      fill
+                      className="object-contain p-2.5"
+                    />
+                  </div>
+                </div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-3">
+                  CT-HTMS Platform
+                </h1>
+                <p className="text-slate-600 text-sm leading-relaxed">
+                  Đăng nhập để truy cập hệ thống quản lý đào tạo
+                </p>
+              </div>
+
+              {/* Desktop Logo and Header inside card */}
+              <div className="hidden lg:block text-center mb-8">
+                <div className="flex justify-center mb-6">
+                  <div className="relative w-24 h-24 flex-shrink-0 rounded-2xl overflow-hidden bg-white shadow-xl shadow-slate-900/10 border border-white/60 aspect-square backdrop-blur-sm">
+                    <Image
+                      src="/logo.png"
+                      alt="CT-HTMS Logo"
+                      fill
+                      className="object-contain p-3"
+                    />
+                  </div>
+                </div>
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-3 whitespace-nowrap">
+                  Chào mừng trở lại
+                </h2>
+                <p className="text-slate-600 text-base leading-relaxed">
+                  Đăng nhập để tiếp tục sử dụng hệ thống
+                </p>
+              </div>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-3">
+                  <Label htmlFor="TenDangNhap" className="text-slate-700 font-semibold text-base">
                     Tên đăng nhập
                   </Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <div className="relative group">
+                    <User className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-200" />
                     <Input
                       id="TenDangNhap"
                       name="TenDangNhap"
@@ -230,18 +299,18 @@ function SignInForm() {
                       onChange={handleInputChange}
                       required
                       disabled={isLoading}
-                      className="pl-12 h-12 text-base bg-white/80 border-slate-200/50"
+                      className="pl-12 h-14 text-base bg-white/90 border-slate-200/60 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 hover:border-slate-300/60 transition-all duration-200 rounded-xl"
                       placeholder="Nhập tên đăng nhập"
                     />
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="MatKhau" className="text-slate-600 font-medium text-base">
+                <div className="space-y-3">
+                  <Label htmlFor="MatKhau" className="text-slate-700 font-semibold text-base">
                     Mật khẩu
                   </Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <div className="relative group">
+                    <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-200" />
                     <Input
                       id="MatKhau"
                       name="MatKhau"
@@ -250,15 +319,15 @@ function SignInForm() {
                       onChange={handleInputChange}
                       required
                       disabled={isLoading}
-                      className="pl-12 h-12 text-base bg-white/80 border-slate-200/50"
+                      className="pl-12 h-14 text-base bg-white/90 border-slate-200/60 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 hover:border-slate-300/60 transition-all duration-200 rounded-xl"
                       placeholder="Nhập mật khẩu"
                     />
                   </div>
                 </div>
 
                 {error && (
-                  <Alert variant="destructive" className="bg-red-50/80 backdrop-blur-sm border-red-200/50">
-                    <AlertDescription className="text-red-700">{error}</AlertDescription>
+                  <Alert variant="destructive" className="bg-red-50/90 backdrop-blur-sm border-red-200/60 rounded-xl">
+                    <AlertDescription className="text-red-700 font-medium">{error}</AlertDescription>
                   </Alert>
                 )}
 
@@ -266,17 +335,17 @@ function SignInForm() {
                   type="submit"
                   variant="default"
                   size="lg"
-                  className="w-full h-12 text-base font-semibold shadow-md hover:shadow-lg transition-all duration-300 bg-blue-600 hover:bg-blue-700 text-white"
+                  className="w-full h-14 text-base font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 bg-gradient-to-r from-blue-600 via-blue-600 to-cyan-600 hover:from-blue-700 hover:via-blue-700 hover:to-cyan-700 text-white border-0 rounded-xl hover:scale-[1.02] active:scale-[0.98]"
                   disabled={isLoading}
                 >
                   {isLoading ? (
                     <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      <Loader2 className="mr-3 h-5 w-5 animate-spin" />
                       Đang đăng nhập...
                     </>
                   ) : (
                     <>
-                      <Shield className="mr-2 h-5 w-5" />
+                      <Shield className="mr-3 h-5 w-5" />
                       Đăng nhập hệ thống
                     </>
                   )}
@@ -299,78 +368,98 @@ function SignInForm() {
               </div>
             </GlassCard>
 
-            {/* Development: Quick Account Selector */}
+            {/* Development: Collapsible Quick Account Selector */}
             {process.env.NODE_ENV === 'development' && (
-              <GlassCard className="mt-6 p-5 shadow-lg border-amber-200/50 bg-amber-50/70 backdrop-blur-md">
-                <div className="mb-3">
-                  <div className="flex items-center gap-2 mb-2">
+              <GlassCard className="mt-6 shadow-lg border-amber-200/50 bg-amber-50/70 backdrop-blur-md overflow-hidden">
+                {/* Collapsible Header */}
+                <button
+                  type="button"
+                  onClick={() => setShowDevAccounts(!showDevAccounts)}
+                  className="w-full p-4 flex items-center justify-between hover:bg-amber-100/50 transition-colors duration-200"
+                >
+                  <div className="flex items-center gap-2">
                     <ShieldCheck className="h-4 w-4 text-amber-600" />
                     <h3 className="text-sm font-semibold text-amber-800">Chế độ phát triển - Đăng nhập nhanh</h3>
                   </div>
-                  <p className="text-xs text-amber-600">Nhấp để tự động điền thông tin (xóa trước khi triển khai)</p>
-                </div>
-                
-                <div className="grid grid-cols-1 gap-2">
-                  {/* SoYTe Account */}
-                  <button
-                    type="button"
-                    onClick={() => handleQuickLogin('soyte_admin', 'password')}
-                    disabled={isLoading}
-                    className="flex items-center gap-3 p-3 rounded-lg border-2 border-blue-200 bg-blue-50/80 hover:bg-blue-100/80 hover:border-blue-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
-                  >
-                    <div className="p-2 rounded-md bg-blue-500/15 group-hover:bg-blue-500/25 transition-colors">
-                      <Building2 className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <div className="text-sm font-semibold text-blue-900">Quản trị Sở Y Tế</div>
-                      <div className="text-xs text-blue-600">soyte_admin - Toàn quyền hệ thống</div>
-                    </div>
-                  </button>
+                  <ChevronDown 
+                    className={`h-4 w-4 text-amber-600 transition-transform duration-200 ${
+                      showDevAccounts ? 'rotate-180' : ''
+                    }`} 
+                  />
+                </button>
 
-                  {/* DonVi Account */}
-                  <button
-                    type="button"
-                    onClick={() => handleQuickLogin('benhvien_qldt', 'password')}
-                    disabled={isLoading}
-                    className="flex items-center gap-3 p-3 rounded-lg border-2 border-green-200 bg-green-50/80 hover:bg-green-100/80 hover:border-green-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
-                  >
-                    <div className="p-2 rounded-md bg-green-500/15 group-hover:bg-green-500/25 transition-colors">
-                      <Users className="h-4 w-4 text-green-600" />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <div className="text-sm font-semibold text-green-900">Quản lý Đơn vị</div>
-                      <div className="text-xs text-green-600">benhvien_qldt - Quản lý bệnh viện</div>
-                    </div>
-                  </button>
+                {/* Collapsible Content */}
+                <div className={`transition-all duration-300 ease-in-out ${
+                  showDevAccounts 
+                    ? 'max-h-96 opacity-100' 
+                    : 'max-h-0 opacity-0'
+                } overflow-hidden`}>
+                  <div className="px-4 pb-4">
+                    <p className="text-xs text-amber-600 mb-4">Nhấp để tự động điền thông tin (xóa trước khi triển khai)</p>
+                    
+                    <div className="grid grid-cols-1 gap-2">
+                      {/* SoYTe Account */}
+                      <button
+                        type="button"
+                        onClick={() => handleQuickLogin('soyte_admin', 'password')}
+                        disabled={isLoading}
+                        className="flex items-center gap-3 p-3 rounded-lg border-2 border-blue-200 bg-blue-50/80 hover:bg-blue-100/80 hover:border-blue-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
+                      >
+                        <div className="p-2 rounded-md bg-blue-500/15 group-hover:bg-blue-500/25 transition-colors">
+                          <Building2 className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <div className="text-sm font-semibold text-blue-900">Quản trị Sở Y Tế</div>
+                          <div className="text-xs text-blue-600">soyte_admin - Toàn quyền hệ thống</div>
+                        </div>
+                      </button>
 
-                  {/* NguoiHanhNghe Account */}
-                  <button
-                    type="button"
-                    onClick={() => handleQuickLogin('bacsi_nguyen', 'password')}
-                    disabled={isLoading}
-                    className="flex items-center gap-3 p-3 rounded-lg border-2 border-purple-200 bg-purple-50/80 hover:bg-purple-100/80 hover:border-purple-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
-                  >
-                    <div className="p-2 rounded-md bg-purple-500/15 group-hover:bg-purple-500/25 transition-colors">
-                      <UserCog className="h-4 w-4 text-purple-600" />
+                      {/* DonVi Account */}
+                      <button
+                        type="button"
+                        onClick={() => handleQuickLogin('benhvien_qldt', 'password')}
+                        disabled={isLoading}
+                        className="flex items-center gap-3 p-3 rounded-lg border-2 border-green-200 bg-green-50/80 hover:bg-green-100/80 hover:border-green-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
+                      >
+                        <div className="p-2 rounded-md bg-green-500/15 group-hover:bg-green-500/25 transition-colors">
+                          <Users className="h-4 w-4 text-green-600" />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <div className="text-sm font-semibold text-green-900">Quản lý Đơn vị</div>
+                          <div className="text-xs text-green-600">benhvien_qldt - Quản lý bệnh viện</div>
+                        </div>
+                      </button>
+
+                      {/* NguoiHanhNghe Account */}
+                      <button
+                        type="button"
+                        onClick={() => handleQuickLogin('bacsi_nguyen', 'password')}
+                        disabled={isLoading}
+                        className="flex items-center gap-3 p-3 rounded-lg border-2 border-purple-200 bg-purple-50/80 hover:bg-purple-100/80 hover:border-purple-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
+                      >
+                        <div className="p-2 rounded-md bg-purple-500/15 group-hover:bg-purple-500/25 transition-colors">
+                          <UserCog className="h-4 w-4 text-purple-600" />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <div className="text-sm font-semibold text-purple-900">Người hành nghề Y tế</div>
+                          <div className="text-xs text-purple-600">bacsi_nguyen - Bác sĩ điều trị</div>
+                        </div>
+                      </button>
                     </div>
-                    <div className="flex-1 text-left">
-                      <div className="text-sm font-semibold text-purple-900">Người hành nghề Y tế</div>
-                      <div className="text-xs text-purple-600">bacsi_nguyen - Bác sĩ điều trị</div>
+                    
+                    <div className="mt-3 pt-3 border-t border-amber-200/50">
+                      <p className="text-xs text-amber-700 text-center">Tất cả mật khẩu: <code className="bg-amber-100 px-1.5 py-0.5 rounded text-amber-800 font-mono">password</code></p>
                     </div>
-                  </button>
-                </div>
-                
-                <div className="mt-3 pt-3 border-t border-amber-200/50">
-                  <p className="text-xs text-amber-700 text-center">Tất cả mật khẩu: <code className="bg-amber-100 px-1.5 py-0.5 rounded text-amber-800 font-mono">password</code></p>
+                  </div>
                 </div>
               </GlassCard>
             )}
 
-            {/* Footer */}
-            <div className="mt-6 text-center">
-              <div className="text-sm text-slate-400 space-y-1">
-                <p>Hệ thống Quản lý Đào tạo Nhân lực Y tế Cần Thơ</p>
-                <p>Phiên bản 1.0.0 • © 2024</p>
+            {/* Enhanced Footer */}
+            <div className="mt-8 text-center">
+              <div className="text-sm text-slate-500 space-y-2">
+                <p className="font-medium">Hệ thống Quản lý Đào tạo Nhân lực Y tế Cần Thơ</p>
+                <p className="text-slate-400">Phiên bản 1.0.0 • © 2024</p>
               </div>
             </div>
           </div>

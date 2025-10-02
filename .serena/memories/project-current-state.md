@@ -291,7 +291,7 @@ src/
 - **Type Safety**: Extends existing Zod schemas for validation
 
 ## Testing & Verification
-- **Test Page**: Created `/test-auth` page to verify authentication works
+
 - **Build Status**: Core functionality complete (minor ESLint warnings remain)
 - **Ready for Development**: Authentication system ready for UI component development
 
@@ -324,8 +324,6 @@ Complete Task 4 - Core UI Components with Glassmorphism Design:
 
 🚀 Demo Pages:
 - /demo - Full glass components showcase
-- /navigation-demo - Interactive navigation testing
-- /signin-demo - Modern sign-in page
 - /signin-showcase - Comprehensive design showcase
 
 🎯 Key Features:

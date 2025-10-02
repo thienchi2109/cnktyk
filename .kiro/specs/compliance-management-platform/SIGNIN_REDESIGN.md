@@ -30,9 +30,8 @@ A complete redesign of the CNKTYKLT Platform sign-in page with modern glassmorph
 ## 🚀 Demo Pages
 
 ### Available Routes
-- `/signin-demo` - Direct access to the new sign-in page
+- `/auth/signin` - Official premium sign-in page
 - `/signin-showcase` - Comprehensive showcase with features and technical details
-- `/auth/signin` - Updated production sign-in page
 
 ### Testing
 1. Visit `/signin-showcase` to see the complete feature overview

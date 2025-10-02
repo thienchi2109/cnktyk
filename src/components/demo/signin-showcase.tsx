@@ -90,7 +90,7 @@ export const SignInShowcase = () => {
             variant="default"
             size="lg"
             className="shadow-xl hover:shadow-2xl transition-all duration-300"
-            onClick={() => window.open('/signin-demo', '_blank')}
+            onClick={() => window.open('/auth/signin', '_blank')}
           >
             <Eye className="mr-2 h-5 w-5" />
             View New Sign-In Page
