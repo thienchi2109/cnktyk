@@ -84,7 +84,7 @@
   - Create notification preferences and settings interface
   - _Requirements: 5.1, 5.2, 5.3, 5.4_
 
-- [ ] 12. Build adaptive practitioner dashboard with glassmorphism UI
+- [x] 12. Build adaptive practitioner dashboard with glassmorphism UI
   - Create personal progress hero card with circular progress indicator and cycle countdown
   - Implement activity management section with submission, timeline, and draft functionality
   - Build alerts & notifications panel with priority-based organization
@@ -92,7 +92,10 @@
   - Add mobile optimizations with collapsible sections and swipe gestures
   - _Requirements: 5.3, 3.1, 1.1, 1.2_
 
-- [ ] 13. Develop comprehensive unit administrator dashboard
+- [x] 13. Develop comprehensive unit administrator dashboard
+
+
+
   - Create unit overview header with key metrics and performance indicators
   - Implement practitioner management grid with advanced search, filtering, and sorting
   - Build approval workflow center with pending queue and batch processing capabilities

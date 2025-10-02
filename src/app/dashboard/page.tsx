@@ -8,9 +8,13 @@ export default async function DashboardPage() {
   const session = await requireAuth();
   const { user } = session;
 
-  // Redirect practitioners to their specialized dashboard
+  // Redirect to role-specific dashboards
   if (user.role === 'NguoiHanhNghe') {
     redirect('/dashboard/practitioner');
+  }
+  
+  if (user.role === 'DonVi') {
+    redirect('/dashboard/unit-admin');
   }
 
   const getRoleDisplayName = (role: string) => {

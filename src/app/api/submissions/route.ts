@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const status = searchParams.get('status');
     const practitionerId = searchParams.get('practitionerId');
+    const unitId = searchParams.get('unitId');
 
     let submissions;
 
@@ -47,15 +48,19 @@ export async function GET(request: NextRequest) {
       );
     } else if (user.role === 'DonVi') {
       // Unit admins can see submissions from their unit
+      const targetUnitId = unitId || user.unitId;
+      
       if (practitionerId) {
         submissions = await ghiNhanHoatDongRepo.findByPractitioner(practitionerId, limit);
       } else {
-        submissions = await ghiNhanHoatDongRepo.findPendingApprovals(user.unitId || undefined);
+        submissions = await ghiNhanHoatDongRepo.findPendingApprovals(targetUnitId || undefined);
       }
     } else if (user.role === 'SoYTe') {
       // DoH admins can see all submissions
       if (practitionerId) {
         submissions = await ghiNhanHoatDongRepo.findByPractitioner(practitionerId, limit);
+      } else if (unitId) {
+        submissions = await ghiNhanHoatDongRepo.findPendingApprovals(unitId);
       } else {
         submissions = await ghiNhanHoatDongRepo.findPendingApprovals();
       }
@@ -95,7 +100,8 @@ export async function GET(request: NextRequest) {
     );
 
     return NextResponse.json({
-      submissions: enrichedSubmissions,
+      success: true,
+      data: enrichedSubmissions,
       pagination: {
         page,
         limit,

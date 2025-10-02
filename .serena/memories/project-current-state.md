@@ -69,8 +69,44 @@
 - ✅ ESLint: 0 errors, 116 warnings (intentional)
 - ✅ Production ready
 
-## Pending Tasks (8/20)
-13. Unit Administrator Dashboard
+### ✅ Task 13: Unit Administrator Dashboard (NEW)
+**Comprehensive management interface for unit administrators**
+
+#### Components Created
+- **UnitAdminDashboard** (`src/components/dashboard/unit-admin-dashboard.tsx`)
+  - Unit overview header with key metrics
+  - Approval workflow center with pending queue
+  - Practitioner management grid with search/filter
+  - Unit analytics with monthly statistics
+  - Collapsible sections for mobile
+
+#### API Endpoints Created
+- **GET /api/units/[id]/metrics** - Unit-level performance metrics
+  - Total/active practitioners
+  - Compliance rate calculation
+  - Pending approvals count
+  - At-risk practitioners identification
+  - Monthly approval/rejection statistics
+
+#### Page Routes
+- `/dashboard/unit-admin` - Dedicated unit admin dashboard
+- Auto-redirect from `/dashboard` for DonVi role
+
+#### Key Features
+- **Real-time Metrics**: Unit performance indicators
+- **Approval Queue**: Priority-sorted pending activities with aging alerts
+- **Practitioner Search**: Advanced filtering by name, license, compliance status
+- **Compliance Tracking**: Color-coded indicators (green/amber/red)
+- **Mobile-Optimized**: Collapsible sections, touch-friendly controls
+- **Glassmorphism**: Consistent with healthcare design system
+
+#### Integration
+- Enhanced practitioners API with `includeProgress` parameter
+- Enhanced submissions API with `unitId` filtering
+- Leverages existing glass components and hooks
+- Vietnamese localization throughout
+
+## Pending Tasks (7/20)
 14. Department of Health Dashboard
 15. Reporting & Export
 16. Bulk Import System
@@ -80,6 +116,6 @@
 20. Production Deployment
 
 ## Next Steps
-- Task 13: Build unit administrator dashboard with approval workflow center
-- Continue with role-specific dashboards
+- Task 14: Build Department of Health executive dashboard
 - Implement reporting and export functionality
+- Continue with system-wide features

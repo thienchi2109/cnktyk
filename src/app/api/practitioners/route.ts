@@ -15,8 +15,10 @@ export async function GET(request: NextRequest) {
     const unitId = searchParams.get('unitId');
     const search = searchParams.get('search');
     const status = searchParams.get('status');
+    const includeProgress = searchParams.get('includeProgress') === 'true';
+    const userId = searchParams.get('userId');
 
-    let practitioners;
+    let practitioners: any[] = [];
 
     // Role-based access control
     if (session.user.role === 'SoYTe') {
@@ -31,8 +33,20 @@ export async function GET(request: NextRequest) {
       practitioners = await nhanVienRepo.findByUnit(session.user.unitId);
     } else if (session.user.role === 'NguoiHanhNghe') {
       // Practitioners can only see themselves
-      const practitioner = await nhanVienRepo.findById(session.user.id);
-      practitioners = practitioner ? [practitioner] : [];
+      // If userId is provided, find by matching email (assuming username is email)
+      if (userId) {
+        const allPractitioners = await nhanVienRepo.findAll();
+        // Try to find by email matching username
+        const user = await import('@/lib/db/repositories').then(m => m.taiKhoanRepo.findById(userId));
+        if (user) {
+          practitioners = allPractitioners.filter(p => p.Email === user.TenDangNhap);
+        } else {
+          practitioners = [];
+        }
+      } else {
+        const practitioner = await nhanVienRepo.findById(session.user.id);
+        practitioners = practitioner ? [practitioner] : [];
+      }
     } else if (session.user.role === 'Auditor') {
       // Auditors can see all practitioners (read-only)
       if (unitId) {
@@ -51,7 +65,7 @@ export async function GET(request: NextRequest) {
 
     // Apply status filter
     if (status && practitioners) {
-      practitioners = practitioners.filter(p => p.TrangThaiLamViec === status);
+      practitioners = practitioners.filter((p: any) => p.TrangThaiLamViec === status);
     }
 
     // Apply pagination
@@ -59,19 +73,56 @@ export async function GET(request: NextRequest) {
     const endIndex = startIndex + limit;
     const paginatedPractitioners = practitioners?.slice(startIndex, endIndex) || [];
 
-    // Get compliance status for each practitioner
-    const practitionersWithCompliance = await Promise.all(
-      paginatedPractitioners.map(async (practitioner) => {
+    // Get compliance status and progress for each practitioner if requested
+    const practitionersWithData = await Promise.all(
+      paginatedPractitioners.map(async (practitioner: any) => {
         const complianceStatus = await nhanVienRepo.getComplianceStatus(practitioner.MaNhanVien);
+        
+        let additionalData: any = { complianceStatus };
+        
+        if (includeProgress) {
+          // Get credit progress
+          const { db } = await import('@/lib/db/client');
+          
+          // Get total approved credits
+          const creditsResult: any = await db.query(
+            `SELECT COALESCE(SUM("SoTinChiQuyDoi"), 0) as total_credits
+             FROM "GhiNhanHoatDong"
+             WHERE "MaNhanVien" = $1 AND "TrangThaiDuyet" = 'DaDuyet'`,
+            [practitioner.MaNhanVien]
+          );
+          const creditsEarned = parseFloat(creditsResult.rows[0]?.total_credits || '0');
+          const creditsRequired = 120; // Default requirement
+          const compliancePercent = Math.round((creditsEarned / creditsRequired) * 100);
+          
+          // Get last activity date
+          const lastActivityResult: any = await db.query(
+            `SELECT MAX("NgayGhiNhan") as last_date
+             FROM "GhiNhanHoatDong"
+             WHERE "MaNhanVien" = $1`,
+            [practitioner.MaNhanVien]
+          );
+          const lastActivityDate = lastActivityResult.rows[0]?.last_date;
+          
+          additionalData = {
+            ...additionalData,
+            creditsEarned,
+            creditsRequired,
+            compliancePercent,
+            lastActivityDate
+          };
+        }
+        
         return {
           ...practitioner,
-          complianceStatus
+          ...additionalData
         };
       })
     );
 
     return NextResponse.json({
-      practitioners: practitionersWithCompliance,
+      success: true,
+      data: practitionersWithData,
       pagination: {
         page,
         limit,

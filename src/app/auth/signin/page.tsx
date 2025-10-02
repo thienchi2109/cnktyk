@@ -470,18 +470,8 @@ function SignInForm() {
 }
 
 function getDashboardUrl(role: string): string {
-  switch (role) {
-    case "SoYTe":
-      return "/so-y-te/dashboard";
-    case "DonVi":
-      return "/don-vi/dashboard";
-    case "NguoiHanhNghe":
-      return "/nguoi-hanh-nghe/dashboard";
-    case "Auditor":
-      return "/dashboard";
-    default:
-      return "/dashboard";
-  }
+  // All roles go to /dashboard which will handle role-specific redirects
+  return "/dashboard";
 }
 
 export default function SignInPage() {
