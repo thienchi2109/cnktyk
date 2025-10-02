@@ -10,6 +10,7 @@ import {
   Shield,
   Activity,
   AlertCircle,
+  Bell,
   Upload,
   ChevronDown
 } from "lucide-react";
@@ -57,23 +58,16 @@ const getNavigationItems = (userRole?: string): NavigationItem[] => {
     return [
       ...baseItems,
       {
-        id: 'activities',
-        label: 'Activities',
+        id: 'submissions',
+        label: 'My Activities',
         icon: <Activity className="h-4 w-4" />,
-        children: [
-          {
-            id: 'submit-activity',
-            label: 'Submit Activity',
-            icon: <Upload className="h-4 w-4" />,
-            href: '/activities/submit'
-          },
-          {
-            id: 'activity-history',
-            label: 'History',
-            icon: <FileText className="h-4 w-4" />,
-            href: '/activities/history'
-          }
-        ]
+        href: '/submissions'
+      },
+      {
+        id: 'practitioners',
+        label: 'Profile',
+        icon: <Users className="h-4 w-4" />,
+        href: '/practitioners'
       },
       {
         id: 'progress',
@@ -82,11 +76,10 @@ const getNavigationItems = (userRole?: string): NavigationItem[] => {
         href: '/progress'
       },
       {
-        id: 'alerts',
-        label: 'Alerts',
-        icon: <AlertCircle className="h-4 w-4" />,
-        href: '/alerts',
-        badge: 3
+        id: 'notifications',
+        label: 'Notifications',
+        icon: <Bell className="h-4 w-4" />,
+        href: '/notifications'
       }
     ];
   }
@@ -102,10 +95,10 @@ const getNavigationItems = (userRole?: string): NavigationItem[] => {
         href: '/practitioners'
       },
       {
-        id: 'approvals',
-        label: 'Approvals',
-        icon: <Shield className="h-4 w-4" />,
-        href: '/approvals',
+        id: 'submissions',
+        label: 'Activities',
+        icon: <Activity className="h-4 w-4" />,
+        href: '/submissions',
         badge: 12
       },
       {
@@ -165,6 +158,12 @@ const getNavigationItems = (userRole?: string): NavigationItem[] => {
         ]
       },
       {
+        id: 'submissions',
+        label: 'Activities',
+        icon: <Activity className="h-4 w-4" />,
+        href: '/submissions'
+      },
+      {
         id: 'system-admin',
         label: 'Admin',
         icon: <Settings className="h-4 w-4" />,
@@ -177,9 +176,15 @@ const getNavigationItems = (userRole?: string): NavigationItem[] => {
           },
           {
             id: 'activity-catalog',
-            label: 'Activities',
+            label: 'Activity Catalog',
             icon: <FileText className="h-4 w-4" />,
             href: '/activities'
+          },
+          {
+            id: 'file-management',
+            label: 'Files',
+            icon: <Upload className="h-4 w-4" />,
+            href: '/files/demo'
           },
           {
             id: 'system-settings',

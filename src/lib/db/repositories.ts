@@ -540,4 +540,6 @@ export const ghiNhanHoatDongRepo = new GhiNhanHoatDongRepository();
 export const donViRepo = new DonViRepository();
 export const danhMucHoatDongRepo = new DanhMucHoatDongRepository();
 export const thongBaoRepo = new ThongBaoRepository();
+// Export the notification repository instance
+export const notificationRepo = thongBaoRepo;
 export const nhatKyHeThongRepo = new NhatKyHeThongRepository();

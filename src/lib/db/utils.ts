@@ -311,6 +311,191 @@ export async function searchPractitioners(
   }
 }
 
+// Notification and Alert Generation Utilities
+export async function generateComplianceAlerts(): Promise<{ success: boolean; alertCount: number; errors: string[] }> {
+  try {
+    const practitioners = await nhanVienRepo.findAll();
+    const alerts = [];
+    const errors = [];
+
+    for (const practitioner of practitioners) {
+      try {
+        // Get practitioner's activities
+        const activities = await ghiNhanHoatDongRepo.findByPractitioner(practitioner.MaNhanVien);
+        const approvedActivities = activities.filter(a => a.TrangThaiDuyet === 'DaDuyet');
+        
+        // Calculate compliance (simplified - would need proper credit calculation)
+        const totalCredits = approvedActivities.reduce((sum, activity) => sum + (activity.SoTinChiQuyDoi || 0), 0);
+        const requiredCredits = 40; // Example requirement
+        const compliancePercentage = totalCredits / requiredCredits;
+
+        let alertMessage = '';
+        let alertType = '';
+
+        if (compliancePercentage < 0.5) {
+          alertType = 'compliance_critical';
+          alertMessage = `Cảnh báo nghiêm trọng: Bạn chỉ đạt ${(compliancePercentage * 100).toFixed(1)}% yêu cầu tín chỉ (${totalCredits}/${requiredCredits} tín chỉ). Cần nộp hoạt động ngay lập tức để tránh vi phạm quy định.`;
+        } else if (compliancePercentage < 0.7) {
+          alertType = 'compliance_warning';
+          alertMessage = `Cảnh báo: Bạn đạt ${(compliancePercentage * 100).toFixed(1)}% yêu cầu tín chỉ (${totalCredits}/${requiredCredits} tín chỉ). Cần tăng cường hoạt động để đảm bảo hoàn thành đúng hạn.`;
+        }
+
+        if (alertMessage) {
+          // Find the user account for this practitioner by unit
+          const unitUsers = await taiKhoanRepo.findByUnit(practitioner.MaDonVi);
+          const practitionerUser = unitUsers.find(user => user.QuyenHan === 'NguoiHanhNghe');
+          
+          if (practitionerUser) {
+            const notification = await thongBaoRepo.create({
+              MaNguoiNhan: practitionerUser.MaTaiKhoan,
+              Loai: alertType,
+              ThongDiep: alertMessage,
+              LienKet: '/submissions',
+              TrangThai: 'Moi'
+            });
+            alerts.push(notification);
+          }
+        }
+      } catch (error) {
+        errors.push(`Error processing practitioner ${practitioner.MaNhanVien}: ${error}`);
+      }
+    }
+
+    return {
+      success: true,
+      alertCount: alerts.length,
+      errors
+    };
+  } catch (error) {
+    console.error('Error generating compliance alerts:', error);
+    return {
+      success: false,
+      alertCount: 0,
+      errors: [error instanceof Error ? error.message : 'Unknown error']
+    };
+  }
+}
+
+export async function generateDeadlineReminders(daysBeforeDeadline: number = 30): Promise<{ success: boolean; alertCount: number; errors: string[] }> {
+  try {
+    const practitioners = await nhanVienRepo.findAll();
+    const alerts = [];
+    const errors = [];
+
+    for (const practitioner of practitioners) {
+      try {
+        // Find the user account for this practitioner by unit
+        const unitUsers = await taiKhoanRepo.findByUnit(practitioner.MaDonVi);
+        const practitionerUser = unitUsers.find(user => user.QuyenHan === 'NguoiHanhNghe');
+        
+        if (practitionerUser) {
+          const notification = await thongBaoRepo.create({
+            MaNguoiNhan: practitionerUser.MaTaiKhoan,
+            Loai: 'deadline_approaching',
+            ThongDiep: `Nhắc nhở: Còn ${daysBeforeDeadline} ngày để hoàn thành yêu cầu tín chỉ năm học. Vui lòng kiểm tra tiến độ và nộp các hoạt động cần thiết.`,
+            LienKet: '/submissions',
+            TrangThai: 'Moi'
+          });
+          alerts.push(notification);
+        }
+      } catch (error) {
+        errors.push(`Error creating reminder for practitioner ${practitioner.MaNhanVien}: ${error}`);
+      }
+    }
+
+    return {
+      success: true,
+      alertCount: alerts.length,
+      errors
+    };
+  } catch (error) {
+    console.error('Error generating deadline reminders:', error);
+    return {
+      success: false,
+      alertCount: 0,
+      errors: [error instanceof Error ? error.message : 'Unknown error']
+    };
+  }
+}
+
+export async function createCustomNotification(
+  recipientIds: string[],
+  message: string,
+  type: string = 'custom',
+  link?: string
+): Promise<{ success: boolean; alertCount: number; errors: string[] }> {
+  try {
+    const alerts = [];
+    const errors = [];
+
+    for (const recipientId of recipientIds) {
+      try {
+        const notification = await thongBaoRepo.create({
+          MaNguoiNhan: recipientId,
+          Loai: type,
+          ThongDiep: message,
+          LienKet: link || null,
+          TrangThai: 'Moi'
+        });
+        alerts.push(notification);
+      } catch (error) {
+        errors.push(`Error creating notification for user ${recipientId}: ${error}`);
+      }
+    }
+
+    return {
+      success: true,
+      alertCount: alerts.length,
+      errors
+    };
+  } catch (error) {
+    console.error('Error creating custom notifications:', error);
+    return {
+      success: false,
+      alertCount: 0,
+      errors: [error instanceof Error ? error.message : 'Unknown error']
+    };
+  }
+}
+
+export async function createSubmissionNotification(
+  practitionerId: string,
+  submissionId: string,
+  status: 'approved' | 'rejected' | 'info_requested',
+  message?: string
+): Promise<void> {
+  try {
+    let notificationType = '';
+    let defaultMessage = '';
+
+    switch (status) {
+      case 'approved':
+        notificationType = 'submission_approved';
+        defaultMessage = 'Hoạt động của bạn đã được phê duyệt và tín chỉ đã được cập nhật.';
+        break;
+      case 'rejected':
+        notificationType = 'submission_rejected';
+        defaultMessage = 'Hoạt động của bạn đã bị từ chối. Vui lòng xem lý do và nộp lại nếu cần.';
+        break;
+      case 'info_requested':
+        notificationType = 'submission_info_requested';
+        defaultMessage = 'Cần bổ sung thông tin cho hoạt động của bạn. Vui lòng kiểm tra và cập nhật.';
+        break;
+    }
+
+    await thongBaoRepo.create({
+      MaNguoiNhan: practitionerId,
+      Loai: notificationType,
+      ThongDiep: message || defaultMessage,
+      LienKet: `/submissions/${submissionId}`,
+      TrangThai: 'Moi'
+    });
+  } catch (error) {
+    console.error('Error creating submission notification:', error);
+    throw error;
+  }
+}
+
 // Export utilities for easy access
 export const dbUtils = {
   health: performHealthCheck,
@@ -326,5 +511,11 @@ export const dbUtils = {
   audit: logUserAction,
   search: {
     practitioners: searchPractitioners
+  },
+  notifications: {
+    generateComplianceAlerts,
+    generateDeadlineReminders,
+    createCustomNotification,
+    createSubmissionNotification
   }
 };

@@ -57,14 +57,14 @@
   - Create activity catalog display for practitioners during submission
   - _Requirements: 4.1, 4.2, 4.3, 1.2_
 
-- [ ] 8. Develop file upload system with Cloudflare R2
+- [x] 8. Develop file upload system with Cloudflare R2
   - Create secure file upload API route with R2 integration
   - Implement file validation (type, size, virus scanning preparation)
   - Build file upload component with drag-and-drop functionality
   - Create file management utilities with checksum generation and verification
   - _Requirements: 1.1, 1.3, 8.3, 8.4_
 
-- [ ] 9. Build activity submission and review workflow
+- [x] 9. Build activity submission and review workflow
   - Create activity submission form with evidence file upload
   - Implement activity submission API route with automatic credit calculation
   - Build activity review interface for unit administrators
@@ -78,7 +78,7 @@
   - Create credit history tracking with audit trail
   - _Requirements: 1.2, 5.3, 8.1, 8.4_
 
-- [ ] 11. Develop alert and notification system
+- [x] 11. Develop alert and notification system
   - Create alert generation system with configurable thresholds
   - Implement in-app notification display with read/unread status
   - Build notification API routes for creating and managing alerts
