@@ -1,4 +1,5 @@
 import { requireAuth } from "@/lib/auth/server";
+import { redirect } from 'next/navigation';
 import { GlassCard } from "@/components/ui/glass-card";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { Shield, User, Building, Clock } from "lucide-react";
@@ -6,6 +7,11 @@ import { Shield, User, Building, Clock } from "lucide-react";
 export default async function DashboardPage() {
   const session = await requireAuth();
   const { user } = session;
+
+  // Redirect practitioners to their specialized dashboard
+  if (user.role === 'NguoiHanhNghe') {
+    redirect('/dashboard/practitioner');
+  }
 
   const getRoleDisplayName = (role: string) => {
     switch (role) {

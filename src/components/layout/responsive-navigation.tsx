@@ -12,7 +12,8 @@ import {
   AlertCircle,
   Bell,
   Upload,
-  ChevronDown
+  ChevronDown,
+  Award
 } from "lucide-react";
 import { GlassHeader } from "./glass-header";
 import { GlassFooter } from "./glass-footer";
@@ -58,26 +59,26 @@ const getNavigationItems = (userRole?: string): NavigationItem[] => {
     return [
       ...baseItems,
       {
+        id: 'credits',
+        label: 'Tín chỉ',
+        icon: <Award className="h-4 w-4" />,
+        href: '/credits'
+      },
+      {
         id: 'submissions',
-        label: 'My Activities',
+        label: 'Hoạt động',
         icon: <Activity className="h-4 w-4" />,
         href: '/submissions'
       },
       {
         id: 'practitioners',
-        label: 'Profile',
+        label: 'Hồ sơ',
         icon: <Users className="h-4 w-4" />,
         href: '/practitioners'
       },
       {
-        id: 'progress',
-        label: 'Progress',
-        icon: <BarChart3 className="h-4 w-4" />,
-        href: '/progress'
-      },
-      {
         id: 'notifications',
-        label: 'Notifications',
+        label: 'Thông báo',
         icon: <Bell className="h-4 w-4" />,
         href: '/notifications'
       }
@@ -90,34 +91,40 @@ const getNavigationItems = (userRole?: string): NavigationItem[] => {
       ...baseItems,
       {
         id: 'practitioners',
-        label: 'Practitioners',
+        label: 'Người hành nghề',
         icon: <Users className="h-4 w-4" />,
         href: '/practitioners'
       },
       {
         id: 'submissions',
-        label: 'Activities',
+        label: 'Hoạt động',
         icon: <Activity className="h-4 w-4" />,
         href: '/submissions',
         badge: 12
       },
       {
         id: 'reports',
-        label: 'Reports',
+        label: 'Báo cáo',
         icon: <BarChart3 className="h-4 w-4" />,
         href: '/reports'
       },
       {
         id: 'bulk-import',
-        label: 'Import',
+        label: 'Nhập dữ liệu',
         icon: <Upload className="h-4 w-4" />,
         href: '/import'
       },
       {
         id: 'user-management',
-        label: 'Users',
+        label: 'Người dùng',
         icon: <Users className="h-4 w-4" />,
         href: '/users'
+      },
+      {
+        id: 'notifications',
+        label: 'Thông báo',
+        icon: <Bell className="h-4 w-4" />,
+        href: '/notifications'
       }
     ];
   }
@@ -128,90 +135,114 @@ const getNavigationItems = (userRole?: string): NavigationItem[] => {
       ...baseItems,
       {
         id: 'system-overview',
-        label: 'Overview',
+        label: 'Tổng quan',
         icon: <BarChart3 className="h-4 w-4" />,
         href: '/system'
       },
       {
         id: 'units',
-        label: 'Units',
+        label: 'Đơn vị',
         icon: <Users className="h-4 w-4" />,
         href: '/units'
       },
       {
         id: 'analytics',
-        label: 'Analytics',
+        label: 'Phân tích',
         icon: <BarChart3 className="h-4 w-4" />,
         children: [
           {
             id: 'compliance-trends',
-            label: 'Compliance',
+            label: 'Tuân thủ',
             icon: <BarChart3 className="h-4 w-4" />,
             href: '/analytics/compliance'
           },
           {
-            id: 'performance-metrics',
-            label: 'Performance',
-            icon: <BarChart3 className="h-4 w-4" />,
-            href: '/analytics/performance'
+            id: 'activity-analysis',
+            label: 'Hoạt động',
+            icon: <Activity className="h-4 w-4" />,
+            href: '/analytics/activities'
           }
         ]
       },
       {
-        id: 'submissions',
-        label: 'Activities',
-        icon: <Activity className="h-4 w-4" />,
-        href: '/submissions'
+        id: 'activities',
+        label: 'Danh mục hoạt động',
+        icon: <FileText className="h-4 w-4" />,
+        href: '/activities'
       },
       {
-        id: 'system-admin',
-        label: 'Admin',
+        id: 'credit-rules',
+        label: 'Quy tắc tín chỉ',
+        icon: <Shield className="h-4 w-4" />,
+        href: '/credits/rules'
+      },
+      {
+        id: 'user-management',
+        label: 'Người dùng',
+        icon: <Users className="h-4 w-4" />,
+        href: '/users'
+      },
+      {
+        id: 'files',
+        label: 'Tệp tin',
+        icon: <Upload className="h-4 w-4" />,
+        href: '/files/demo'
+      },
+      {
+        id: 'notifications',
+        label: 'Thông báo',
+        icon: <Bell className="h-4 w-4" />,
+        href: '/notifications'
+      },
+      {
+        id: 'settings',
+        label: 'Cài đặt',
         icon: <Settings className="h-4 w-4" />,
         children: [
           {
-            id: 'user-management',
-            label: 'Users',
-            icon: <Users className="h-4 w-4" />,
-            href: '/users'
-          },
-          {
-            id: 'activity-catalog',
-            label: 'Activity Catalog',
-            icon: <FileText className="h-4 w-4" />,
-            href: '/activities'
-          },
-          {
-            id: 'file-management',
-            label: 'Files',
-            icon: <Upload className="h-4 w-4" />,
-            href: '/files/demo'
-          },
-          {
-            id: 'system-settings',
-            label: 'Settings',
+            id: 'system-config',
+            label: 'Cấu hình hệ thống',
             icon: <Settings className="h-4 w-4" />,
-            href: '/admin/settings'
+            href: '/settings/system'
+          },
+          {
+            id: 'audit-logs',
+            label: 'Nhật ký kiểm toán',
+            icon: <Shield className="h-4 w-4" />,
+            href: '/settings/audit'
           }
         ]
       }
     ];
   }
 
-  // Auditor items (read-only)
+  // Auditor items
   if (userRole === 'Auditor') {
     return [
       ...baseItems,
       {
-        id: 'audit-logs',
-        label: 'Audit Logs',
-        icon: <FileText className="h-4 w-4" />,
+        id: 'audit-overview',
+        label: 'Tổng quan kiểm toán',
+        icon: <Shield className="h-4 w-4" />,
         href: '/audit'
       },
       {
         id: 'compliance-reports',
-        label: 'Reports',
-        icon: <BarChart3 className="h-4 w-4" />,
-        href: '/reports/compliance'
+        label: 'Báo cáo tuân thủ',
+        icon: <FileText className="h-4 w-4" />,
+        href: '/audit/compliance'
+      },
+      {
+        id: 'audit-logs',
+        label: 'Nhật ký hệ thống',
+        icon: <AlertCircle className="h-4 w-4" />,
+        href: '/audit/logs'
+      },
+      {
+        id: 'notifications',
+        label: 'Thông báo',
+        icon: <Bell className="h-4 w-4" />,
+        href: '/notifications'
       }
     ];
   }
