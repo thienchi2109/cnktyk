@@ -39,11 +39,6 @@
   - _Requirements: 6.1, 6.2, 6.3, 4.1_
 
 - [x] 6. Build practitioner registry functionality
-
-
-
-
-
   - Create practitioner CRUD API routes with proper authorization
   - Implement practitioner registration form with validation
   - Build practitioner listing interface with search and filtering
@@ -112,7 +107,7 @@
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 4.1, 4.2_
 
 - [ ] 15. Implement reporting and export functionality
-  - Create report generation API routes for CSV and PDF export
+  - Create report generation API routes for Excel and PDF export
   - Build report configuration interface with date ranges and filters
   - Implement data aggregation queries for compliance reporting
   - Create export preview functionality with glass modal interface

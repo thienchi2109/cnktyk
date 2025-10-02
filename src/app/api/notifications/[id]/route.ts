@@ -2,15 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, requireRole } from '@/lib/auth/server';
 import { notificationRepo } from '@/lib/db/repositories';
 
+type RouteParams = {
+  params: Promise<{ id: string }>;
+};
+
 // GET /api/notifications/[id] - Get specific notification
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
     const session = await requireAuth();
+    const { id } = await params;
 
-    const notification = await notificationRepo.findById(params.id);
+    const notification = await notificationRepo.findById(id);
     if (!notification) {
       return NextResponse.json({ error: 'Notification not found' }, { status: 404 });
     }
@@ -36,13 +41,14 @@ export async function GET(
 // PUT /api/notifications/[id] - Mark notification as read
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
     const session = await requireAuth();
+    const { id } = await params;
 
     // First check if notification exists and belongs to user
-    const existingNotification = await notificationRepo.findById(params.id);
+    const existingNotification = await notificationRepo.findById(id);
     if (!existingNotification) {
       return NextResponse.json({ error: 'Notification not found' }, { status: 404 });
     }
@@ -52,7 +58,7 @@ export async function PUT(
     }
 
     // Mark as read
-    const updatedNotification = await notificationRepo.markAsRead(params.id);
+    const updatedNotification = await notificationRepo.markAsRead(id);
 
     return NextResponse.json({
       notification: updatedNotification,
@@ -70,14 +76,15 @@ export async function PUT(
 // DELETE /api/notifications/[id] - Delete notification (admin only)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
     const session = await requireAuth();
+    const { id } = await params;
 
     await requireRole(['SoYTe']);
 
-    const deleted = await notificationRepo.delete(params.id);
+    const deleted = await notificationRepo.delete(id);
     if (!deleted) {
       return NextResponse.json({ error: 'Notification not found' }, { status: 404 });
     }
