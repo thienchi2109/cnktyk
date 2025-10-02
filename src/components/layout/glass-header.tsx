@@ -1,10 +1,12 @@
 'use client';
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Bell, User, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { GlassCard } from "@/components/ui/glass-card";
 import { GlassButton } from "@/components/ui/glass-button";
+import { signOut } from "next-auth/react";
 
 interface GlassHeaderProps {
   user?: {
@@ -19,6 +21,7 @@ interface GlassHeaderProps {
 export const GlassHeader = React.forwardRef<HTMLDivElement, GlassHeaderProps>(
   ({ user, notifications = 0, className }, ref) => {
     const [showUserMenu, setShowUserMenu] = React.useState(false);
+    const router = useRouter();
 
     // Close dropdown when clicking outside
     React.useEffect(() => {
@@ -83,11 +86,23 @@ export const GlassHeader = React.forwardRef<HTMLDivElement, GlassHeaderProps>(
           {showUserMenu && (
             <GlassCard className="absolute right-0 top-full mt-2 w-48 p-2 z-50">
               <div className="space-y-1">
-                <button className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-white/20 transition-colors">
+                <button 
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    router.push('/profile');
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-white/20 transition-colors"
+                >
                   <User className="h-4 w-4" />
                   Profile
                 </button>
-                <button className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-white/20 transition-colors text-red-600">
+                <button 
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    signOut({ callbackUrl: '/auth/signin' });
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-white/20 transition-colors text-red-600"
+                >
                   <LogOut className="h-4 w-4" />
                   Sign Out
                 </button>

@@ -28,14 +28,22 @@
   - Implement responsive navigation with mobile drawer functionality
   - _Requirements: 3.1, 3.2, 5.3_
 
-- [ ] 5. Develop user management system
+- [x] 5. Develop user management system
+
+
+
   - Create user registration API route (admin-only) with role assignment
   - Build user profile management components and API endpoints
   - Implement role-based access control in API routes and components
   - Create user listing and management interface for administrators
   - _Requirements: 6.1, 6.2, 6.3, 4.1_
 
-- [ ] 6. Build practitioner registry functionality
+- [x] 6. Build practitioner registry functionality
+
+
+
+
+
   - Create practitioner CRUD API routes with proper authorization
   - Implement practitioner registration form with validation
   - Build practitioner listing interface with search and filtering
