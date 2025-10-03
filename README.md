@@ -10,6 +10,7 @@ A modern web-based system for healthcare practitioner compliance tracking across
 - **Glassmorphism UI**: Modern glass-effect design system optimized for healthcare professionals
 - **Real-time Compliance Tracking**: 5-year cycle monitoring with automated alerts
 - **Evidence File Management**: Secure file upload with Cloudflare R2 integration
+- **Comprehensive Audit Logging**: Complete audit trail for all data modifications and user actions
 
 ## Technology Stack
 
@@ -118,6 +119,29 @@ The application uses an existing PostgreSQL schema (`v_1_init_schema.sql`) with 
 - `NhanVien`: Healthcare practitioner records
 - `GhiNhanHoatDong`: Activity submissions and approvals
 - `DonVi`: Healthcare units and organizational structure
+- `NhatKyHeThong`: Comprehensive audit logging for all system operations
+
+## Audit Logging System
+
+The platform includes a comprehensive audit logging system that tracks:
+
+- All data modifications (CREATE, UPDATE, DELETE operations)
+- User authentication events (login/logout)
+- File upload and download operations
+- Activity approvals and rejections
+- Data export and import operations
+
+**Key Features:**
+- Role-based access (SoYTe and Auditor roles only)
+- Advanced filtering and search capabilities
+- Record history tracking with before/after values
+- File integrity verification with SHA-256 checksums
+- CSV export for external analysis
+- System-wide statistics and suspicious activity detection
+
+**Documentation:** See `docs/audit-system.md` for detailed usage and API documentation.
+
+**Access:** Navigate to `/audit` (requires SoYTe or Auditor role)
 
 ## Contributing
 
