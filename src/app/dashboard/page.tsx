@@ -9,6 +9,10 @@ export default async function DashboardPage() {
   const { user } = session;
 
   // Redirect to role-specific dashboards
+  if (user.role === 'SoYTe') {
+    redirect('/dashboard/doh');
+  }
+  
   if (user.role === 'NguoiHanhNghe') {
     redirect('/dashboard/practitioner');
   }
@@ -57,7 +61,7 @@ export default async function DashboardPage() {
               Dashboard
             </h1>
             <p className="text-gray-600">
-              Chào mừng bạn đến với hệ thống CNKTYKLT
+              Chào mừng bạn đến với Hệ thống Quản lý đào tạo Nhân lực y tế
             </p>
           </div>
           <LogoutButton showIcon={true}>
@@ -117,7 +121,7 @@ export default async function DashboardPage() {
               <div className="p-2 rounded-lg bg-green-100/50">
                 <Shield className="h-5 w-5 text-green-600" />
               </div>
-              <h3 className="font-semibold text-gray-900">Hoạt động CNKTYKLT</h3>
+              <h3 className="font-semibold text-gray-900">Hoạt động cập nhật kiến thức y khoa liên tục</h3>
             </div>
             <p className="text-sm text-gray-600 mb-4">
               Quản lý các hoạt động đào tạo liên tục

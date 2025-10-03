@@ -10,7 +10,7 @@
 
 ### Code Review Readiness
 - **RUN** `npm run typecheck` before committing
-- **RUN** `npm run lint`
+- **RUN** `npm run lint`: skip warnings (if any), fix major errors
 - **ENSURE** no console.log statements in production code
 - **DOCUMENT** complex logic with inline comments
 

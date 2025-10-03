@@ -244,11 +244,31 @@ function SignInForm() {
 
 
             {/* Enhanced Login Form with Logo */}
-            <GlassCard className="p-8 shadow-2xl shadow-slate-900/10 border-white/60 bg-white/70 backdrop-blur-xl">
+            <GlassCard className="p-6 shadow-2xl shadow-slate-900/10 border-white/60 bg-white/70 backdrop-blur-xl">
               {/* Mobile Logo and Header inside card */}
-              <div className="lg:hidden text-center mb-8">
-                <div className="flex justify-center mb-6">
-                  <div className="relative w-20 h-20 flex-shrink-0 rounded-2xl overflow-hidden bg-white shadow-xl shadow-slate-900/10 border border-white/60 aspect-square backdrop-blur-sm">
+              <div className="lg:hidden text-center mb-6">
+                <div className="flex justify-center mb-4">
+                  <div className="relative w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden bg-white shadow-lg shadow-slate-900/10 border border-white/60 aspect-square backdrop-blur-sm">
+                    <Image
+                      src="/logo.png"
+                      alt="CT-HTMS Logo"
+                      fill
+                      className="object-contain p-2"
+                    />
+                  </div>
+                </div>
+                <h1 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-2">
+                  CT-HTMS Platform
+                </h1>
+                <p className="text-slate-600 text-xs leading-relaxed">
+                  Đăng nhập để truy cập hệ thống quản lý đào tạo
+                </p>
+              </div>
+
+              {/* Desktop Logo and Header inside card */}
+              <div className="hidden lg:block text-center mb-6">
+                <div className="flex justify-center mb-4">
+                  <div className="relative w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden bg-white shadow-lg shadow-slate-900/10 border border-white/60 aspect-square backdrop-blur-sm">
                     <Image
                       src="/logo.png"
                       alt="CT-HTMS Logo"
@@ -257,40 +277,20 @@ function SignInForm() {
                     />
                   </div>
                 </div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-3">
-                  CT-HTMS Platform
-                </h1>
-                <p className="text-slate-600 text-sm leading-relaxed">
-                  Đăng nhập để truy cập hệ thống quản lý đào tạo
-                </p>
-              </div>
-
-              {/* Desktop Logo and Header inside card */}
-              <div className="hidden lg:block text-center mb-8">
-                <div className="flex justify-center mb-6">
-                  <div className="relative w-24 h-24 flex-shrink-0 rounded-2xl overflow-hidden bg-white shadow-xl shadow-slate-900/10 border border-white/60 aspect-square backdrop-blur-sm">
-                    <Image
-                      src="/logo.png"
-                      alt="CT-HTMS Logo"
-                      fill
-                      className="object-contain p-3"
-                    />
-                  </div>
-                </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-3 whitespace-nowrap">
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-2 whitespace-nowrap">
                   Chào mừng trở lại
                 </h2>
-                <p className="text-slate-600 text-base leading-relaxed">
+                <p className="text-slate-600 text-sm leading-relaxed">
                   Đăng nhập để tiếp tục sử dụng hệ thống
                 </p>
               </div>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-3">
-                  <Label htmlFor="TenDangNhap" className="text-slate-700 font-semibold text-base">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="TenDangNhap" className="text-slate-700 font-semibold text-sm">
                     Tên đăng nhập
                   </Label>
                   <div className="relative group">
-                    <User className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-200" />
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-200" />
                     <Input
                       id="TenDangNhap"
                       name="TenDangNhap"
@@ -299,18 +299,18 @@ function SignInForm() {
                       onChange={handleInputChange}
                       required
                       disabled={isLoading}
-                      className="pl-12 h-14 text-base bg-white/90 border-slate-200/60 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 hover:border-slate-300/60 transition-all duration-200 rounded-xl"
+                      className="pl-10 h-11 text-sm bg-white/90 border-slate-200/60 focus:border-blue-400/60 focus:ring-2 focus:ring-blue-500/10 hover:border-slate-300/60 transition-all duration-200 rounded-lg"
                       placeholder="Nhập tên đăng nhập"
                     />
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <Label htmlFor="MatKhau" className="text-slate-700 font-semibold text-base">
+                <div className="space-y-2">
+                  <Label htmlFor="MatKhau" className="text-slate-700 font-semibold text-sm">
                     Mật khẩu
                   </Label>
                   <div className="relative group">
-                    <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-200" />
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-200" />
                     <Input
                       id="MatKhau"
                       name="MatKhau"
@@ -319,7 +319,7 @@ function SignInForm() {
                       onChange={handleInputChange}
                       required
                       disabled={isLoading}
-                      className="pl-12 h-14 text-base bg-white/90 border-slate-200/60 focus:border-blue-400/60 focus:ring-4 focus:ring-blue-500/10 hover:border-slate-300/60 transition-all duration-200 rounded-xl"
+                      className="pl-10 h-11 text-sm bg-white/90 border-slate-200/60 focus:border-blue-400/60 focus:ring-2 focus:ring-blue-500/10 hover:border-slate-300/60 transition-all duration-200 rounded-lg"
                       placeholder="Nhập mật khẩu"
                     />
                   </div>
@@ -334,18 +334,18 @@ function SignInForm() {
                 <GlassButton
                   type="submit"
                   variant="default"
-                  size="lg"
-                  className="w-full h-14 text-base font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 bg-gradient-to-r from-blue-600 via-blue-600 to-cyan-600 hover:from-blue-700 hover:via-blue-700 hover:to-cyan-700 text-white border-0 rounded-xl hover:scale-[1.02] active:scale-[0.98]"
+                  size="default"
+                  className="w-full h-11 text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-blue-600 via-blue-600 to-cyan-600 hover:from-blue-700 hover:via-blue-700 hover:to-cyan-700 text-white border-0 rounded-lg hover:scale-[1.02] active:scale-[0.98]"
                   disabled={isLoading}
                 >
                   {isLoading ? (
                     <>
-                      <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Đang đăng nhập...
                     </>
                   ) : (
                     <>
-                      <Shield className="mr-3 h-5 w-5" />
+                      <Shield className="mr-2 h-4 w-4" />
                       Đăng nhập hệ thống
                     </>
                   )}
@@ -353,15 +353,15 @@ function SignInForm() {
               </form>
 
               {/* Additional Info */}
-              <div className="mt-5 pt-5 border-t border-slate-200/30">
-                <div className="flex items-center justify-center space-x-4 text-sm text-slate-500">
+              <div className="mt-4 pt-4 border-t border-slate-200/30">
+                <div className="flex items-center justify-center space-x-3 text-xs text-slate-500">
                   <div className="flex items-center space-x-1">
-                    <BookOpen className="h-4 w-4" />
+                    <BookOpen className="h-3 w-3" />
                     <span>Hướng dẫn</span>
                   </div>
                   <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
                   <div className="flex items-center space-x-1">
-                    <HeartPulse className="h-4 w-4" />
+                    <HeartPulse className="h-3 w-3" />
                     <span>Hỗ trợ</span>
                   </div>
                 </div>
@@ -370,19 +370,19 @@ function SignInForm() {
 
             {/* Development: Collapsible Quick Account Selector */}
             {process.env.NODE_ENV === 'development' && (
-              <GlassCard className="mt-6 shadow-lg border-amber-200/50 bg-amber-50/70 backdrop-blur-md overflow-hidden">
+              <GlassCard className="mt-4 shadow-lg border-amber-200/50 bg-amber-50/70 backdrop-blur-md overflow-hidden">
                 {/* Collapsible Header */}
                 <button
                   type="button"
                   onClick={() => setShowDevAccounts(!showDevAccounts)}
-                  className="w-full p-4 flex items-center justify-between hover:bg-amber-100/50 transition-colors duration-200"
+                  className="w-full p-3 flex items-center justify-between hover:bg-amber-100/50 transition-colors duration-200"
                 >
                   <div className="flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4 text-amber-600" />
-                    <h3 className="text-sm font-semibold text-amber-800">Chế độ phát triển - Đăng nhập nhanh</h3>
+                    <ShieldCheck className="h-3.5 w-3.5 text-amber-600" />
+                    <h3 className="text-xs font-semibold text-amber-800">Chế độ phát triển - Đăng nhập nhanh</h3>
                   </div>
                   <ChevronDown 
-                    className={`h-4 w-4 text-amber-600 transition-transform duration-200 ${
+                    className={`h-3.5 w-3.5 text-amber-600 transition-transform duration-200 ${
                       showDevAccounts ? 'rotate-180' : ''
                     }`} 
                   />
@@ -394,8 +394,8 @@ function SignInForm() {
                     ? 'max-h-96 opacity-100' 
                     : 'max-h-0 opacity-0'
                 } overflow-hidden`}>
-                  <div className="px-4 pb-4">
-                    <p className="text-xs text-amber-600 mb-4">Nhấp để tự động điền thông tin (xóa trước khi triển khai)</p>
+                  <div className="px-3 pb-3">
+                    <p className="text-xs text-amber-600 mb-3">Nhấp để tự động điền thông tin (xóa trước khi triển khai)</p>
                     
                     <div className="grid grid-cols-1 gap-2">
                       {/* SoYTe Account */}
@@ -403,14 +403,14 @@ function SignInForm() {
                         type="button"
                         onClick={() => handleQuickLogin('soyte_admin', 'password')}
                         disabled={isLoading}
-                        className="flex items-center gap-3 p-3 rounded-lg border-2 border-blue-200 bg-blue-50/80 hover:bg-blue-100/80 hover:border-blue-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
+                        className="flex items-center gap-2 p-2.5 rounded-lg border border-blue-200 bg-blue-50/80 hover:bg-blue-100/80 hover:border-blue-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
                       >
-                        <div className="p-2 rounded-md bg-blue-500/15 group-hover:bg-blue-500/25 transition-colors">
-                          <Building2 className="h-4 w-4 text-blue-600" />
+                        <div className="p-1.5 rounded-md bg-blue-500/15 group-hover:bg-blue-500/25 transition-colors">
+                          <Building2 className="h-3.5 w-3.5 text-blue-600" />
                         </div>
                         <div className="flex-1 text-left">
-                          <div className="text-sm font-semibold text-blue-900">Quản trị Sở Y Tế</div>
-                          <div className="text-xs text-blue-600">soyte_admin - Toàn quyền hệ thống</div>
+                          <div className="text-xs font-semibold text-blue-900">Quản trị Sở Y Tế</div>
+                          <div className="text-[10px] text-blue-600">soyte_admin - Toàn quyền hệ thống</div>
                         </div>
                       </button>
 
@@ -419,14 +419,14 @@ function SignInForm() {
                         type="button"
                         onClick={() => handleQuickLogin('benhvien_qldt', 'password')}
                         disabled={isLoading}
-                        className="flex items-center gap-3 p-3 rounded-lg border-2 border-green-200 bg-green-50/80 hover:bg-green-100/80 hover:border-green-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
+                        className="flex items-center gap-2 p-2.5 rounded-lg border border-green-200 bg-green-50/80 hover:bg-green-100/80 hover:border-green-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
                       >
-                        <div className="p-2 rounded-md bg-green-500/15 group-hover:bg-green-500/25 transition-colors">
-                          <Users className="h-4 w-4 text-green-600" />
+                        <div className="p-1.5 rounded-md bg-green-500/15 group-hover:bg-green-500/25 transition-colors">
+                          <Users className="h-3.5 w-3.5 text-green-600" />
                         </div>
                         <div className="flex-1 text-left">
-                          <div className="text-sm font-semibold text-green-900">Quản lý Đơn vị</div>
-                          <div className="text-xs text-green-600">benhvien_qldt - Quản lý bệnh viện</div>
+                          <div className="text-xs font-semibold text-green-900">Quản lý Đơn vị</div>
+                          <div className="text-[10px] text-green-600">benhvien_qldt - Quản lý bệnh viện</div>
                         </div>
                       </button>
 
@@ -435,20 +435,20 @@ function SignInForm() {
                         type="button"
                         onClick={() => handleQuickLogin('bacsi_nguyen', 'password')}
                         disabled={isLoading}
-                        className="flex items-center gap-3 p-3 rounded-lg border-2 border-purple-200 bg-purple-50/80 hover:bg-purple-100/80 hover:border-purple-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
+                        className="flex items-center gap-2 p-2.5 rounded-lg border border-purple-200 bg-purple-50/80 hover:bg-purple-100/80 hover:border-purple-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
                       >
-                        <div className="p-2 rounded-md bg-purple-500/15 group-hover:bg-purple-500/25 transition-colors">
-                          <UserCog className="h-4 w-4 text-purple-600" />
+                        <div className="p-1.5 rounded-md bg-purple-500/15 group-hover:bg-purple-500/25 transition-colors">
+                          <UserCog className="h-3.5 w-3.5 text-purple-600" />
                         </div>
                         <div className="flex-1 text-left">
-                          <div className="text-sm font-semibold text-purple-900">Người hành nghề Y tế</div>
-                          <div className="text-xs text-purple-600">bacsi_nguyen - Bác sĩ điều trị</div>
+                          <div className="text-xs font-semibold text-purple-900">Người hành nghề Y tế</div>
+                          <div className="text-[10px] text-purple-600">bacsi_nguyen - Bác sĩ điều trị</div>
                         </div>
                       </button>
                     </div>
                     
-                    <div className="mt-3 pt-3 border-t border-amber-200/50">
-                      <p className="text-xs text-amber-700 text-center">Tất cả mật khẩu: <code className="bg-amber-100 px-1.5 py-0.5 rounded text-amber-800 font-mono">password</code></p>
+                    <div className="mt-2 pt-2 border-t border-amber-200/50">
+                      <p className="text-[10px] text-amber-700 text-center">Tất cả mật khẩu: <code className="bg-amber-100 px-1 py-0.5 rounded text-amber-800 font-mono text-[10px]">password</code></p>
                     </div>
                   </div>
                 </div>
@@ -456,10 +456,10 @@ function SignInForm() {
             )}
 
             {/* Enhanced Footer */}
-            <div className="mt-8 text-center">
-              <div className="text-sm text-slate-500 space-y-2">
+            <div className="mt-6 text-center">
+              <div className="text-xs text-slate-500 space-y-1">
                 <p className="font-medium">Hệ thống Quản lý Đào tạo Nhân lực Y tế Cần Thơ</p>
-                <p className="text-slate-400">Phiên bản 1.0.0 • © 2024</p>
+                <p className="text-slate-400 text-[10px]">Phiên bản 1.0.0 • © 2024</p>
               </div>
             </div>
           </div>

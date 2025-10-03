@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 import { AuthProvider } from "@/components/providers/session-provider";
 
 export const metadata: Metadata = {
-  title: "CNKTYKLT Compliance Management Platform",
+  title: "Hệ thống quản lý đào tạo nhân lực y tế",
   description: "Healthcare practitioner compliance tracking system for the Department of Health",
 };
 
