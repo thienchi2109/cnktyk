@@ -253,6 +253,7 @@ function SignInForm() {
                       src="/logo.png"
                       alt="CT-HTMS Logo"
                       fill
+                      sizes="64px"
                       className="object-contain p-2"
                     />
                   </div>
@@ -273,6 +274,7 @@ function SignInForm() {
                       src="/logo.png"
                       alt="CT-HTMS Logo"
                       fill
+                      sizes="80px"
                       className="object-contain p-2.5"
                     />
                   </div>
@@ -315,6 +317,7 @@ function SignInForm() {
                       id="MatKhau"
                       name="MatKhau"
                       type="password"
+                      autoComplete="current-password"
                       value={formData.MatKhau}
                       onChange={handleInputChange}
                       required

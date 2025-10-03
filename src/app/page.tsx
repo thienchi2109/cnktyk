@@ -17,11 +17,11 @@ export default async function Home() {
 function getDashboardUrl(role: string): string {
   switch (role) {
     case "SoYTe":
-      return "/so-y-te/dashboard";
+      return "/dashboard/doh";
     case "DonVi":
-      return "/don-vi/dashboard";
+      return "/dashboard/unit-admin";
     case "NguoiHanhNghe":
-      return "/nguoi-hanh-nghe/dashboard";
+      return "/dashboard/practitioner";
     case "Auditor":
       return "/dashboard";
     default:

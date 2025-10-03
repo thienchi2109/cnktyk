@@ -4,13 +4,14 @@ import { auth } from "@/lib/auth";
 // Define protected routes and their required roles
 const PROTECTED_ROUTES = {
   "/dashboard": ["SoYTe", "DonVi", "NguoiHanhNghe", "Auditor"],
-  "/so-y-te": ["SoYTe"],
-  "/don-vi": ["SoYTe", "DonVi"],
-  "/nguoi-hanh-nghe": ["SoYTe", "DonVi", "NguoiHanhNghe"],
-  "/admin": ["SoYTe"],
-  "/api/admin": ["SoYTe"],
-  "/api/don-vi": ["SoYTe", "DonVi"],
-  "/api/nguoi-hanh-nghe": ["SoYTe", "DonVi", "NguoiHanhNghe"],
+  "/practitioners": ["SoYTe", "DonVi", "NguoiHanhNghe"],
+  "/activities": ["SoYTe", "DonVi"],
+  "/submissions": ["SoYTe", "DonVi", "NguoiHanhNghe"],
+  "/credits": ["SoYTe", "DonVi", "NguoiHanhNghe"],
+  "/notifications": ["SoYTe", "DonVi", "NguoiHanhNghe", "Auditor"],
+  "/users": ["SoYTe", "DonVi"],
+  "/profile": ["SoYTe", "DonVi", "NguoiHanhNghe", "Auditor"],
+  "/files": ["SoYTe", "DonVi"],
 } as const;
 
 // Public routes that don't require authentication
@@ -18,7 +19,13 @@ const PUBLIC_ROUTES = [
   "/",
   "/auth/signin",
   "/auth/error",
-  "/api/auth",
+  "/api/auth/signin",
+  "/api/auth/signout",
+  "/api/auth/callback",
+  "/api/auth/csrf",
+  "/api/auth/providers",
+  "/api/auth/session",
+  "/api/auth/error",
 ];
 
 export default auth((req) => {
@@ -60,11 +67,11 @@ export default auth((req) => {
 function getDashboardUrl(role?: string): string {
   switch (role) {
     case "SoYTe":
-      return "/so-y-te/dashboard";
+      return "/dashboard/doh";
     case "DonVi":
-      return "/don-vi/dashboard";
+      return "/dashboard/unit-admin";
     case "NguoiHanhNghe":
-      return "/nguoi-hanh-nghe/dashboard";
+      return "/dashboard/practitioner";
     case "Auditor":
       return "/dashboard";
     default:

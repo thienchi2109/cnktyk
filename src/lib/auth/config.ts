@@ -34,6 +34,7 @@ declare module "next-auth" {
 }
 
 export const authConfig: NextAuthConfig = {
+  basePath: "/api/auth",
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -77,10 +78,7 @@ export const authConfig: NextAuthConfig = {
   ],
   session: {
     strategy: "jwt",
-    maxAge: 2 * 60 * 60, // 2 hours session duration
-  },
-  jwt: {
-    maxAge: 5 * 60, // 5 minutes JWT expiry
+    maxAge: 8 * 60 * 60, // 8 hours session duration
   },
   callbacks: {
     async jwt({ token, user, trigger }) {

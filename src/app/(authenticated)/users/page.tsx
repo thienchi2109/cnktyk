@@ -258,8 +258,7 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto">
         {error && (
           <Alert className="mb-6 border-medical-red/20 bg-medical-red/5">
             <AlertCircle className="h-4 w-4 text-medical-red" />
@@ -286,7 +285,6 @@ export default function UsersPage() {
           onDeleteUser={handleDeleteUser}
           currentUserRole={user.role}
         />
-      </div>
 
       {/* Create User Modal */}
       <GlassModal

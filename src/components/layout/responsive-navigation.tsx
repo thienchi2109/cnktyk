@@ -13,7 +13,9 @@ import {
   Bell,
   Upload,
   ChevronDown,
-  Award
+  Award,
+  Menu,
+  X
 } from "lucide-react";
 import { GlassHeader } from "./glass-header";
 import { GlassFooter } from "./glass-footer";
@@ -305,7 +307,7 @@ const HeaderNavigation = ({
 
             {/* Dropdown Menu */}
             {hasChildren && isOpen && (
-              <div className="absolute top-full left-0 mt-1 min-w-48 backdrop-blur-md bg-white/20 border border-white/30 rounded-lg shadow-lg z-50">
+              <div className="absolute top-full left-0 mt-1 min-w-48 backdrop-blur-md bg-white/90 border border-white/30 rounded-lg shadow-lg z-[100]">
                 <div className="py-1">
                   {item.children?.map((child) => (
                     <button
@@ -395,29 +397,40 @@ const FooterNavigation = ({
 
 export const ResponsiveNavigation = React.forwardRef<HTMLDivElement, ResponsiveNavigationProps>(
   ({ children, user, notifications = 0, activeItem, onNavigate, className }, ref) => {
+    const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
     const navigationItems = getNavigationItems(user?.role);
 
     const handleItemClick = (item: NavigationItem) => {
+      setMobileMenuOpen(false);
       onNavigate?.(item);
     };
 
     return (
-      <div ref={ref} className={cn("min-h-screen flex flex-col", className)}>
+      <div ref={ref} className={cn("min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-green-50", className)}>
         {/* Header with Navigation */}
-        <div className="sticky top-0 z-50 backdrop-blur-lg bg-white/10 border-b border-white/20">
+        <header className="z-50 backdrop-blur-lg bg-white/10 border-b border-white/20 shadow-sm">
           <div className="flex h-16 items-center justify-between px-4 lg:px-6">
-            {/* Left side - Logo */}
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary/60 to-secondary/60 flex items-center justify-center">
-                <span className="text-white font-bold text-sm">CN</span>
-              </div>
-              <div className="hidden sm:block">
-                <h1 className="text-lg font-semibold text-slate-900 dark:text-white">
-                  CNKTYKLT Platform
-                </h1>
-                <p className="text-xs text-slate-600 dark:text-slate-400">
-                  Compliance Management
-                </p>
+            {/* Left side - Logo & Mobile Menu Button */}
+            <div className="flex items-center gap-3">
+              {/* Mobile Menu Button */}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="xl:hidden p-2 rounded-lg hover:bg-white/20 transition-colors"
+              >
+                {mobileMenuOpen ? (
+                  <X className="h-5 w-5 text-gray-700" />
+                ) : (
+                  <Menu className="h-5 w-5 text-gray-700" />
+                )}
+              </button>
+
+              {/* Logo */}
+              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-medical-blue to-medical-green flex items-center justify-center shadow-lg">
+                <svg className="h-6 w-6 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </div>
             </div>
 
@@ -435,11 +448,71 @@ export const ResponsiveNavigation = React.forwardRef<HTMLDivElement, ResponsiveN
               className="bg-transparent border-0 h-auto p-0 relative"
             />
           </div>
-        </div>
+
+          {/* Mobile Menu Dropdown */}
+          {mobileMenuOpen && (
+            <div className="xl:hidden border-t border-white/20 bg-white/95 backdrop-blur-lg">
+              <nav className="px-4 py-3 space-y-1 max-h-[calc(100vh-4rem)] overflow-y-auto">
+                {navigationItems.map((item) => {
+                  const isActive = activeItem === item.id;
+                  const hasChildren = item.children && item.children.length > 0;
+
+                  return (
+                    <div key={item.id}>
+                      <button
+                        onClick={() => !hasChildren && handleItemClick(item)}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
+                          isActive
+                            ? "bg-medical-blue/20 text-medical-blue"
+                            : "text-gray-700 hover:bg-white/50"
+                        )}
+                      >
+                        {item.icon}
+                        <span className="flex-1 text-left">{item.label}</span>
+                        {item.badge && (
+                          <span className="px-2 py-0.5 text-xs rounded-full bg-red-500 text-white">
+                            {item.badge}
+                          </span>
+                        )}
+                      </button>
+                      
+                      {/* Child items */}
+                      {hasChildren && (
+                        <div className="ml-4 mt-1 space-y-1">
+                          {item.children?.map((child) => (
+                            <button
+                              key={child.id}
+                              onClick={() => handleItemClick(child)}
+                              className={cn(
+                                "w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-colors",
+                                activeItem === child.id
+                                  ? "bg-medical-blue/10 text-medical-blue"
+                                  : "text-gray-600 hover:bg-white/50"
+                              )}
+                            >
+                              {child.icon}
+                              <span className="flex-1 text-left">{child.label}</span>
+                              {child.badge && (
+                                <span className="px-2 py-0.5 text-xs rounded-full bg-red-500 text-white">
+                                  {child.badge}
+                                </span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </nav>
+            </div>
+          )}
+        </header>
 
         {/* Main Content */}
         <main className={cn(
-          "flex-1 p-4 lg:p-6 overflow-auto",
+          "flex-1 p-4 lg:p-6",
           "xl:pb-4", // Normal padding on desktop
           "pb-20" // Extra padding on mobile/tablet for footer nav
         )}>

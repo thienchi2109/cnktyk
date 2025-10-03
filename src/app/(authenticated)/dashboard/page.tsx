@@ -52,8 +52,7 @@ export default async function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -173,6 +172,5 @@ export default async function DashboardPage() {
           </div>
         </GlassCard>
       </div>
-    </div>
   );
 }

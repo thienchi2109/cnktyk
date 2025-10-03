@@ -190,8 +190,7 @@ export default function ActivitiesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
-      <div className="max-w-7xl mx-auto p-6">
+    <div className="max-w-7xl mx-auto">
         {error && (
           <Alert className="mb-6 border-red-200 bg-red-50">
             <AlertDescription className="text-red-700">
@@ -225,6 +224,5 @@ export default function ActivitiesPage() {
           </GlassModal>
         )}
       </div>
-    </div>
   );
 }

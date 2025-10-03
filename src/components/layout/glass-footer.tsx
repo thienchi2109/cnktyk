@@ -16,33 +16,12 @@ export const GlassFooter = React.forwardRef<HTMLElement, GlassFooterProps>(
           className
         )}
       >
-        <div className="px-4 py-6 lg:px-6">
+        <div className="px-4 py-4 lg:px-6">
           {children || (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="text-sm text-slate-600 dark:text-slate-400">
-                <p>&copy; 2024 CNKTYKLT Platform. All rights reserved.</p>
-              </div>
-              
-              <div className="flex items-center gap-6 text-sm text-slate-600 dark:text-slate-400">
-                <a 
-                  href="#" 
-                  className="hover:text-primary transition-colors duration-200"
-                >
-                  Privacy Policy
-                </a>
-                <a 
-                  href="#" 
-                  className="hover:text-primary transition-colors duration-200"
-                >
-                  Terms of Service
-                </a>
-                <a 
-                  href="#" 
-                  className="hover:text-primary transition-colors duration-200"
-                >
-                  Support
-                </a>
-              </div>
+            <div className="flex items-center justify-center">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Phát triển bởi Phòng Tổ chức cán bộ - Sở Y tế
+              </p>
             </div>
           )}
         </div>

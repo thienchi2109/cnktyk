@@ -132,14 +132,12 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto">
         <UserProfile
           profile={profile}
           onUpdateProfile={handleUpdateProfile}
           isLoading={isLoading}
         />
-      </div>
     </div>
   );
 }

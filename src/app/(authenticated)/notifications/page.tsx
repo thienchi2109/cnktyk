@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { NotificationList } from '@/components/notifications/notification-list';
 import { AlertGenerator } from '@/components/notifications/alert-generator';
-import { ResponsiveNavigation } from '@/components/layout/responsive-navigation';
 import { ThongBao } from '@/lib/db/schemas';
 import { cn } from '@/lib/utils';
 
@@ -186,16 +185,7 @@ export default function NotificationsPage() {
   const canGenerateAlerts = ['SoYTe', 'DonVi'].includes(session.user?.role || '');
 
   return (
-    <ResponsiveNavigation
-      user={{
-        name: session.user?.username || 'User',
-        role: session.user?.role || 'User'
-      }}
-      notifications={state.unreadCount}
-      activeItem="notifications"
-    >
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
-        <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -274,8 +264,6 @@ export default function NotificationsPage() {
             onMarkAllRead={handleMarkAllRead}
             loading={state.loading}
           />
-        </div>
       </div>
-    </ResponsiveNavigation>
   );
 }

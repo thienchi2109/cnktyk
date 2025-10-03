@@ -172,69 +172,88 @@ export const GlassHeader = React.forwardRef<HTMLDivElement, GlassHeaderProps>(
 
         {/* User Menu */}
         <div className="relative">
-          <GlassButton
-            variant="ghost"
+          <button
             onClick={(e) => {
               e.stopPropagation();
               setShowUserMenu(!showUserMenu);
               setShowNotifications(false);
             }}
-            className="flex items-center gap-2 px-3"
+            className="p-1 rounded-full hover:bg-white/20 transition-all duration-200 hover:scale-105"
           >
-            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary/60 to-secondary/60 flex items-center justify-center">
+            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-medical-blue to-medical-green flex items-center justify-center shadow-lg ring-2 ring-white/50">
               {user?.avatar ? (
-                <img src={user.avatar} alt={user.name} className="h-8 w-8 rounded-full" />
+                <img src={user.avatar} alt={user.name} className="h-9 w-9 rounded-full" />
               ) : (
-                <User className="h-4 w-4 text-white" />
+                <User className="h-5 w-5 text-white" />
               )}
             </div>
-            <div className="hidden md:block text-left">
-              <p className="text-sm font-medium">{user?.name || 'User'}</p>
-              <p className="text-xs text-slate-600 dark:text-slate-400">
-                {user?.role || 'Role'}
-              </p>
-            </div>
-          </GlassButton>
+          </button>
 
           {/* User Dropdown */}
           {showUserMenu && (
-            <GlassCard className="absolute right-0 top-full mt-2 w-48 p-2 z-50">
+            <GlassCard className="absolute right-0 top-full mt-2 w-64 p-4 z-[100]">
+              {/* User Info Header */}
+              <div className="pb-3 mb-3 border-b border-gray-200/50">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary/60 to-secondary/60 flex items-center justify-center">
+                    {user?.avatar ? (
+                      <img src={user.avatar} alt={user.name} className="h-12 w-12 rounded-full" />
+                    ) : (
+                      <User className="h-6 w-6 text-white" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 truncate">{user?.name || 'User'}</p>
+                    <p className="text-xs text-gray-600 truncate">
+                      {user?.role === 'SoYTe' && 'Quản trị Sở Y Tế'}
+                      {user?.role === 'DonVi' && 'Quản lý Đơn vị'}
+                      {user?.role === 'NguoiHanhNghe' && 'Người hành nghề'}
+                      {user?.role === 'Auditor' && 'Kiểm toán viên'}
+                      {!user?.role && 'Role'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Menu Items */}
               <div className="space-y-1">
                 <button 
                   onClick={() => {
                     setShowUserMenu(false);
                     router.push('/profile');
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-white/20 transition-colors"
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-white/20 transition-colors text-gray-700"
                 >
                   <User className="h-4 w-4" />
-                  Profile
+                  <span>Hồ sơ cá nhân</span>
                 </button>
                 <button 
                   onClick={() => {
                     setShowUserMenu(false);
                     router.push('/notifications');
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-white/20 transition-colors"
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-white/20 transition-colors text-gray-700"
                 >
                   <Bell className="h-4 w-4" />
-                  Notifications
+                  <span>Thông báo</span>
                   {notifications > 0 && (
                     <span className="ml-auto px-1.5 py-0.5 text-xs rounded-full bg-red-500 text-white">
                       {notifications}
                     </span>
                   )}
                 </button>
-                <button 
-                  onClick={() => {
-                    setShowUserMenu(false);
-                    signOut({ callbackUrl: '/auth/signin' });
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-white/20 transition-colors text-red-600"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Sign Out
-                </button>
+                <div className="pt-2 mt-2 border-t border-gray-200/50">
+                  <button 
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      signOut({ callbackUrl: '/auth/signin' });
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-red-50 transition-colors text-red-600"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Đăng xuất</span>
+                  </button>
+                </div>
               </div>
             </GlassCard>
           )}

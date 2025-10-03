@@ -19,8 +19,7 @@ export default async function SubmissionDetailPage({ params }: SubmissionDetailP
   const { id } = await params;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
-      <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto">
         <Suspense fallback={
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-medical-blue"></div>
@@ -32,7 +31,6 @@ export default async function SubmissionDetailPage({ params }: SubmissionDetailP
             onBack={() => window.history.back()}
           />
         </Suspense>
-      </div>
     </div>
   );
 }
