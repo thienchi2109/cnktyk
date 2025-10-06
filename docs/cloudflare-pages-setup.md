@@ -130,23 +130,31 @@ Target: cnktyklt-platform.pages.dev
 
 ### Build Configuration
 
-```toml
-# wrangler.toml
-name = "cnktyklt-platform"
-compatibility_date = "2025-01-10"
-pages_build_output_dir = ".next"
+**Important:** For Cloudflare Pages, build configuration is primarily managed through the dashboard or GitHub Actions, not `wrangler.toml`.
 
-[build]
-command = "npm run build"
+Configure in Cloudflare Pages dashboard:
+```yaml
+Build command: npm run build
+Build output directory: .next
+Root directory: /
+Node version: 20
 ```
+
+The `wrangler.toml` file is used for:
+- R2 bucket bindings
+- KV namespace bindings (optional)
+- Compatibility flags
+- Environment-specific settings
 
 ### Node.js Compatibility
 
-Ensure `nodejs_compat` flag is enabled for Next.js:
+The `wrangler.toml` includes `nodejs_compat` flag for Next.js:
 
 ```toml
 compatibility_flags = ["nodejs_compat"]
 ```
+
+This is automatically applied when deploying.
 
 ## Step 6: Set Up R2 Bindings
 

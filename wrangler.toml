@@ -1,22 +1,12 @@
 # Cloudflare Pages Configuration for CNKTYKLT Platform
 # This file configures the Cloudflare Pages deployment
+# Note: For Pages, most configuration is done via the dashboard or wrangler CLI
 
 name = "cnktyklt-platform"
 compatibility_date = "2025-01-10"
-pages_build_output_dir = ".vercel/output/static"
 
 # Node.js compatibility for Next.js
 compatibility_flags = ["nodejs_compat"]
-
-# Environment variables for production
-[env.production]
-NODE_VERSION = "20"
-
-# Build configuration
-[build]
-command = "npm run build"
-cwd = ""
-watch_dirs = ["src", "components", "lib"]
 
 # R2 bucket bindings for file storage
 [[r2_buckets]]
@@ -25,17 +15,36 @@ bucket_name = "cnktyklt-syt"
 preview_bucket_name = "cnktyklt-syt-preview"
 
 # KV namespace for session storage (optional)
-[[kv_namespaces]]
-binding = "SESSIONS"
-id = "placeholder_production_id"
-preview_id = "placeholder_preview_id"
+# Uncomment and configure after creating KV namespace
+# [[kv_namespaces]]
+# binding = "SESSIONS"
+# id = "your_production_kv_id"
+# preview_id = "your_preview_kv_id"
 
 # Analytics engine binding (optional)
-[[analytics_engine_datasets]]
-binding = "ANALYTICS"
+# Uncomment after setting up Analytics Engine
+# [[analytics_engine_datasets]]
+# binding = "ANALYTICS"
 
-# Custom domains (configure after deployment)
-# routes = [
-#   { pattern = "cnktyklt.gov.vn", custom_domain = true },
-#   { pattern = "www.cnktyklt.gov.vn", custom_domain = true }
-# ]
+# Environment-specific configuration
+[env.production]
+NODE_VERSION = "20"
+
+# R2 buckets for production environment
+[[env.production.r2_buckets]]
+binding = "EVIDENCE_FILES"
+bucket_name = "cnktyklt-production"
+
+# Preview environment configuration
+[env.preview]
+NODE_VERSION = "20"
+
+[[env.preview.r2_buckets]]
+binding = "EVIDENCE_FILES"
+bucket_name = "cnktyklt-syt-preview"
+
+# Note: Build configuration is managed via Cloudflare Pages dashboard or GitHub Actions
+# - Build command: npm run build
+# - Build output directory: .next
+# - Root directory: /
+# - Node version: 20
