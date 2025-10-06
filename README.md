@@ -150,6 +150,65 @@ The platform includes a comprehensive audit logging system that tracks:
 3. Ensure all components follow the glassmorphism design system
 4. Test with different user roles and permissions
 
+## Production Deployment
+
+### Quick Deploy
+
+```bash
+# 1. Verify environment
+npm run verify:production
+
+# 2. Build and check
+npm run build:check
+
+# 3. Deploy to Cloudflare Pages
+npm run deploy:production
+
+# 4. Seed initial data (first time only)
+npm run seed:production
+```
+
+### Deployment Guides
+
+- **Complete Guide**: See `docs/deployment-guide.md` for comprehensive deployment instructions
+- **Cloudflare Setup**: See `docs/cloudflare-pages-setup.md` for Cloudflare Pages configuration
+- **Security**: See `docs/security-hardening.md` for security best practices
+- **Checklist**: See `docs/production-checklist.md` for pre/post-deployment verification
+
+### Environment Variables
+
+Copy `.env.production.template` and configure for your production environment:
+
+```bash
+cp .env.production.template .env.production
+# Edit .env.production with your production values
+```
+
+**Critical variables:**
+- `NEXTAUTH_URL` - Your production domain (HTTPS)
+- `NEXTAUTH_SECRET` - Generate with: `openssl rand -base64 32`
+- `DATABASE_URL` - Neon production connection string
+- `CF_R2_*` - Cloudflare R2 credentials
+
+### CI/CD
+
+Automatic deployment via GitHub Actions:
+- **Production**: Push to `main` branch
+- **Preview**: Create pull request
+
+### Monitoring
+
+- **Cloudflare Analytics**: Enabled by default
+- **Error Tracking**: Configure Sentry (optional)
+- **Logs**: View in Cloudflare Pages dashboard
+
+### Support
+
+For deployment issues:
+1. Check `docs/deployment-guide.md` troubleshooting section
+2. Run `npm run verify:production` for diagnostics
+3. Review Cloudflare Pages deployment logs
+
 ## License
 
 This project is proprietary software for the Department of Health.

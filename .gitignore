@@ -16,6 +16,26 @@ dist/
 .env.development.local
 .env.test.local
 .env.production.local
+.env.production
+
+# Wrangler
+.wrangler/
+wrangler.toml.backup
+
+# Deployment artifacts
+.vercel/
+.cloudflare/
+
+# Backup files
+*.backup
+*.bak
+backup_*.sql.gz
+
+# Security
+*.pem
+*.key
+*.cert
+secrets/
 
 # IDE
 .vscode/
