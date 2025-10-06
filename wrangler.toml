@@ -9,10 +9,12 @@ compatibility_date = "2025-01-10"
 compatibility_flags = ["nodejs_compat"]
 
 # R2 bucket bindings for file storage
+# Bucket: cnktyklt-syt (Asia-Pacific APAC)
+# Account: 643c80a3c4819db1be3f8e7174ad8501
 [[r2_buckets]]
 binding = "EVIDENCE_FILES"
 bucket_name = "cnktyklt-syt"
-preview_bucket_name = "cnktyklt-syt-preview"
+preview_bucket_name = "cnktyklt-syt"  # Using same bucket for preview (create separate if needed)
 
 # KV namespace for session storage (optional)
 # Uncomment and configure after creating KV namespace
@@ -33,7 +35,7 @@ NODE_VERSION = "20"
 # R2 buckets for production environment
 [[env.production.r2_buckets]]
 binding = "EVIDENCE_FILES"
-bucket_name = "cnktyklt-production"
+bucket_name = "cnktyklt-syt"  # Production bucket
 
 # Preview environment configuration
 [env.preview]
@@ -41,7 +43,7 @@ NODE_VERSION = "20"
 
 [[env.preview.r2_buckets]]
 binding = "EVIDENCE_FILES"
-bucket_name = "cnktyklt-syt-preview"
+bucket_name = "cnktyklt-syt"  # Using same bucket (create cnktyklt-syt-preview for isolation)
 
 # Note: Build configuration is managed via Cloudflare Pages dashboard or GitHub Actions
 # - Build command: npm run build
