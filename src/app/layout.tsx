@@ -1,16 +1,33 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+// Use system fonts for better compatibility
+const systemFonts = [
+  "system-ui",
+  "-apple-system",
+  "BlinkMacSystemFont",
+  '"Segoe UI"',
+  "Roboto",
+  '"Helvetica Neue"',
+  "Arial",
+  '"Noto Sans"',
+  "sans-serif",
+  '"Apple Color Emoji"',
+  '"Segoe UI Emoji"',
+  '"Segoe UI Symbol"',
+  '"Noto Color Emoji"',
+];
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const systemMonoFonts = [
+  "ui-monospace",
+  "SFMono-Regular",
+  '"SF Mono"',
+  "Consolas",
+  '"Liberation Mono"',
+  "Menlo",
+  "monospace",
+];
+
 import { AuthProvider } from "@/components/providers/session-provider";
 
 export const metadata: Metadata = {
@@ -26,7 +43,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className="antialiased"
+        style={{
+          fontFamily: systemFonts.join(', '),
+        }}
       >
         <AuthProvider>
           {children}

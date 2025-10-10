@@ -1,7 +1,4 @@
-import { neon, neonConfig } from '@neondatabase/serverless';
-
-// Configure Neon for optimal performance
-neonConfig.fetchConnectionCache = true;
+import { neon } from '@neondatabase/serverless';
 
 // Database client class for managing connections and queries
 export class DatabaseClient {

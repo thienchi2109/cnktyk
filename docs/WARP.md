@@ -362,7 +362,7 @@ CLOUDFLARE_R2_PUBLIC_URL="https://files.example.com"
 
 ### Performance Optimizations
 
-- Connection caching enabled: `neonConfig.fetchConnectionCache = true`
+- Connection caching enabled by default (no configuration needed)
 - Pagination for large result sets: Use `db.paginate()`
 - Indexes already defined in schema - leverage them in queries
 - Consider React Query for client-side caching (spec mentions TanStack Query v5)

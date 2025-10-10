@@ -8,3 +8,8 @@ pages_build_output_dir = ".next"
 
 # Node.js compatibility for Next.js
 compatibility_flags = ["nodejs_compat"]
+
+# R2 bindings for file storage
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "cnktyklt-syt"
