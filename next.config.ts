@@ -9,6 +9,14 @@ const nextConfig: NextConfig = {
     // Skip TypeScript type checking during builds (we handle it separately)
     ignoreBuildErrors: false, // Keep this false to catch actual TS errors
   },
+  // Fix for Cloudflare Pages deployment
+  images: {
+    unoptimized: true,
+  },
+  // Skip static generation for problematic routes
+  experimental: {
+    missingSuspenseWithCSRBailout: false,
+  },
 };
 
 export default nextConfig;
