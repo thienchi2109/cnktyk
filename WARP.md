@@ -4,7 +4,7 @@ This file provides guidance to WARP (warp.dev) when working with code in this re
 
 ## Project Overview
 
-**CNKTYKLT Compliance Management Platform** - Healthcare compliance tracking system for managing Continuing Professional Development (CPD) credits for Vietnamese healthcare practitioners. Tracks activities, approvals, and 5-year cycle compliance across Department of Health and healthcare units.
+**CNKTYKLT Compliance Management Platform** - A healthcare compliance tracking system for managing Continuing Professional Development (CPD) credits for Vietnamese healthcare practitioners. Tracks activities, approvals, and 5-year cycle compliance across Department of Health and healthcare units.
 
 **Tech Stack:**
 - Next.js 15.5.4 (App Router) with React 19 and TypeScript
@@ -34,14 +34,8 @@ npm run typecheck
 # Run ESLint (warnings only)
 npm run lint
 
-# Fix ESLint issues automatically
-npm run lint:fix
-
 # Run both typecheck and lint
 npm run check
-
-# Complete build verification
-npm run build:check
 ```
 
 ### Database Testing
@@ -59,63 +53,23 @@ npx tsx scripts/test-core-functionality.ts
 npx tsx scripts/test-complete-system.ts
 ```
 
-### Production Deployment
+### Database Utilities
+Apply initial schema migration:
 ```powershell
-# Verify production environment
-npm run verify:production
-
-# Deploy to Cloudflare Pages (preview)
-npm run deploy:preview
-
-# Deploy to Cloudflare Pages (production)
-npm run deploy:production
-
-# Seed initial production data (first time only)
-npm run seed:production
+# Connect to Neon and run v_1_init_schema.sql manually via psql or Neon SQL editor
 ```
-
-### Database Management
-**CRITICAL:** Database migrations are NEVER applied through automated tools.
-
-- Migration files belong in `/supabase/migrations/` (if folder exists) or at project root
-- Naming format: `DDMMYYYYHHMM_clear_descriptive_name.sql`
-- Example: `061220241430_add_regional_leader_equipment_access.sql`
-- Must include header comment block with purpose and dependencies
-- Always wait for manual review and application via database console
-- Current schema: `v_1_init_schema.sql` (in `docs/` folder)
 
 ## Architecture
 
 ### Multi-Tenant Role-Based System
 
-**Role Hierarchy (CRITICAL - from project rules):**
-```
-global → Full system access (all regions, all operations)
-  ↓
-regional_leader → READ-ONLY access to all facilities in assigned dia_ban
-  ↓
-to_qltb → Full access to single facility's equipment
-  ↓
-admin → Legacy admin role (facility-level admin)
-  ↓
-technician, user → Limited facility access
-```
-
-**Current Implementation (as documented in WARP.md):**
+**Four User Roles:**
 1. **SoYTe** (Department of Health) - Full system access across all units
 2. **DonVi** (Unit Admin) - Access to their unit's data only
 3. **NguoiHanhNghe** (Practitioner) - Access to own activity records
 4. **Auditor** - Read-only access for compliance auditing
 
 **Data Isolation:** Application-level enforcement via `WHERE` clauses (RLS disabled). Unit admins can only access `WHERE MaDonVi = :jwt.maDonVi`.
-
-**Regional Leader Constraints (from rules):**
-- READ-ONLY access enforced at all levels
-- Cannot perform write operations (INSERT, UPDATE, DELETE)
-- Cannot manage users
-- Limited to assigned `dia_ban` (region)
-- All queries must validate `dia_ban` access
-- UI must hide/disable write actions for this role
 
 ### Database Layer Architecture
 
@@ -140,6 +94,8 @@ Located in `src/lib/db/`:
   - `authenticateUser(username, password)` - Returns auth result with user object
   - `hashPassword()`, `verifyPassword()` 
   - Audit logging helpers
+
+- **migrations.ts** - Migration utilities (manual schema execution for now)
 
 ### Authentication Flow
 
@@ -293,23 +249,12 @@ const progress = (totalCredits / quyTac.TongTinChiYeuCau) * 100; // Target: 120 
 
 ## Development Guidelines
 
-### Import Hierarchy (from project rules)
-1. Use `@/*` alias for all internal imports
-2. Group imports in this order:
-   - React/Next.js core
-   - Third-party libraries
-   - Internal components (@/components)
-   - Internal utilities (@/lib)
-   - Types (@/types)
-3. Never use relative imports beyond single-level (`./` only for same-directory files)
-
 ### TypeScript Strict Mode
 
 - **No `any` types** - Create proper interfaces or use `unknown`
 - All functions have explicit return types
 - Props validated with proper interfaces
 - Enable `strict: true` in tsconfig.json
-- **Type role as:** `'global' | 'regional_leader' | 'to_qltb' | 'admin' | 'technician' | 'user'`
 
 ### Database Operations
 
@@ -323,41 +268,27 @@ const user = await taiKhoanRepo.findByUsername(username);
 
 **Never write raw SQL directly in components** - Use repository methods or add new methods to repositories.
 
-### Security Patterns (CRITICAL from project rules)
+### Security Patterns
 
-1. **JWT & Session Management:**
-   - **ALWAYS** derive user context from server session, never from client headers
-   - **ALWAYS** include `role`, `don_vi`, and `dia_ban` in JWT claims
-   - **NEVER** trust `p_don_vi` or `p_dia_ban` from non-global users without sanitization
-   - **VALIDATE** every API route against session.role before processing
-   - **CHECK** regional_leader dia_ban assignment for region-based queries
-
-2. **Multi-Tenancy & Regional Access:**
-   - **FILTER** data based on role hierarchy
-   - **ENFORCE** read-only access for regional_leader role
-   - **VALIDATE** dia_ban access for regional operations
-   - **PREVENT** cross-region data exposure for regional_leader
-   - **CHECK** session.don_vi matches requested resource tenant (non-regional roles)
-
-3. **Password Handling:**
+1. **Password Handling:**
    ```typescript
    // ALWAYS hash with bcryptjs (Workers compatible)
    const hashedPassword = await bcrypt.hash(password, 10);
    ```
 
-4. **Tenant Isolation:**
+2. **Tenant Isolation:**
    ```typescript
    // For DonVi role, always filter by unit:
    WHERE "MaDonVi" = req.auth.user.unitId
    ```
 
-5. **Input Validation:**
+3. **Input Validation:**
    ```typescript
    // Validate with Zod before DB operations
    const validated = CreateNhanVienSchema.parse(data);
    ```
 
-6. **Audit Logging:**
+4. **Audit Logging:**
    ```typescript
    // Log all mutations to NhatKyHeThong
    await auditLog({
@@ -399,24 +330,9 @@ export async function GET(request: Request) {
 }
 ```
 
-### Regional Leader Specific Rules (from project rules)
-
-- **DENY** all write operations for regional_leader role
-- **DENY** user management operations for regional_leader
-- **ALLOW** read access to all facilities within assigned dia_ban
-- **REQUIRE** dia_ban validation in all regional queries
-- **LOG** regional_leader access for audit purposes
-
-### Role-Based UI Rendering (from project rules)
-
-- **SHOW** read-only interfaces for regional_leader
-- **HIDE** action buttons for unauthorized operations
-- **DISABLE** form inputs based on role permissions
-- **INDICATE** permission level in UI clearly
-
 ## Environment Variables
 
-Required variables (see `.env.production.template`):
+Required variables (see `.env.example`):
 
 ```env
 # Database (Neon PostgreSQL)
@@ -444,21 +360,57 @@ CLOUDFLARE_R2_PUBLIC_URL="https://files.example.com"
 - **Edge runtime compatible** - No Node.js-specific APIs unless marked `runtime = 'nodejs'`
 - **R2 file uploads** via API routes (stream to R2, return URL)
 
-### Dual Deployment Support
+### Performance Optimizations
+
+- Connection caching enabled by default (no configuration needed)
+- Pagination for large result sets: Use `db.paginate()`
+- Indexes already defined in schema - leverage them in queries
+- Consider React Query for client-side caching (spec mentions TanStack Query v5)
+
+### Build Targets
 
 Project supports dual deployment:
 - **Primary**: Cloudflare Workers + Pages
 - **Fallback**: Vercel (requires Node.js runtime for some features)
 
-Check feature compatibility with both platforms.
+## Testing Strategy
 
-## Documentation References
+**Database Tests** (in `scripts/`):
+- `test-database.ts` - Connection health and latency
+- `test-repositories.ts` - CRUD operations for each repository
+- `test-core-functionality.ts` - Business logic (auth, credit calculation)
+- `test-complete-system.ts` - Full integration test
 
-- **Deployment Guide:** `docs/deployment-guide.md`
-- **Cloudflare Setup:** `docs/cloudflare-pages-setup.md`
-- **Security Hardening:** `docs/security-hardening.md`
-- **Audit System:** `docs/audit-system.md`
-- **Database Schema:** `docs/v_1_init_schema.sql`
+**Run all tests:**
+```powershell
+npx tsx scripts/test-complete-system.ts
+```
+
+## Project Status
+
+**Current Phase:** Authentication system implemented, ready for UI development
+
+**Completed:**
+- ✅ Database layer with full repository pattern
+- ✅ NextAuth.js configuration with role-based middleware
+- ✅ Zod validation schemas for all entities
+- ✅ Base UI components (glasscn-ui)
+- ✅ Project structure and configuration
+
+**Next Steps:**
+- Dashboard layouts for each role
+- Activity submission forms
+- Approval workflows
+- File upload integration (R2)
+- Compliance tracking views
+- Reporting and analytics
+
+## Useful References
+
+- **Spec Document:** `spec_001_cnktyklt_compliance_management_platform (2).md`
+- **Database Schema:** `v_1_init_schema.sql`
+- **Project State:** `.serena/memories/project-current-state.md`
+- **Architecture:** `.serena/memories/database-technical-architecture.md`
 
 ## Package Manager
 
