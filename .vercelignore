@@ -1,0 +1,12 @@
+.env.local
+.env*.local
+node_modules
+.next
+out
+.git
+.github
+.vscode
+.kiro
+.serena
+wrangler.toml
+docs

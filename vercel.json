@@ -1,0 +1,16 @@
+{
+  "buildCommand": "npm run build",
+  "framework": "nextjs",
+  "regions": ["sin1"],
+  "env": {
+    "NEXTAUTH_URL": "@nextauth_url",
+    "NEXTAUTH_SECRET": "@nextauth_secret",
+    "DATABASE_URL": "@database_url",
+    "CF_R2_ACCOUNT_ID": "@cf_r2_account_id",
+    "CF_R2_ACCESS_KEY_ID": "@cf_r2_access_key_id",
+    "CF_R2_SECRET_ACCESS_KEY": "@cf_r2_secret_access_key",
+    "CF_R2_BUCKET_NAME": "@cf_r2_bucket_name",
+    "CF_R2_ENDPOINT": "@cf_r2_endpoint",
+    "CF_R2_PUBLIC_URL": "@cf_r2_public_url"
+  }
+}
