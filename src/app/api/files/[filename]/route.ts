@@ -63,6 +63,15 @@ export async function GET(
 
   } catch (error) {
     console.error('File retrieval error:', error);
+    
+    // Handle R2 configuration errors gracefully
+    if (error instanceof Error && error.message.includes('Cloudflare R2 is not configured')) {
+      return NextResponse.json(
+        { error: 'File storage is not configured' },
+        { status: 503 }
+      );
+    }
+    
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -25,26 +25,43 @@ export interface UploadResult {
 }
 
 class R2StorageClient {
-  private client: S3Client;
+  private client: S3Client | null = null;
   private bucketName: string;
   private publicUrl: string;
+  private isConfigured: boolean = false;
 
   constructor() {
-    if (!process.env.CF_R2_ACCOUNT_ID || !process.env.CF_R2_ACCESS_KEY_ID || !process.env.CF_R2_SECRET_ACCESS_KEY) {
-      throw new Error('Missing Cloudflare R2 configuration. Please check environment variables.');
+    // Check if R2 is properly configured
+    const requiredVars = [
+      'CF_R2_ACCOUNT_ID',
+      'CF_R2_ACCESS_KEY_ID', 
+      'CF_R2_SECRET_ACCESS_KEY',
+      'CF_R2_BUCKET_NAME',
+      'CF_R2_ENDPOINT',
+      'CF_R2_PUBLIC_URL'
+    ];
+
+    const missingVars = requiredVars.filter(varName => !process.env[varName]);
+    
+    if (missingVars.length === 0) {
+      this.isConfigured = true;
+      this.bucketName = process.env.CF_R2_BUCKET_NAME!;
+      this.publicUrl = process.env.CF_R2_PUBLIC_URL!;
+
+      this.client = new S3Client({
+        region: 'auto',
+        endpoint: process.env.CF_R2_ENDPOINT!,
+        credentials: {
+          accessKeyId: process.env.CF_R2_ACCESS_KEY_ID!,
+          secretAccessKey: process.env.CF_R2_SECRET_ACCESS_KEY!,
+        },
+      });
+    } else {
+      console.warn('Cloudflare R2 not configured. File upload/download features will be disabled. Missing variables:', missingVars.join(', '));
+      this.isConfigured = false;
+      this.bucketName = '';
+      this.publicUrl = '';
     }
-
-    this.bucketName = process.env.CF_R2_BUCKET_NAME!;
-    this.publicUrl = process.env.CF_R2_PUBLIC_URL!;
-
-    this.client = new S3Client({
-      region: 'auto',
-      endpoint: process.env.CF_R2_ENDPOINT!,
-      credentials: {
-        accessKeyId: process.env.CF_R2_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.CF_R2_SECRET_ACCESS_KEY!,
-      },
-    });
   }
 
   /**
@@ -55,6 +72,13 @@ class R2StorageClient {
     filename: string, 
     metadata: Partial<FileMetadata> = {}
   ): Promise<UploadResult> {
+    if (!this.isConfigured || !this.client) {
+      return {
+        success: false,
+        error: 'Cloudflare R2 is not configured. File upload functionality is disabled.',
+      };
+    }
+
     try {
       const buffer = await file.arrayBuffer();
       
@@ -103,6 +127,10 @@ class R2StorageClient {
    * Get a signed URL for secure file access
    */
   async getSignedUrl(filename: string, expiresIn: number = 3600): Promise<string> {
+    if (!this.isConfigured || !this.client) {
+      throw new Error('Cloudflare R2 is not configured. File access functionality is disabled.');
+    }
+
     const command = new GetObjectCommand({
       Bucket: this.bucketName,
       Key: filename,
@@ -115,6 +143,11 @@ class R2StorageClient {
    * Delete a file from R2 storage
    */
   async deleteFile(filename: string): Promise<boolean> {
+    if (!this.isConfigured || !this.client) {
+      console.warn('Cloudflare R2 is not configured. File deletion functionality is disabled.');
+      return false;
+    }
+
     try {
       const command = new DeleteObjectCommand({
         Bucket: this.bucketName,
@@ -133,6 +166,10 @@ class R2StorageClient {
    * Check if a file exists in R2 storage
    */
   async fileExists(filename: string): Promise<boolean> {
+    if (!this.isConfigured || !this.client) {
+      return false;
+    }
+
     try {
       const command = new HeadObjectCommand({
         Bucket: this.bucketName,
@@ -150,6 +187,10 @@ class R2StorageClient {
    * Get file metadata from R2 storage
    */
   async getFileMetadata(filename: string): Promise<FileMetadata | null> {
+    if (!this.isConfigured || !this.client) {
+      return null;
+    }
+
     try {
       const command = new HeadObjectCommand({
         Bucket: this.bucketName,
@@ -171,6 +212,13 @@ class R2StorageClient {
       console.error('R2 metadata error:', error);
       return null;
     }
+  }
+
+  /**
+   * Check if R2 is properly configured
+   */
+  isR2Configured(): boolean {
+    return this.isConfigured;
   }
 }
 
