@@ -372,8 +372,17 @@ interface NhanVien {
   Email?: string;
   DienThoai?: string;
   ChucDanh?: string;       // Position/title
+  // Extended fields (Migration 002)
+  MaNhanVienNoiBo?: string;    // Internal employee ID
+  NgaySinh?: Date;             // Date of birth
+  GioiTinh?: 'Nam' | 'Nữ' | 'Khác';  // Gender
+  KhoaPhong?: string;          // Department/Division
+  NoiCapCCHN?: string;         // Issuing authority
+  PhamViChuyenMon?: string;    // Scope of practice
 }
 ```
+
+**Note**: Extended fields added in Migration 002 (October 2024) to support comprehensive practitioner information from bulk import system. See `docs/migrations/002_add_nhanvien_extended_fields.sql` for details.
 
 #### GhiNhanHoatDong (Activity Record)
 ```typescript
@@ -430,6 +439,64 @@ interface ApiSuccess<T> {
   data: T;
 }
 ```
+
+## Database Migrations
+
+### Migration History
+
+#### Migration 001: Initial Schema
+**File**: `docs/v_1_init_schema.sql`
+**Date**: October 2024
+**Description**: Initial database schema with core tables
+
+**Tables Created**:
+- `DonVi` - Healthcare units and organizational hierarchy
+- `TaiKhoan` - User accounts with role-based access
+- `NhanVien` - Healthcare practitioners (basic fields)
+- `DanhMucHoatDong` - Activity catalog
+- `QuyTacTinChi` - Credit rules
+- `GhiNhanHoatDong` - Activity submissions
+- `KyCNKT` - Compliance cycles (5-year periods)
+- `ThongBao` - In-app notifications
+- `NhatKyHeThong` - Audit log
+
+#### Migration 002: Extended Practitioner Fields
+**File**: `docs/migrations/002_add_nhanvien_extended_fields.sql`
+**Date**: October 14, 2025
+**Description**: Add extended fields to NhanVien table for bulk import support
+
+**Changes**:
+- Added `MaNhanVienNoiBo` TEXT - Internal employee ID
+- Added `NgaySinh` DATE - Date of birth
+- Added `GioiTinh` TEXT - Gender (Nam/Nữ/Khác)
+- Added `KhoaPhong` TEXT - Department/Division
+- Added `NoiCapCCHN` TEXT - Issuing authority
+- Added `PhamViChuyenMon` TEXT - Scope of practice
+- Added CHECK constraint for gender values
+- Added CHECK constraint for minimum age (18 years)
+- Created indexes for performance optimization
+
+**Impact**:
+- Enables comprehensive practitioner data import from Excel
+- Supports demographic reporting and filtering
+- Maintains backward compatibility (all new fields nullable)
+- TypeScript schemas updated in `lib/db/schemas.ts`
+- Frontend types added in `src/types/practitioner.ts`
+- Mapper utilities created in `src/lib/api/practitioner-mapper.ts`
+
+**Running Migration**:
+```bash
+npx tsx scripts/run-migration-002.ts
+```
+
+### Migration Best Practices
+
+1. **Version Control**: All migrations stored in `docs/migrations/` with sequential numbering
+2. **Idempotent**: Use `IF NOT EXISTS` and `IF EXISTS` for safe re-runs
+3. **Rollback Scripts**: Include rollback instructions in migration comments
+4. **Testing**: Test migrations on development database before production
+5. **Documentation**: Update design document and type definitions
+6. **Backward Compatibility**: Prefer adding nullable columns over breaking changes
 
 ## Testing Strategy
 

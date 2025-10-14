@@ -120,12 +120,15 @@
   - Create export preview functionality with glass modal interface
   - _Requirements: 3.3, 3.4, 7.1, 7.2_
 
-- [ ] 16. Develop bulk import system
-  - Create CSV import API route with data validation and error handling
-  - Build bulk import interface with file upload and preview
-  - Implement upsert operations for practitioners and historical credits
-  - Create import status tracking and error reporting system
+- [ ] 16. Develop bulk import system (Excel-based for DonVi users)
+  - Create Excel template generator with formatted sheets (Practitioners + Activities)
+  - Build file upload and validation API with comprehensive error checking
+  - Implement Excel parsing with exceljs library and business rule validation
+  - Create import execution API with transaction-based upsert operations
+  - Build import UI with drag-drop upload, validation results, and progress tracking
+  - Add import history tracking and audit logging
   - _Requirements: 7.1, 7.2, 7.3, 7.4_
+  - _See: TASK_16_BULK_IMPORT_PLAN.md and EXCEL_TEMPLATE_SCHEMA.md for details_
 
 - [x] 17. Implement audit logging system
 

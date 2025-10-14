@@ -8,6 +8,7 @@ export const QuyenHanSchema = z.enum(['SoYTe', 'DonVi', 'NguoiHanhNghe', 'Audito
 export const LoaiHoatDongSchema = z.enum(['KhoaHoc', 'HoiThao', 'NghienCuu', 'BaoCao']);
 export const DonViTinhSchema = z.enum(['gio', 'tiet', 'tin_chi']);
 export const TrangThaiThongBaoSchema = z.enum(['Moi', 'DaDoc']);
+export const GioiTinhSchema = z.enum(['Nam', 'Nữ', 'Khác']);
 
 // UUID validation schema
 export const UUIDSchema = z.string().uuid();
@@ -60,7 +61,33 @@ export const NhanVienSchema = z.object({
   Email: z.string().email().nullable().or(z.literal('')),
   DienThoai: z.string().nullable(),
   ChucDanh: z.string().nullable(),
-});
+  // Extended fields (added in migration 002)
+  MaNhanVienNoiBo: z.string().max(50).nullable(),
+  NgaySinh: z.date().nullable(),
+  GioiTinh: GioiTinhSchema.nullable(),
+  KhoaPhong: z.string().max(100).nullable(),
+  NoiCapCCHN: z.string().max(200).nullable(),
+  PhamViChuyenMon: z.string().max(200).nullable(),
+}).refine(
+  (data) => {
+    // Validate age >= 18 if date of birth is provided
+    if (data.NgaySinh) {
+      const today = new Date();
+      const birthDate = new Date(data.NgaySinh);
+      const age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      const dayDiff = today.getDate() - birthDate.getDate();
+      
+      const actualAge = monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
+      return actualAge >= 18;
+    }
+    return true;
+  },
+  {
+    message: 'Practitioner must be at least 18 years old',
+    path: ['NgaySinh'],
+  }
+);
 
 export const CreateNhanVienSchema = NhanVienSchema.omit({ MaNhanVien: true });
 export const UpdateNhanVienSchema = CreateNhanVienSchema.partial().extend({
