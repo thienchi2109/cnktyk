@@ -93,7 +93,7 @@ export interface ImportPractitioner {
  */
 export interface PractitionerDisplay extends Practitioner {
   // Computed fields
-  Tuoi?: number; // Age calculated from NgaySinh
+  Tuoi?: number | null; // Age calculated from NgaySinh
   TenDonVi?: string; // Unit name (from join)
   TongTinChi?: number; // Total credits (from join)
   TienDoHoanThanh?: number; // Completion percentage

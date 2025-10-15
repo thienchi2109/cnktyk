@@ -178,6 +178,15 @@ export const GhiNhanHoatDongSchema = z.object({
   TrangThaiDuyet: TrangThaiDuyetSchema.default('ChoDuyet'),
   ThoiGianDuyet: z.date().nullable(),
   GhiChu: z.string().nullable(),
+  // Extended fields for bulk import (Migration 003)
+  HinhThucCapNhatKienThucYKhoa: z.string().nullable(),
+  ChiTietVaiTro: z.string().nullable(),
+  DonViToChuc: z.string().nullable(),
+  NgayBatDau: z.date().nullable(),
+  NgayKetThuc: z.date().nullable(),
+  SoTiet: z.number().min(0).nullable(),
+  SoGioTinChiQuyDoi: z.number().min(0).nullable(),
+  BangChungSoGiayChungNhan: z.string().nullable(),
   CreatedAt: z.date(),
   UpdatedAt: z.date(),
 }).refine(
@@ -190,6 +199,18 @@ export const GhiNhanHoatDongSchema = z.object({
   {
     message: 'End time must be after start time',
     path: ['ThoiGianKetThuc'],
+  }
+).refine(
+  (data) => {
+    // NgayKetThuc must be after or equal to NgayBatDau
+    if (data.NgayBatDau !== null && data.NgayKetThuc !== null) {
+      return data.NgayKetThuc >= data.NgayBatDau;
+    }
+    return true;
+  },
+  {
+    message: 'End date must be after or equal to start date',
+    path: ['NgayKetThuc'],
   }
 );
 
