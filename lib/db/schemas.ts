@@ -185,7 +185,6 @@ export const GhiNhanHoatDongSchema = z.object({
   NgayBatDau: z.date().nullable(),
   NgayKetThuc: z.date().nullable(),
   SoTiet: z.number().min(0).nullable(),
-  SoGioTinChiQuyDoi: z.number().min(0).nullable(),
   BangChungSoGiayChungNhan: z.string().nullable(),
   CreatedAt: z.date(),
   UpdatedAt: z.date(),

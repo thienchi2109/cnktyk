@@ -97,7 +97,7 @@ Based on the new schema, the Activities sheet in the Excel template maps as foll
 | F | Ngày bắt đầu | NgayBatDau |
 | G | Ngày kết thúc | NgayKetThuc |
 | H | Số tiết (nếu có) | SoTiet |
-| I | Số giờ tín chỉ quy đổi | SoGioTinChiQuyDoi |
+| I | Số giờ tín chỉ quy đổi | SoTinChiQuyDoi (existing) |
 | J | Bằng chứng (Số Giấy chứng nhận) | BangChungSoGiayChungNhan |
 
 ## Running the Migration
@@ -209,7 +209,6 @@ export async function GET(request: NextRequest) {
       "NgayBatDau",
       "NgayKetThuc",
       "SoTiet",
-      "SoGioTinChiQuyDoi",
       "BangChungSoGiayChungNhan",
       "CreatedAt",
       "UpdatedAt"
@@ -248,8 +247,8 @@ export async function POST(request: NextRequest) {
       "MaNhanVien", "TenHoatDong", "SoTinChiQuyDoi", "NguoiNhap",
       "TrangThaiDuyet", "HinhThucCapNhatKienThucYKhoa", "ChiTietVaiTro",
       "DonViToChuc", "NgayBatDau", "NgayKetThuc", "SoTiet",
-      "SoGioTinChiQuyDoi", "BangChungSoGiayChungNhan"
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      "BangChungSoGiayChungNhan"
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
     RETURNING *
   `, [
     body.MaNhanVien,
@@ -263,7 +262,6 @@ export async function POST(request: NextRequest) {
     body.NgayBatDau,
     body.NgayKetThuc,
     body.SoTiet,
-    body.SoGioTinChiQuyDoi,
     body.BangChungSoGiayChungNhan
   ]);
 
@@ -319,8 +317,8 @@ export function ActivityForm({ activity }: { activity?: Activity }) {
       />
       <input 
         type="number" 
-        name="SoGioTinChiQuyDoi" 
-        defaultValue={activity?.SoGioTinChiQuyDoi || ''} 
+        name="SoTinChiQuyDoi" 
+        defaultValue={activity?.SoTinChiQuyDoi || ''} 
         placeholder="Số giờ tín chỉ quy đổi"
         step="0.01"
         required
@@ -401,10 +399,10 @@ export function ActivityDetail({ activity }: { activity: ActivityDisplay }) {
         </div>
       )}
       
-      {activity.SoGioTinChiQuyDoi && (
+      {activity.SoTinChiQuyDoi && (
         <div>
           <label>Số giờ tín chỉ:</label>
-          <span>{activity.SoGioTinChiQuyDoi}</span>
+          <span>{activity.SoTinChiQuyDoi}</span>
         </div>
       )}
       
@@ -437,7 +435,7 @@ const importData: ImportActivity = {
   NgayBatDau: row[5], // DD/MM/YYYY
   NgayKetThuc: row[6], // DD/MM/YYYY
   SoTiet: row[7],
-  SoGioTinChiQuyDoi: row[8],
+  SoTinChiQuyDoi: row[8], // Maps to existing SoTinChiQuyDoi column
   BangChungSoGiayChungNhan: row[9]
 };
 

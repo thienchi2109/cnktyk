@@ -60,7 +60,6 @@ export interface CreateActivity {
   NgayBatDau?: Date | null;
   NgayKetThuc?: Date | null;
   SoTiet?: number | null;
-  SoGioTinChiQuyDoi?: number | null;
   BangChungSoGiayChungNhan?: string | null;
 }
 
@@ -79,7 +78,7 @@ export interface ImportActivity {
   NgayBatDau?: string; // Column F: Start date (DD/MM/YYYY)
   NgayKetThuc?: string; // Column G: End date (DD/MM/YYYY)
   SoTiet?: string; // Column H: Number of sessions (if applicable)
-  SoGioTinChiQuyDoi?: string; // Column I: Converted credit hours
+  SoTinChiQuyDoi?: string; // Column I: Converted credit hours (maps to existing SoTinChiQuyDoi)
   BangChungSoGiayChungNhan?: string; // Column J: Evidence/Certificate number
 }
 
@@ -101,7 +100,6 @@ export interface ActivityListItem {
   HinhThucCapNhatKienThucYKhoa: string | null;
   NgayBatDau: Date | null;
   NgayKetThuc: Date | null;
-  SoGioTinChiQuyDoi: number | null;
   TrangThaiDuyet: TrangThaiDuyet;
   CreatedAt: Date;
 }

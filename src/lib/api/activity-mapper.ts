@@ -48,7 +48,6 @@ export function mapDbToActivity(row: any): Activity {
     NgayBatDau: row.NgayBatDau ? new Date(row.NgayBatDau) : null,
     NgayKetThuc: row.NgayKetThuc ? new Date(row.NgayKetThuc) : null,
     SoTiet: row.SoTiet !== null ? parseFloat(row.SoTiet) : null,
-    SoGioTinChiQuyDoi: row.SoGioTinChiQuyDoi !== null ? parseFloat(row.SoGioTinChiQuyDoi) : null,
     BangChungSoGiayChungNhan: row.BangChungSoGiayChungNhan || null,
     CreatedAt: new Date(row.CreatedAt),
     UpdatedAt: new Date(row.UpdatedAt),
@@ -91,7 +90,7 @@ export function mapImportToDb(
     NgayBatDau: importData.NgayBatDau ? parseVietnameseDate(importData.NgayBatDau) : null,
     NgayKetThuc: importData.NgayKetThuc ? parseVietnameseDate(importData.NgayKetThuc) : null,
     SoTiet: importData.SoTiet ? parseFloat(importData.SoTiet) : null,
-    SoGioTinChiQuyDoi: importData.SoGioTinChiQuyDoi ? parseFloat(importData.SoGioTinChiQuyDoi) : null,
+    SoTinChiQuyDoi: importData.SoTinChiQuyDoi ? parseFloat(importData.SoTinChiQuyDoi) : 0,
     BangChungSoGiayChungNhan: importData.BangChungSoGiayChungNhan?.trim() || null,
     NguoiNhap: nguoiNhap,
     TrangThaiDuyet: 'ChoDuyet',
@@ -149,8 +148,8 @@ export function validateActivity(data: Partial<CreateActivity>): {
     errors.push('Mã nhân viên là bắt buộc');
   }
 
-  // Validate credits
-  const creditValidation = validateCredits(data.SoGioTinChiQuyDoi || null);
+  // Validate credits (using existing SoTinChiQuyDoi field)
+  const creditValidation = validateCredits(data.SoTinChiQuyDoi || null);
   if (!creditValidation.valid) {
     errors.push(creditValidation.error!);
   }
@@ -269,7 +268,7 @@ export function formatForExport(activity: Activity): any {
     'Ngày bắt đầu': activity.NgayBatDau ? formatVietnameseDate(activity.NgayBatDau) : '',
     'Ngày kết thúc': activity.NgayKetThuc ? formatVietnameseDate(activity.NgayKetThuc) : '',
     'Số tiết': activity.SoTiet || '',
-    'Số giờ tín chỉ': activity.SoGioTinChiQuyDoi || '',
+    'Số giờ tín chỉ': activity.SoTinChiQuyDoi || '',
     'Bằng chứng': activity.BangChungSoGiayChungNhan || '',
     'Trạng thái': activity.TrangThaiDuyet,
   };
