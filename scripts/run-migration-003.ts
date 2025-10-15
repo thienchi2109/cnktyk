@@ -3,10 +3,15 @@
  * Migration 003: Extended Activity Fields for Bulk Import System
  * 
  * This script adds extended fields to the GhiNhanHoatDong table:
- * - NgayHoatDong: Activity date
- * - NgayDuyet: Approval date
- * - NguoiDuyet: Approver account ID
- * - GhiChuDuyet: Approval notes
+ * - HinhThucCapNhatKienThucYKhoa: Form of medical knowledge update
+ * - ChiTietVaiTro: Detailed role/position
+ * - DonViToChuc: Organizing unit
+ * - NgayBatDau: Start date
+ * - NgayKetThuc: End date
+ * - SoTiet: Number of sessions
+ * - BangChungSoGiayChungNhan: Evidence/Certificate number
+ * 
+ * Note: SoTinChiQuyDoi already exists in the original schema
  * 
  * Run: npx tsx scripts/run-migration-003.ts
  */
@@ -40,19 +45,18 @@ async function runMigration() {
         'NgayBatDau',
         'NgayKetThuc',
         'SoTiet',
-        'SoGioTinChiQuyDoi',
         'BangChungSoGiayChungNhan'
       )
       ORDER BY column_name;
     `);
 
-    if (columns.length === 8) {
-      console.log('✅ All 8 new columns created successfully:');
+    if (columns.length === 7) {
+      console.log('✅ All 7 new columns created successfully:');
       columns.forEach((col: any) => {
         console.log(`   - ${col.column_name} (${col.data_type}, nullable: ${col.is_nullable})`);
       });
     } else {
-      console.log('⚠️  Warning: Expected 8 columns, found', columns.length);
+      console.log('⚠️  Warning: Expected 7 columns, found', columns.length);
     }
 
     // Verify indexes

@@ -10,12 +10,14 @@
 -- - NgayBatDau: Start date
 -- - NgayKetThuc: End date
 -- - SoTiet: Number of sessions/periods
--- - SoGioTinChiQuyDoi: Converted credit hours
 -- - BangChungSoGiayChungNhan: Evidence/Certificate number
+--
+-- Note: SoTinChiQuyDoi already exists in the original schema (v_1_init_schema.sql)
 
 BEGIN;
 
 -- Add new columns to GhiNhanHoatDong table
+-- Note: SoTinChiQuyDoi already exists in the original schema, so we skip it
 ALTER TABLE "GhiNhanHoatDong"
   ADD COLUMN IF NOT EXISTS "HinhThucCapNhatKienThucYKhoa" TEXT,
   ADD COLUMN IF NOT EXISTS "ChiTietVaiTro" TEXT,
@@ -23,7 +25,6 @@ ALTER TABLE "GhiNhanHoatDong"
   ADD COLUMN IF NOT EXISTS "NgayBatDau" DATE,
   ADD COLUMN IF NOT EXISTS "NgayKetThuc" DATE,
   ADD COLUMN IF NOT EXISTS "SoTiet" NUMERIC(6,2) CHECK ("SoTiet" IS NULL OR "SoTiet" >= 0),
-  ADD COLUMN IF NOT EXISTS "SoGioTinChiQuyDoi" NUMERIC(6,2) CHECK ("SoGioTinChiQuyDoi" IS NULL OR "SoGioTinChiQuyDoi" >= 0),
   ADD COLUMN IF NOT EXISTS "BangChungSoGiayChungNhan" TEXT;
 
 -- Add check constraint: NgayKetThuc must be after or equal to NgayBatDau
@@ -55,7 +56,6 @@ COMMENT ON COLUMN "GhiNhanHoatDong"."DonViToChuc" IS 'Organizing unit/institutio
 COMMENT ON COLUMN "GhiNhanHoatDong"."NgayBatDau" IS 'Activity start date';
 COMMENT ON COLUMN "GhiNhanHoatDong"."NgayKetThuc" IS 'Activity end date';
 COMMENT ON COLUMN "GhiNhanHoatDong"."SoTiet" IS 'Number of sessions/periods (if applicable)';
-COMMENT ON COLUMN "GhiNhanHoatDong"."SoGioTinChiQuyDoi" IS 'Converted credit hours';
 COMMENT ON COLUMN "GhiNhanHoatDong"."BangChungSoGiayChungNhan" IS 'Evidence/Certificate number';
 
 COMMIT;
@@ -74,7 +74,6 @@ AND column_name IN (
   'NgayBatDau',
   'NgayKetThuc',
   'SoTiet',
-  'SoGioTinChiQuyDoi',
   'BangChungSoGiayChungNhan'
 );
 

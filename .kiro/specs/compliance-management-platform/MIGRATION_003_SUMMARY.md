@@ -120,7 +120,6 @@ AND column_name IN (
   'NgayBatDau',
   'NgayKetThuc',
   'SoTiet',
-  'SoGioTinChiQuyDoi',
   'BangChungSoGiayChungNhan'
 );
 
@@ -469,7 +468,7 @@ DROP INDEX IF EXISTS idx_gnhd_don_vi_to_chuc;
 ALTER TABLE "GhiNhanHoatDong" 
   DROP CONSTRAINT IF EXISTS chk_gnhd_ngay_bat_dau_ket_thuc;
 
--- Drop columns
+-- Drop columns (Note: Do NOT drop SoTinChiQuyDoi as it's part of the original schema)
 ALTER TABLE "GhiNhanHoatDong" 
   DROP COLUMN IF EXISTS "HinhThucCapNhatKienThucYKhoa",
   DROP COLUMN IF EXISTS "ChiTietVaiTro",
@@ -477,7 +476,6 @@ ALTER TABLE "GhiNhanHoatDong"
   DROP COLUMN IF EXISTS "NgayBatDau",
   DROP COLUMN IF EXISTS "NgayKetThuc",
   DROP COLUMN IF EXISTS "SoTiet",
-  DROP COLUMN IF EXISTS "SoGioTinChiQuyDoi",
   DROP COLUMN IF EXISTS "BangChungSoGiayChungNhan";
 
 COMMIT;
