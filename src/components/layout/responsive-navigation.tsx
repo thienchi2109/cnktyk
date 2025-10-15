@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from "react";
+import { useRouter } from 'next/navigation';
 import { 
   Home, 
   Users, 
@@ -397,12 +398,19 @@ const FooterNavigation = ({
 
 export const ResponsiveNavigation = React.forwardRef<HTMLDivElement, ResponsiveNavigationProps>(
   ({ children, user, notifications = 0, activeItem, onNavigate, className }, ref) => {
+    const router = useRouter();
     const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
     const navigationItems = getNavigationItems(user?.role);
 
     const handleItemClick = (item: NavigationItem) => {
       setMobileMenuOpen(false);
-      onNavigate?.(item);
+      
+      // Use custom onNavigate if provided, otherwise use router
+      if (onNavigate) {
+        onNavigate(item);
+      } else if (item.href) {
+        router.push(item.href);
+      }
     };
 
     return (

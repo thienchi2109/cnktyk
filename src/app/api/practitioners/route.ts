@@ -59,8 +59,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Apply search filter
-    if (search && practitioners) {
-      practitioners = await nhanVienRepo.searchByName(search, unitId || undefined);
+    if (search && search.trim() !== '') {
+      // Determine the unitId to use for search based on role
+      let searchUnitId: string | undefined = undefined;
+      if (session.user.role === 'DonVi' && session.user.unitId) {
+        searchUnitId = session.user.unitId;
+      } else if (unitId) {
+        searchUnitId = unitId;
+      }
+      
+      practitioners = await nhanVienRepo.searchByName(search, searchUnitId);
     }
 
     // Apply status filter

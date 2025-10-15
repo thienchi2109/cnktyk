@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Filter, Plus, Eye, Edit, Trash2, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { Search, Filter, Plus, Eye, Edit, Trash2, AlertTriangle, CheckCircle, Clock, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { PractitionerForm } from './practitioner-form';
+import { PractitionerDetailSheet } from './practitioner-detail-sheet';
 
 interface ComplianceStatus {
   totalCredits: number;
@@ -55,6 +56,8 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
   const [unitFilter, setUnitFilter] = useState<string>('all');
   const [complianceFilter, setComplianceFilter] = useState<string>('all');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [selectedPractitionerId, setSelectedPractitionerId] = useState<string | null>(null);
+  const [showDetailSheet, setShowDetailSheet] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
@@ -79,7 +82,7 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
       }
 
       const data = await response.json();
-      setPractitioners(data.practitioners || []);
+      setPractitioners(data.data || []);
       setTotalPages(data.pagination?.totalPages || 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -114,11 +117,11 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'DangLamViec':
-        return <Badge variant="default" className="bg-green-100 text-green-800">Active</Badge>;
+        return <Badge variant="default" className="bg-green-100 text-green-800">Đang làm việc</Badge>;
       case 'TamHoan':
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Suspended</Badge>;
+        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Tạm hoãn</Badge>;
       case 'DaNghi':
-        return <Badge variant="destructive" className="bg-red-100 text-red-800">Inactive</Badge>;
+        return <Badge variant="destructive" className="bg-red-100 text-red-800">Đã nghỉ</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -185,52 +188,66 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Practitioners</h1>
-          <p className="text-gray-600">Manage healthcare practitioners and their compliance status</p>
+          <h1 className="text-3xl font-bold">Người hành nghề</h1>
+          <p className="text-gray-600">Quản lý người hành nghề y tế và trạng thái tuân thủ</p>
         </div>
         {canCreatePractitioner && (
-          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Practitioner
+          <div className="flex gap-3">
+            {/* Bulk Import Button - DonVi only */}
+            {userRole === 'DonVi' && (
+              <Button
+                variant="outline"
+                onClick={() => router.push('/import')}
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Nhập hàng loạt
               </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Register New Practitioner</DialogTitle>
-                <DialogDescription>
-                  Add a new healthcare practitioner to the system
-                </DialogDescription>
-              </DialogHeader>
-              <PractitionerForm
-                unitId={userRole === 'DonVi' ? userUnitId : undefined}
-                units={userRole === 'SoYTe' ? units : units.filter(u => u.MaDonVi === userUnitId)}
-                onSuccess={() => {
-                  setShowCreateDialog(false);
-                  fetchPractitioners();
-                }}
-                onCancel={() => setShowCreateDialog(false)}
-                mode="create"
-              />
-            </DialogContent>
-          </Dialog>
+            )}
+            
+            {/* Add Single Practitioner */}
+            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Thêm người hành nghề
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Đăng ký người hành nghề mới</DialogTitle>
+                  <DialogDescription>
+                    Thêm người hành nghề y tế mới vào hệ thống
+                  </DialogDescription>
+                </DialogHeader>
+                <PractitionerForm
+                  unitId={userRole === 'DonVi' ? userUnitId : undefined}
+                  units={userRole === 'SoYTe' ? units : units.filter(u => u.MaDonVi === userUnitId)}
+                  onSuccess={() => {
+                    setShowCreateDialog(false);
+                    fetchPractitioners();
+                  }}
+                  onCancel={() => setShowCreateDialog(false)}
+                  mode="create"
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
         )}
       </div>
 
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Search & Filter</CardTitle>
+          <CardTitle className="text-lg">Tìm kiếm & Lọc</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Search</label>
+              <label className="text-sm font-medium">Tìm kiếm</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
-                  placeholder="Search by name..."
+                  placeholder="Tìm theo tên..."
                   value={searchTerm}
                   onChange={(e) => handleSearch(e.target.value)}
                   className="pl-10"
@@ -239,29 +256,29 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Work Status</label>
+              <label className="text-sm font-medium">Trạng thái làm việc</label>
               <Select value={statusFilter} onValueChange={handleStatusFilter}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="DangLamViec">Active</SelectItem>
-                  <SelectItem value="TamHoan">Suspended</SelectItem>
-                  <SelectItem value="DaNghi">Inactive</SelectItem>
+                <SelectContent className="z-50 bg-white">
+                  <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                  <SelectItem value="DangLamViec">Đang làm việc</SelectItem>
+                  <SelectItem value="TamHoan">Tạm hoãn</SelectItem>
+                  <SelectItem value="DaNghi">Đã nghỉ</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {userRole === 'SoYTe' && units.length > 0 && (
               <div className="space-y-2">
-                <label className="text-sm font-medium">Unit</label>
+                <label className="text-sm font-medium">Đơn vị</label>
                 <Select value={unitFilter} onValueChange={handleUnitFilter}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Units</SelectItem>
+                  <SelectContent className="z-50 bg-white">
+                    <SelectItem value="all">Tất cả đơn vị</SelectItem>
                     {units.map((unit) => (
                       <SelectItem key={unit.MaDonVi} value={unit.MaDonVi}>
                         {unit.TenDonVi}
@@ -273,16 +290,16 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
             )}
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Compliance</label>
+              <label className="text-sm font-medium">Tuân thủ</label>
               <Select value={complianceFilter} onValueChange={handleComplianceFilter}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Compliance</SelectItem>
-                  <SelectItem value="compliant">Compliant (≥90%)</SelectItem>
-                  <SelectItem value="at_risk">At Risk (70-89%)</SelectItem>
-                  <SelectItem value="non_compliant">Non-Compliant (&lt;70%)</SelectItem>
+                <SelectContent className="z-50 bg-white">
+                  <SelectItem value="all">Tất cả mức độ</SelectItem>
+                  <SelectItem value="compliant">Đạt chuẩn (≥90%)</SelectItem>
+                  <SelectItem value="at_risk">Rủi ro (70-89%)</SelectItem>
+                  <SelectItem value="non_compliant">Chưa đạt (&lt;70%)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -302,30 +319,30 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
       <Card>
         <CardHeader>
           <CardTitle>
-            Practitioners ({filteredPractitioners.length})
+            Người hành nghề ({filteredPractitioners.length})
           </CardTitle>
           <CardDescription>
-            Healthcare practitioners and their compliance status
+            Danh sách người hành nghề y tế và trạng thái tuân thủ
           </CardDescription>
         </CardHeader>
         <CardContent>
           {filteredPractitioners.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-500">No practitioners found matching your criteria.</p>
+              <p className="text-gray-500">Không tìm thấy người hành nghề phù hợp với tiêu chí.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Position</TableHead>
-                    <TableHead>CCHN</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Compliance</TableHead>
-                    <TableHead>Credits</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>Họ và tên</TableHead>
+                    <TableHead>Chức danh</TableHead>
+                    <TableHead>Số CCHN</TableHead>
+                    <TableHead>Trạng thái</TableHead>
+                    <TableHead>Tuân thủ</TableHead>
+                    <TableHead>Tín chỉ</TableHead>
+                    <TableHead>Liên hệ</TableHead>
+                    <TableHead>Thao tác</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -364,7 +381,11 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => router.push(`/practitioners/${practitioner.MaNhanVien}`)}
+                            onClick={() => {
+                              setSelectedPractitionerId(practitioner.MaNhanVien);
+                              setShowDetailSheet(true);
+                            }}
+                            title="Xem chi tiết"
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
@@ -373,6 +394,7 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
                               variant="outline"
                               size="sm"
                               onClick={() => router.push(`/practitioners/${practitioner.MaNhanVien}/edit`)}
+                              title="Chỉnh sửa"
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
@@ -396,20 +418,27 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
             onClick={() => setPage(page - 1)}
             disabled={page === 1}
           >
-            Previous
+            Trước
           </Button>
           <span className="flex items-center px-4">
-            Page {page} of {totalPages}
+            Trang {page} / {totalPages}
           </span>
           <Button
             variant="outline"
             onClick={() => setPage(page + 1)}
             disabled={page === totalPages}
           >
-            Next
+            Sau
           </Button>
         </div>
       )}
+
+      {/* Practitioner Detail Sheet */}
+      <PractitionerDetailSheet
+        practitionerId={selectedPractitionerId}
+        open={showDetailSheet}
+        onOpenChange={setShowDetailSheet}
+      />
     </div>
   );
 }
