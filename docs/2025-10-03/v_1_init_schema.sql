@@ -194,10 +194,7 @@ BEGIN
   RETURN NEW;
 END;$$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS trg_gnhd_set_updated_at ON "GhiNhanHoatDong";
-CREATE TRIGGER trg_gnhd_set_updated_at
-BEFORE UPDATE ON "GhiNhanHoatDong"
-FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+-- Note: Trigger removed in Migration 003 as UpdatedAt column no longer exists
 
 -- === Indexes ===
 -- DonVi
