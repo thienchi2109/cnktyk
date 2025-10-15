@@ -97,7 +97,7 @@ Based on the new schema, the Activities sheet in the Excel template maps as foll
 | F | Ngày bắt đầu | NgayBatDau |
 | G | Ngày kết thúc | NgayKetThuc |
 | H | Số tiết (nếu có) | SoTiet |
-| I | Số giờ tín chỉ quy đổi | SoTinChiQuyDoi (existing) |
+| I | Số giờ tín chỉ quy đổi | SoGioTinChiQuyDoi |
 | J | Bằng chứng (Số Giấy chứng nhận) | BangChungSoGiayChungNhan |
 
 ## Running the Migration

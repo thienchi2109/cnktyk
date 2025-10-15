@@ -17,7 +17,7 @@ export interface Activity {
   ThoiGianBatDau: Date | null;
   ThoiGianKetThuc: Date | null;
   SoGio: number | null;
-  SoTinChiQuyDoi: number;
+  SoGioTinChiQuyDoi: number;
   FileMinhChungUrl: string | null;
   FileMinhChungETag: string | null;
   FileMinhChungSha256: string | null;
@@ -48,7 +48,7 @@ export interface CreateActivity {
   ThoiGianBatDau?: Date | null;
   ThoiGianKetThuc?: Date | null;
   SoGio?: number | null;
-  SoTinChiQuyDoi: number;
+  SoGioTinChiQuyDoi: number;
   FileMinhChungUrl?: string | null;
   NguoiNhap: string;
   TrangThaiDuyet?: TrangThaiDuyet;
@@ -78,7 +78,7 @@ export interface ImportActivity {
   NgayBatDau?: string; // Column F: Start date (DD/MM/YYYY)
   NgayKetThuc?: string; // Column G: End date (DD/MM/YYYY)
   SoTiet?: string; // Column H: Number of sessions (if applicable)
-  SoTinChiQuyDoi?: string; // Column I: Converted credit hours (maps to existing SoTinChiQuyDoi)
+  SoGioTinChiQuyDoi?: string; // Column I: Converted credit hours
   BangChungSoGiayChungNhan?: string; // Column J: Evidence/Certificate number
 }
 

@@ -4,7 +4,7 @@
 INSERT INTO "GhiNhanHoatDong" (
   "MaNhanVien",
   "TenHoatDong",
-  "SoTinChiQuyDoi",
+  "SoGioTinChiQuyDoi",
   "NguoiNhap",
   "TrangThaiDuyet",
   "HinhThucCapNhatKienThucYKhoa",
@@ -38,7 +38,7 @@ SELECT
   "NgayBatDau",
   "NgayKetThuc",
   "SoTiet",
-  "SoTinChiQuyDoi",
+  "SoGioTinChiQuyDoi",
   "BangChungSoGiayChungNhan",
   "TrangThaiDuyet"
 FROM "GhiNhanHoatDong"

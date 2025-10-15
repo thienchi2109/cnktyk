@@ -169,7 +169,7 @@ export const GhiNhanHoatDongSchema = z.object({
   ThoiGianBatDau: z.date().nullable(),
   ThoiGianKetThuc: z.date().nullable(),
   SoGio: z.number().min(0).nullable(),
-  SoTinChiQuyDoi: z.number().min(0, 'Credits must be non-negative'),
+  SoGioTinChiQuyDoi: z.number().min(0, 'Credits must be non-negative'),
   FileMinhChungUrl: z.string().url().nullable().or(z.literal('')),
   FileMinhChungETag: z.string().nullable(),
   FileMinhChungSha256: z.string().nullable(),

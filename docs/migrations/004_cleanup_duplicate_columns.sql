@@ -5,7 +5,7 @@
 -- This migration addresses schema drift and duplicate columns:
 -- 1. VaiTro vs ChiTietVaiTro (role fields)
 -- 2. NgayHoatDong vs NgayBatDau/NgayKetThuc (date fields)
--- 3. SoTinChi vs SoTinChiQuyDoi vs SoGioTinChiQuyDoi (credit fields)
+-- 3. SoTinChi vs SoGioTinChiQuyDoi (credit fields)
 
 BEGIN;
 
@@ -23,31 +23,12 @@ SET "NgayBatDau" = "NgayHoatDong"
 WHERE "NgayBatDau" IS NULL 
   AND "NgayHoatDong" IS NOT NULL;
 
--- Migrate SoTinChi to SoTinChiQuyDoi (if SoTinChiQuyDoi is 0 or NULL)
+-- Migrate SoTinChi to SoGioTinChiQuyDoi (if SoGioTinChiQuyDoi is 0 or NULL)
 UPDATE "GhiNhanHoatDong"
-SET "SoTinChiQuyDoi" = "SoTinChi"
-WHERE ("SoTinChiQuyDoi" IS NULL OR "SoTinChiQuyDoi" = 0)
+SET "SoGioTinChiQuyDoi" = "SoTinChi"
+WHERE ("SoGioTinChiQuyDoi" IS NULL OR "SoGioTinChiQuyDoi" = 0)
   AND "SoTinChi" IS NOT NULL 
   AND "SoTinChi" > 0;
-
--- Migrate SoGioTinChiQuyDoi to SoTinChiQuyDoi (if it exists and SoTinChiQuyDoi is empty)
--- This handles the case where Migration 003 created SoGioTinChiQuyDoi
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns 
-    WHERE table_name = 'GhiNhanHoatDong' 
-    AND column_name = 'SoGioTinChiQuyDoi'
-  ) THEN
-    EXECUTE '
-      UPDATE "GhiNhanHoatDong"
-      SET "SoTinChiQuyDoi" = "SoGioTinChiQuyDoi"
-      WHERE ("SoTinChiQuyDoi" IS NULL OR "SoTinChiQuyDoi" = 0)
-        AND "SoGioTinChiQuyDoi" IS NOT NULL 
-        AND "SoGioTinChiQuyDoi" > 0
-    ';
-  END IF;
-END $$;
 
 -- Step 2: Drop deprecated columns (after data migration)
 
@@ -59,18 +40,14 @@ ALTER TABLE "GhiNhanHoatDong"
 ALTER TABLE "GhiNhanHoatDong"
   DROP COLUMN IF EXISTS "NgayHoatDong";
 
--- Drop SoTinChi (data migrated to SoTinChiQuyDoi)
+-- Drop SoTinChi (data migrated to SoGioTinChiQuyDoi)
 ALTER TABLE "GhiNhanHoatDong"
   DROP COLUMN IF EXISTS "SoTinChi";
-
--- Drop SoGioTinChiQuyDoi (duplicate of SoTinChiQuyDoi)
-ALTER TABLE "GhiNhanHoatDong"
-  DROP COLUMN IF EXISTS "SoGioTinChiQuyDoi";
 
 -- Step 3: Add comments for clarity
 COMMENT ON COLUMN "GhiNhanHoatDong"."ChiTietVaiTro" IS 'Detailed role/position in activity (consolidated from VaiTro)';
 COMMENT ON COLUMN "GhiNhanHoatDong"."NgayBatDau" IS 'Activity start date (consolidated from NgayHoatDong)';
-COMMENT ON COLUMN "GhiNhanHoatDong"."SoTinChiQuyDoi" IS 'Converted credit hours (authoritative credit field)';
+COMMENT ON COLUMN "GhiNhanHoatDong"."SoGioTinChiQuyDoi" IS 'Converted credit hours (authoritative credit field, consolidated from SoTinChi)';
 
 COMMIT;
 
@@ -80,7 +57,7 @@ COMMIT;
 SELECT column_name 
 FROM information_schema.columns 
 WHERE table_name = 'GhiNhanHoatDong'
-AND column_name IN ('VaiTro', 'NgayHoatDong', 'SoTinChi', 'SoGioTinChiQuyDoi');
+AND column_name IN ('VaiTro', 'NgayHoatDong', 'SoTinChi');
 -- Should return 0 rows
 
 -- Check data integrity
@@ -88,12 +65,12 @@ SELECT
   COUNT(*) as total_records,
   COUNT("ChiTietVaiTro") as has_role,
   COUNT("NgayBatDau") as has_start_date,
-  COUNT(CASE WHEN "SoTinChiQuyDoi" > 0 THEN 1 END) as has_credits
+  COUNT(CASE WHEN "SoGioTinChiQuyDoi" > 0 THEN 1 END) as has_credits
 FROM "GhiNhanHoatDong";
 
 -- Check for any NULL values in critical fields
 SELECT 
   COUNT(*) as records_missing_credits
 FROM "GhiNhanHoatDong"
-WHERE "SoTinChiQuyDoi" IS NULL OR "SoTinChiQuyDoi" = 0;
+WHERE "SoGioTinChiQuyDoi" IS NULL OR "SoGioTinChiQuyDoi" = 0;
 */
