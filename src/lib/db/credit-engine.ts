@@ -118,12 +118,12 @@ export async function getCurrentCycle(practitionerId: string): Promise<Complianc
 
   // Calculate total approved credits in current cycle
   const creditsResult = await db.query<{ total: number }>(
-    `SELECT COALESCE(SUM("SoTinChiQuyDoi"), 0) as total
+    `SELECT COALESCE(SUM("SoGioTinChiQuyDoi"), 0) as total
      FROM "GhiNhanHoatDong"
      WHERE "MaNhanVien" = $1
      AND "TrangThaiDuyet" = 'DaDuyet'
-     AND "ThoiGianBatDau" >= $2
-     AND "ThoiGianBatDau" <= $3`,
+     AND "NgayBatDau" >= $2
+     AND "NgayBatDau" <= $3`,
     [practitionerId, cycleStartDate, cycleEndDate]
   );
 
@@ -175,14 +175,14 @@ export async function getCreditSummaryByType(
   }>(
     `SELECT 
       COALESCE(dm."LoaiHoatDong", 'Khac') as "LoaiHoatDong",
-      COALESCE(SUM(g."SoTinChiQuyDoi"), 0) as "TongTinChi",
+      COALESCE(SUM(g."SoGioTinChiQuyDoi"), 0) as "TongTinChi",
       COUNT(g."MaGhiNhan") as "SoHoatDong"
      FROM "GhiNhanHoatDong" g
      LEFT JOIN "DanhMucHoatDong" dm ON g."MaDanhMuc" = dm."MaDanhMuc"
      WHERE g."MaNhanVien" = $1
      AND g."TrangThaiDuyet" = 'DaDuyet'
-     AND g."ThoiGianBatDau" >= $2
-     AND g."ThoiGianBatDau" <= $3
+     AND g."NgayBatDau" >= $2
+     AND g."NgayBatDau" <= $3
      GROUP BY dm."LoaiHoatDong"
      ORDER BY "TongTinChi" DESC`,
     [practitionerId, cycleStartDate, cycleEndDate]
@@ -215,8 +215,8 @@ export async function getCreditHistory(
     MaGhiNhan: string;
     TenHoatDong: string;
     LoaiHoatDong: string | null;
-    SoTinChiQuyDoi: number;
-    CreatedAt: Date;
+    SoGioTinChiQuyDoi: number;
+    NgayGhiNhan: Date;
     TrangThaiDuyet: string;
     GhiChu: string | null;
   }>(
@@ -224,16 +224,16 @@ export async function getCreditHistory(
       g."MaGhiNhan",
       g."TenHoatDong",
       dm."LoaiHoatDong",
-      g."SoTinChiQuyDoi",
-      g."CreatedAt",
+      g."SoGioTinChiQuyDoi",
+      g."NgayGhiNhan",
       g."TrangThaiDuyet",
       g."GhiChu"
      FROM "GhiNhanHoatDong" g
      LEFT JOIN "DanhMucHoatDong" dm ON g."MaDanhMuc" = dm."MaDanhMuc"
      WHERE g."MaNhanVien" = $1
-     AND g."ThoiGianBatDau" >= $2
-     AND g."ThoiGianBatDau" <= $3
-     ORDER BY g."CreatedAt" DESC
+     AND g."NgayBatDau" >= $2
+     AND g."NgayBatDau" <= $3
+     ORDER BY g."NgayGhiNhan" DESC
      LIMIT $4`,
     [practitionerId, cycleStartDate, cycleEndDate, limit]
   );
@@ -242,8 +242,8 @@ export async function getCreditHistory(
     MaGhiNhan: row.MaGhiNhan,
     TenHoatDong: row.TenHoatDong,
     LoaiHoatDong: row.LoaiHoatDong,
-    SoTinChi: Number(row.SoTinChiQuyDoi),
-    NgayGhiNhan: row.CreatedAt,
+    SoTinChi: Number(row.SoGioTinChiQuyDoi),
+    NgayGhiNhan: row.NgayGhiNhan,
     TrangThaiDuyet: row.TrangThaiDuyet,
     GhiChu: row.GhiChu
   }));
@@ -273,14 +273,14 @@ export async function validateCategoryLimit(
 
   // Get current total for this category
   const result = await db.query<{ total: number }>(
-    `SELECT COALESCE(SUM(g."SoTinChiQuyDoi"), 0) as total
+    `SELECT COALESCE(SUM(g."SoGioTinChiQuyDoi"), 0) as total
      FROM "GhiNhanHoatDong" g
      LEFT JOIN "DanhMucHoatDong" dm ON g."MaDanhMuc" = dm."MaDanhMuc"
      WHERE g."MaNhanVien" = $1
      AND dm."LoaiHoatDong" = $2
      AND g."TrangThaiDuyet" = 'DaDuyet'
-     AND g."ThoiGianBatDau" >= $3
-     AND g."ThoiGianBatDau" <= $4`,
+     AND g."NgayBatDau" >= $3
+     AND g."NgayBatDau" <= $4`,
     [practitionerId, activityType, cycleStartDate, cycleEndDate]
   );
 

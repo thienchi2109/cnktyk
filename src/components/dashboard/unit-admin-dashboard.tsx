@@ -413,15 +413,22 @@ export function UnitAdminDashboard({ userId, unitId }: UnitAdminDashboardProps) 
                   />
                 </div>
                 <div className="flex gap-2">
-                  <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value as any)}
-                    className="px-4 py-2 bg-white/30 backdrop-blur-sm border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-medical-blue/50"
-                  >
-                    <option value="all">Tất cả</option>
-                    <option value="at-risk">Rủi ro cao</option>
-                    <option value="compliant">Đạt chuẩn</option>
-                  </select>
+                  <div className="relative inline-block">
+                    <select
+                      value={filterStatus}
+                      onChange={(e) => setFilterStatus(e.target.value as any)}
+                      className="appearance-none px-4 py-2 pr-10 bg-white/30 backdrop-blur-sm border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-medical-blue/50 cursor-pointer hover:bg-white/40 transition-colors"
+                    >
+                      <option value="all">Tất cả</option>
+                      <option value="at-risk">Rủi ro cao</option>
+                      <option value="compliant">Đạt chuẩn</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-600">
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
               </div>
 

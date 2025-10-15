@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/server';
 import { ghiNhanHoatDongRepo, danhMucHoatDongRepo, nhanVienRepo } from '@/lib/db/repositories';
-import { CreateGhiNhanHoatDongSchema } from '@/lib/db/schemas';
+import { CreateGhiNhanHoatDong } from '@/lib/db/schemas';
 import { z } from 'zod';
 
 // GET /api/submissions - List activity submissions
@@ -139,18 +139,21 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    // Validate input data
-    const submissionSchema = CreateGhiNhanHoatDongSchema.extend({
-      // Allow custom activity name if no catalog activity is selected
+    // Validate input data using SubmitActivitySchema
+    const submissionSchema = z.object({
+      MaNhanVien: z.string().uuid(),
+      MaDanhMuc: z.string().uuid().nullable().optional(),
       TenHoatDong: z.string().min(1, 'Activity name is required'),
-      // File upload information
-      evidenceFiles: z.array(z.object({
-        filename: z.string(),
-        originalName: z.string(),
-        size: z.number(),
-        mimeType: z.string(),
-        checksum: z.string(),
-      })).optional(),
+      HinhThucCapNhatKienThucYKhoa: z.string().nullable().optional(),
+      ChiTietVaiTro: z.string().nullable().optional(),
+      DonViToChuc: z.string().nullable().optional(),
+      NgayBatDau: z.string().nullable().optional(), // ISO date string
+      NgayKetThuc: z.string().nullable().optional(), // ISO date string
+      SoTiet: z.number().min(0).nullable().optional(),
+      SoGioTinChiQuyDoi: z.number().min(0).nullable().optional(),
+      BangChungSoGiayChungNhan: z.string().nullable().optional(),
+      FileMinhChungUrl: z.string().nullable().optional(),
+      GhiChuDuyet: z.string().nullable().optional(),
     });
 
     const validatedData = submissionSchema.parse(body);
@@ -174,47 +177,34 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate credits based on activity catalog or manual entry
-    let calculatedCredits = validatedData.SoTinChiQuyDoi;
+    let calculatedCredits = validatedData.SoGioTinChiQuyDoi || 0;
     
     if (validatedData.MaDanhMuc) {
       const activityCatalog = await danhMucHoatDongRepo.findById(validatedData.MaDanhMuc);
-      if (activityCatalog && validatedData.SoGio) {
-        calculatedCredits = validatedData.SoGio * activityCatalog.TyLeQuyDoi;
+      if (activityCatalog && validatedData.SoTiet) {
+        calculatedCredits = validatedData.SoTiet * activityCatalog.TyLeQuyDoi;
       }
     }
 
-    // Handle evidence file information
-    let evidenceFileUrl = null;
-    let evidenceFileETag = null;
-    let evidenceFileSha256 = null;
-    let evidenceFileSize = null;
-
-    if (validatedData.evidenceFiles && validatedData.evidenceFiles.length > 0) {
-      const primaryFile = validatedData.evidenceFiles[0];
-      evidenceFileUrl = `/api/files/${primaryFile.filename}`;
-      evidenceFileSha256 = primaryFile.checksum;
-      evidenceFileSize = primaryFile.size;
-    }
-
-    // Create submission
+    // Create submission with new schema
     const submissionData = {
       MaNhanVien: practitionerId,
-      MaDanhMuc: validatedData.MaDanhMuc,
+      MaDanhMuc: validatedData.MaDanhMuc || null,
       TenHoatDong: validatedData.TenHoatDong,
-      VaiTro: validatedData.VaiTro,
-      ThoiGianBatDau: validatedData.ThoiGianBatDau,
-      ThoiGianKetThuc: validatedData.ThoiGianKetThuc,
-      SoGio: validatedData.SoGio,
-      SoTinChiQuyDoi: calculatedCredits,
-      FileMinhChungUrl: evidenceFileUrl,
-      FileMinhChungETag: evidenceFileETag,
-      FileMinhChungSha256: evidenceFileSha256,
-      FileMinhChungSize: evidenceFileSize,
+      FileMinhChungUrl: validatedData.FileMinhChungUrl || null,
       NguoiNhap: user.id,
       TrangThaiDuyet: 'ChoDuyet' as const,
-      ThoiGianDuyet: null,
-      GhiChu: validatedData.GhiChu,
-    };
+      GhiChuDuyet: validatedData.GhiChuDuyet || null,
+      // Extended fields from Migration 003
+      HinhThucCapNhatKienThucYKhoa: validatedData.HinhThucCapNhatKienThucYKhoa || null,
+      ChiTietVaiTro: validatedData.ChiTietVaiTro || null,
+      DonViToChuc: validatedData.DonViToChuc || null,
+      NgayBatDau: validatedData.NgayBatDau ? new Date(validatedData.NgayBatDau) : null,
+      NgayKetThuc: validatedData.NgayKetThuc ? new Date(validatedData.NgayKetThuc) : null,
+      SoTiet: validatedData.SoTiet || null,
+      SoGioTinChiQuyDoi: calculatedCredits,
+      BangChungSoGiayChungNhan: validatedData.BangChungSoGiayChungNhan || null,
+    } as any; // Temporary workaround for type mismatch
 
     const submission = await ghiNhanHoatDongRepo.create(submissionData);
 

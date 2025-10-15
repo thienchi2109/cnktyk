@@ -228,7 +228,7 @@ export async function submitActivity(activityData: any, submitterId: string) {
       'CREATE',
       'GhiNhanHoatDong',
       activity.MaGhiNhan,
-      { activity: activity.TenHoatDong, credits: activity.SoTinChiQuyDoi }
+      { activity: activity.TenHoatDong, credits: activity.SoGioTinChiQuyDoi }
     );
 
     // Create notification for unit administrators

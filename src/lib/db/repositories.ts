@@ -204,7 +204,7 @@ export class NhanVienRepository extends BaseRepository<NhanVien, CreateNhanVien,
     const result = await db.queryOne<{
       total_credits: string;
     }>(`
-      SELECT COALESCE(SUM("SoTinChiQuyDoi"), 0) as total_credits
+      SELECT COALESCE(SUM("SoGioTinChiQuyDoi"), 0) as total_credits
       FROM "GhiNhanHoatDong"
       WHERE "MaNhanVien" = $1 AND "TrangThaiDuyet" = 'DaDuyet'
     `, [practitionerId]);
@@ -249,7 +249,7 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
     let query = `
       SELECT * FROM "${this.tableName}" 
       WHERE "MaNhanVien" = $1 
-      ORDER BY "ThoiGianBatDau" DESC, "CreatedAt" DESC
+      ORDER BY "NgayBatDau" DESC, "NgayGhiNhan" DESC
     `;
     const params = [practitionerId];
 
@@ -275,7 +275,7 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
       params.push(unitId);
     }
 
-    query += ` ORDER BY g."CreatedAt" ASC`;
+    query += ` ORDER BY g."NgayGhiNhan" ASC`;
 
     return db.query<GhiNhanHoatDong>(query, params);
   }
@@ -283,16 +283,16 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
   async approveActivity(activityId: string, approverId: string, comments?: string): Promise<GhiNhanHoatDong | null> {
     return this.update(activityId, {
       TrangThaiDuyet: 'DaDuyet',
-      ThoiGianDuyet: new Date(),
-      GhiChu: comments,
+      NgayDuyet: new Date(),
+      GhiChuDuyet: comments,
     } as UpdateGhiNhanHoatDong);
   }
 
   async rejectActivity(activityId: string, approverId: string, reason: string): Promise<GhiNhanHoatDong | null> {
     return this.update(activityId, {
       TrangThaiDuyet: 'TuChoi',
-      ThoiGianDuyet: new Date(),
-      GhiChu: reason,
+      NgayDuyet: new Date(),
+      GhiChuDuyet: reason,
     } as UpdateGhiNhanHoatDong);
   }
 

@@ -139,37 +139,35 @@ export const GhiNhanHoatDongSchema = z.object({
   MaDanhMuc: UUIDSchema.nullable(),
   TenHoatDong: z.string().min(1, 'Activity name is required'),
   VaiTro: z.string().nullable(),
-  ThoiGianBatDau: z.date().nullable(),
-  ThoiGianKetThuc: z.date().nullable(),
-  SoGio: z.number().min(0).nullable(),
-  SoTinChiQuyDoi: z.number().min(0, 'Credits must be non-negative'),
+  NgayBatDau: z.date().nullable(),
+  NgayKetThuc: z.date().nullable(),
+  SoTiet: z.number().min(0).nullable(),
+  SoGioTinChiQuyDoi: z.number().min(0, 'Credits must be non-negative'),
   FileMinhChungUrl: z.string().url().nullable().or(z.literal('')),
   FileMinhChungETag: z.string().nullable(),
   FileMinhChungSha256: z.string().nullable(),
   FileMinhChungSize: z.number().int().min(0).nullable(),
   NguoiNhap: UUIDSchema,
   TrangThaiDuyet: TrangThaiDuyetSchema.default('ChoDuyet'),
-  ThoiGianDuyet: z.date().nullable(),
-  GhiChu: z.string().nullable(),
-  CreatedAt: z.date(),
-  UpdatedAt: z.date(),
+  NgayDuyet: z.date().nullable(),
+  GhiChuDuyet: z.string().nullable(),
+  NgayGhiNhan: z.date(),
 }).refine(
   (data) => {
-    if (data.ThoiGianBatDau !== null && data.ThoiGianKetThuc !== null) {
-      return data.ThoiGianKetThuc >= data.ThoiGianBatDau;
+    if (data.NgayBatDau !== null && data.NgayKetThuc !== null) {
+      return data.NgayKetThuc >= data.NgayBatDau;
     }
     return true;
   },
   {
     message: 'End time must be after start time',
-    path: ['ThoiGianKetThuc'],
+    path: ['NgayKetThuc'],
   }
 );
 
 export const CreateGhiNhanHoatDongSchema = GhiNhanHoatDongSchema.omit({ 
   MaGhiNhan: true, 
-  CreatedAt: true, 
-  UpdatedAt: true 
+  NgayGhiNhan: true
 });
 
 export const UpdateGhiNhanHoatDongSchema = CreateGhiNhanHoatDongSchema.partial().extend({

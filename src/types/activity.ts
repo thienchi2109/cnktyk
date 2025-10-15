@@ -7,25 +7,19 @@
 // Approval status type
 export type TrangThaiDuyet = 'ChoDuyet' | 'DaDuyet' | 'TuChoi';
 
-// Core Activity interface
+// Core Activity interface - matches actual database schema
 export interface Activity {
   MaGhiNhan: string;
   MaNhanVien: string;
   MaDanhMuc: string | null;
   TenHoatDong: string;
-  VaiTro: string | null;
-  ThoiGianBatDau: Date | null;
-  ThoiGianKetThuc: Date | null;
-  SoGio: number | null;
-  SoGioTinChiQuyDoi: number;
+  NgayGhiNhan: Date;
   FileMinhChungUrl: string | null;
-  FileMinhChungETag: string | null;
-  FileMinhChungSha256: string | null;
-  FileMinhChungSize: number | null;
   NguoiNhap: string;
   TrangThaiDuyet: TrangThaiDuyet;
-  ThoiGianDuyet: Date | null;
-  GhiChu: string | null;
+  NgayDuyet: Date | null;
+  NguoiDuyet: string | null;
+  GhiChuDuyet: string | null;
   // Extended fields (Migration 003)
   HinhThucCapNhatKienThucYKhoa: string | null;
   ChiTietVaiTro: string | null;
@@ -35,8 +29,6 @@ export interface Activity {
   SoTiet: number | null;
   SoGioTinChiQuyDoi: number | null;
   BangChungSoGiayChungNhan: string | null;
-  CreatedAt: Date;
-  UpdatedAt: Date;
 }
 
 // For creating new activities
@@ -44,15 +36,10 @@ export interface CreateActivity {
   MaNhanVien: string;
   MaDanhMuc?: string | null;
   TenHoatDong: string;
-  VaiTro?: string | null;
-  ThoiGianBatDau?: Date | null;
-  ThoiGianKetThuc?: Date | null;
-  SoGio?: number | null;
-  SoGioTinChiQuyDoi: number;
   FileMinhChungUrl?: string | null;
   NguoiNhap: string;
   TrangThaiDuyet?: TrangThaiDuyet;
-  GhiChu?: string | null;
+  GhiChuDuyet?: string | null;
   // Extended fields
   HinhThucCapNhatKienThucYKhoa?: string | null;
   ChiTietVaiTro?: string | null;
@@ -60,6 +47,7 @@ export interface CreateActivity {
   NgayBatDau?: Date | null;
   NgayKetThuc?: Date | null;
   SoTiet?: number | null;
+  SoGioTinChiQuyDoi?: number | null;
   BangChungSoGiayChungNhan?: string | null;
 }
 
@@ -101,7 +89,7 @@ export interface ActivityListItem {
   NgayBatDau: Date | null;
   NgayKetThuc: Date | null;
   TrangThaiDuyet: TrangThaiDuyet;
-  CreatedAt: Date;
+  NgayGhiNhan: Date;
 }
 
 // Filter options

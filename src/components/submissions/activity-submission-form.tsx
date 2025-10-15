@@ -54,12 +54,16 @@ const submissionSchema = z.object({
   MaNhanVien: z.string().min(1, 'Vui lòng chọn nhân viên'),
   MaDanhMuc: z.string().optional(),
   TenHoatDong: z.string().min(1, 'Tên hoạt động là bắt buộc'),
-  VaiTro: z.string().optional(),
-  ThoiGianBatDau: z.string().optional(),
-  ThoiGianKetThuc: z.string().optional(),
-  SoGio: z.number().min(0, 'Số giờ phải lớn hơn 0').optional(),
-  SoTinChiQuyDoi: z.number().min(0, 'Số tín chỉ phải lớn hơn 0'),
-  GhiChu: z.string().optional(),
+  // Migration 003 fields
+  HinhThucCapNhatKienThucYKhoa: z.string().optional(),
+  ChiTietVaiTro: z.string().optional(),
+  DonViToChuc: z.string().optional(),
+  NgayBatDau: z.string().optional(),
+  NgayKetThuc: z.string().optional(),
+  SoTiet: z.number().min(0, 'Số tiết phải lớn hơn 0').optional(),
+  SoGioTinChiQuyDoi: z.number().min(0, 'Số tín chỉ phải lớn hơn 0'),
+  BangChungSoGiayChungNhan: z.string().optional(),
+  GhiChuDuyet: z.string().optional(),
 });
 
 type SubmissionFormData = z.infer<typeof submissionSchema>;
@@ -96,7 +100,7 @@ export function ActivitySubmissionForm({
   } = useForm<SubmissionFormData>({
     resolver: zodResolver(submissionSchema),
     defaultValues: {
-      SoTinChiQuyDoi: 0,
+      SoGioTinChiQuyDoi: 0,
     },
   });
 
@@ -135,14 +139,14 @@ export function ActivitySubmissionForm({
 
   // Calculate credits automatically
   useEffect(() => {
-    if (selectedActivity && watchedValues.SoGio) {
-      const credits = watchedValues.SoGio * selectedActivity.TyLeQuyDoi;
+    if (selectedActivity && watchedValues.SoTiet) {
+      const credits = watchedValues.SoTiet * selectedActivity.TyLeQuyDoi;
       setCalculatedCredits(credits);
-      setValue('SoTinChiQuyDoi', credits);
-    } else if (!selectedActivity && watchedValues.SoTinChiQuyDoi !== undefined) {
-      setCalculatedCredits(watchedValues.SoTinChiQuyDoi);
+      setValue('SoGioTinChiQuyDoi', credits);
+    } else if (!selectedActivity && watchedValues.SoGioTinChiQuyDoi !== undefined) {
+      setCalculatedCredits(watchedValues.SoGioTinChiQuyDoi);
     }
-  }, [selectedActivity, watchedValues.SoGio, watchedValues.SoTinChiQuyDoi, setValue]);
+  }, [selectedActivity, watchedValues.SoTiet, watchedValues.SoGioTinChiQuyDoi, setValue]);
 
   const handleFileUpload = (files: UploadedFile[]) => {
     setUploadedFiles(files);
@@ -161,15 +165,9 @@ export function ActivitySubmissionForm({
       // Prepare submission data
       const submissionData = {
         ...data,
-        ThoiGianBatDau: data.ThoiGianBatDau ? new Date(data.ThoiGianBatDau) : null,
-        ThoiGianKetThuc: data.ThoiGianKetThuc ? new Date(data.ThoiGianKetThuc) : null,
-        evidenceFiles: uploadedFiles.map(file => ({
-          filename: file.filename,
-          originalName: file.originalName,
-          size: file.size,
-          mimeType: file.mimeType,
-          checksum: file.checksum,
-        })),
+        NgayBatDau: data.NgayBatDau || null,
+        NgayKetThuc: data.NgayKetThuc || null,
+        FileMinhChungUrl: uploadedFiles.length > 0 ? `/api/files/${uploadedFiles[0].filename}` : null,
       };
 
       const response = await fetch('/api/submissions', {
@@ -329,52 +327,82 @@ export function ActivitySubmissionForm({
               )}
             </div>
 
-            {/* Role */}
+            {/* Form of Medical Knowledge Update */}
             <div>
-              <Label htmlFor="VaiTro">Vai trò trong hoạt động</Label>
+              <Label htmlFor="HinhThucCapNhatKienThucYKhoa">Hình thức cập nhật kiến thức</Label>
               <Input
-                id="VaiTro"
-                {...register('VaiTro')}
-                placeholder="VD: Học viên, Diễn giả, Tác giả..."
+                id="HinhThucCapNhatKienThucYKhoa"
+                {...register('HinhThucCapNhatKienThucYKhoa')}
+                placeholder="VD: Hội thảo, Đào tạo, Hội nghị..."
               />
             </div>
 
-            {/* Hours */}
+            {/* Detailed Role */}
             <div>
-              <Label htmlFor="SoGio">Số giờ tham gia</Label>
+              <Label htmlFor="ChiTietVaiTro">Chi tiết vai trò</Label>
               <Input
-                id="SoGio"
-                type="number"
-                step="0.5"
-                min="0"
-                {...register('SoGio', { valueAsNumber: true })}
-                placeholder="0"
+                id="ChiTietVaiTro"
+                {...register('ChiTietVaiTro')}
+                placeholder="VD: Báo cáo viên, Tham dự, Diễn giả..."
               />
-              {selectedActivity && selectedActivity.GioToiThieu && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Tối thiểu: {selectedActivity.GioToiThieu}h
-                  {selectedActivity.GioToiDa && ` • Tối đa: ${selectedActivity.GioToiDa}h`}
-                </p>
-              )}
+            </div>
+
+            {/* Organizing Unit */}
+            <div className="md:col-span-2">
+              <Label htmlFor="DonViToChuc">Đơn vị tổ chức</Label>
+              <Input
+                id="DonViToChuc"
+                {...register('DonViToChuc')}
+                placeholder="Tên đơn vị tổ chức hoạt động..."
+              />
             </div>
 
             {/* Start Date */}
             <div>
-              <Label htmlFor="ThoiGianBatDau">Thời gian bắt đầu</Label>
+              <Label htmlFor="NgayBatDau">Ngày bắt đầu</Label>
               <Input
-                id="ThoiGianBatDau"
-                type="datetime-local"
-                {...register('ThoiGianBatDau')}
+                id="NgayBatDau"
+                type="date"
+                {...register('NgayBatDau')}
               />
             </div>
 
             {/* End Date */}
             <div>
-              <Label htmlFor="ThoiGianKetThuc">Thời gian kết thúc</Label>
+              <Label htmlFor="NgayKetThuc">Ngày kết thúc</Label>
               <Input
-                id="ThoiGianKetThuc"
-                type="datetime-local"
-                {...register('ThoiGianKetThuc')}
+                id="NgayKetThuc"
+                type="date"
+                {...register('NgayKetThuc')}
+              />
+            </div>
+
+            {/* Number of Sessions */}
+            <div>
+              <Label htmlFor="SoTiet">Số tiết (nếu có)</Label>
+              <Input
+                id="SoTiet"
+                type="number"
+                step="0.5"
+                min="0"
+                {...register('SoTiet', { valueAsNumber: true })}
+                placeholder="0"
+              />
+              {selectedActivity && selectedActivity.GioToiThieu && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Tối thiểu: {selectedActivity.GioToiThieu}
+                  {selectedActivity.GioToiDa && ` • Tối đa: ${selectedActivity.GioToiDa}`}
+                </p>
+              )}
+            </div>
+
+            {/* Certificate Number */}
+            <div>
+              <Label htmlFor="BangChungSoGiayChungNhan">Số giấy chứng nhận</Label>
+              <Input
+                id="BangChungSoGiayChungNhan"
+                {...register('BangChungSoGiayChungNhan')}
+                placeholder="Số giấy chứng nhận (nếu có)..."
               />
             </div>
           </div>
@@ -389,32 +417,32 @@ export function ActivitySubmissionForm({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="SoTinChiQuyDoi">Số tín chỉ quy đổi *</Label>
+              <Label htmlFor="SoGioTinChiQuyDoi">Số giờ tín chỉ quy đổi *</Label>
               <Input
-                id="SoTinChiQuyDoi"
+                id="SoGioTinChiQuyDoi"
                 type="number"
                 step="0.1"
                 min="0"
-                {...register('SoTinChiQuyDoi', { valueAsNumber: true })}
+                {...register('SoGioTinChiQuyDoi', { valueAsNumber: true })}
                 placeholder="0"
-                disabled={!!selectedActivity && !!watchedValues.SoGio}
+                disabled={!!selectedActivity && !!watchedValues.SoTiet}
               />
-              {errors.SoTinChiQuyDoi && (
-                <p className="text-sm text-red-600 mt-1">{errors.SoTinChiQuyDoi.message}</p>
+              {errors.SoGioTinChiQuyDoi && (
+                <p className="text-sm text-red-600 mt-1">{errors.SoGioTinChiQuyDoi.message}</p>
               )}
               
-              {selectedActivity && watchedValues.SoGio && (
+              {selectedActivity && watchedValues.SoTiet && (
                 <p className="text-sm text-green-600 mt-1">
-                  Tự động tính: {watchedValues.SoGio}h × {selectedActivity.TyLeQuyDoi} = {calculatedCredits} tín chỉ
+                  Tự động tính: {watchedValues.SoTiet} tiết × {selectedActivity.TyLeQuyDoi} = {calculatedCredits} tín chỉ
                 </p>
               )}
             </div>
 
             <div>
-              <Label htmlFor="GhiChu">Ghi chú</Label>
+              <Label htmlFor="GhiChuDuyet">Ghi chú</Label>
               <Textarea
-                id="GhiChu"
-                {...register('GhiChu')}
+                id="GhiChuDuyet"
+                {...register('GhiChuDuyet')}
                 placeholder="Ghi chú thêm về hoạt động..."
                 rows={3}
               />

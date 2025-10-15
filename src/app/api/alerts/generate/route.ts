@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
           const approvedActivities = activities.filter(a => a.TrangThaiDuyet === 'DaDuyet');
           
           // Simplified compliance calculation (would need proper credit rules)
-          const totalCredits = approvedActivities.reduce((sum, activity) => sum + (activity.SoTinChiQuyDoi || 0), 0);
+          const totalCredits = approvedActivities.reduce((sum, activity) => sum + (activity.SoGioTinChiQuyDoi || 0), 0);
           const requiredCredits = 40; // Example requirement
           const compliancePercentage = totalCredits / requiredCredits;
 

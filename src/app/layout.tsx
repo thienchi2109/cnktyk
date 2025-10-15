@@ -41,9 +41,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="light">
       <body
-        className="antialiased"
+        className="antialiased bg-white"
         style={{
           fontFamily: systemFonts.join(', '),
         }}

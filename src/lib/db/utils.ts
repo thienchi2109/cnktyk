@@ -227,7 +227,7 @@ export async function submitActivity(activityData: any, submitterId: string) {
       'CREATE',
       'GhiNhanHoatDong',
       activity.MaGhiNhan,
-      { activity: activity.TenHoatDong, credits: activity.SoTinChiQuyDoi }
+      { activity: activity.TenHoatDong, credits: activity.SoGioTinChiQuyDoi }
     );
 
     // Create notification for unit administrators
@@ -325,7 +325,7 @@ export async function generateComplianceAlerts(): Promise<{ success: boolean; al
         const approvedActivities = activities.filter(a => a.TrangThaiDuyet === 'DaDuyet');
         
         // Calculate compliance (simplified - would need proper credit calculation)
-        const totalCredits = approvedActivities.reduce((sum, activity) => sum + (activity.SoTinChiQuyDoi || 0), 0);
+        const totalCredits = approvedActivities.reduce((sum, activity) => sum + (activity.SoGioTinChiQuyDoi || 0), 0);
         const requiredCredits = 40; // Example requirement
         const compliancePercentage = totalCredits / requiredCredits;
 

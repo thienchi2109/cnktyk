@@ -160,24 +160,19 @@ export const CreateQuyTacTinChiSchema = QuyTacTinChiSchema.omit({ MaQuyTac: true
 export const UpdateQuyTacTinChiSchema = CreateQuyTacTinChiSchema.partial();
 
 // GhiNhanHoatDong (Activity Record) schema
+// Matches actual database schema after Migration 003
 export const GhiNhanHoatDongSchema = z.object({
   MaGhiNhan: UUIDSchema,
   MaNhanVien: UUIDSchema,
   MaDanhMuc: UUIDSchema.nullable(),
   TenHoatDong: z.string().min(1, 'Activity name is required'),
-  VaiTro: z.string().nullable(),
-  ThoiGianBatDau: z.date().nullable(),
-  ThoiGianKetThuc: z.date().nullable(),
-  SoGio: z.number().min(0).nullable(),
-  SoGioTinChiQuyDoi: z.number().min(0, 'Credits must be non-negative'),
-  FileMinhChungUrl: z.string().url().nullable().or(z.literal('')),
-  FileMinhChungETag: z.string().nullable(),
-  FileMinhChungSha256: z.string().nullable(),
-  FileMinhChungSize: z.number().int().min(0).nullable(),
+  NgayGhiNhan: z.date(),
+  FileMinhChungUrl: z.string().nullable(),
   NguoiNhap: UUIDSchema,
   TrangThaiDuyet: TrangThaiDuyetSchema.default('ChoDuyet'),
-  ThoiGianDuyet: z.date().nullable(),
-  GhiChu: z.string().nullable(),
+  NgayDuyet: z.date().nullable(),
+  NguoiDuyet: UUIDSchema.nullable(),
+  GhiChuDuyet: z.string().nullable(),
   // Extended fields for bulk import (Migration 003)
   HinhThucCapNhatKienThucYKhoa: z.string().nullable(),
   ChiTietVaiTro: z.string().nullable(),
@@ -185,21 +180,9 @@ export const GhiNhanHoatDongSchema = z.object({
   NgayBatDau: z.date().nullable(),
   NgayKetThuc: z.date().nullable(),
   SoTiet: z.number().min(0).nullable(),
+  SoGioTinChiQuyDoi: z.number().min(0).nullable(),
   BangChungSoGiayChungNhan: z.string().nullable(),
-  CreatedAt: z.date(),
-  UpdatedAt: z.date(),
 }).refine(
-  (data) => {
-    if (data.ThoiGianBatDau !== null && data.ThoiGianKetThuc !== null) {
-      return data.ThoiGianKetThuc >= data.ThoiGianBatDau;
-    }
-    return true;
-  },
-  {
-    message: 'End time must be after start time',
-    path: ['ThoiGianKetThuc'],
-  }
-).refine(
   (data) => {
     // NgayKetThuc must be after or equal to NgayBatDau
     if (data.NgayBatDau !== null && data.NgayKetThuc !== null) {
@@ -214,9 +197,10 @@ export const GhiNhanHoatDongSchema = z.object({
 );
 
 export const CreateGhiNhanHoatDongSchema = GhiNhanHoatDongSchema.omit({ 
-  MaGhiNhan: true, 
-  CreatedAt: true, 
-  UpdatedAt: true 
+  MaGhiNhan: true,
+  NgayGhiNhan: true,
+  NgayDuyet: true,
+  NguoiDuyet: true,
 });
 
 export const UpdateGhiNhanHoatDongSchema = CreateGhiNhanHoatDongSchema.partial().extend({
@@ -224,7 +208,7 @@ export const UpdateGhiNhanHoatDongSchema = CreateGhiNhanHoatDongSchema.partial()
   NguoiNhap: UUIDSchema.optional(),
 });
 
-// File upload schema
+// File upload schema for evidence files
 export const FileUploadSchema = z.object({
   file: z.instanceof(File),
   activityId: UUIDSchema.optional(),
@@ -247,6 +231,40 @@ export const FileUploadSchema = z.object({
     path: ['file'],
   }
 );
+
+// Activity submission schema for API endpoints
+export const SubmitActivitySchema = z.object({
+  MaNhanVien: UUIDSchema,
+  MaDanhMuc: UUIDSchema.nullable(),
+  TenHoatDong: z.string().min(1, 'Activity name is required'),
+  HinhThucCapNhatKienThucYKhoa: z.string().nullable(),
+  ChiTietVaiTro: z.string().nullable(),
+  DonViToChuc: z.string().nullable(),
+  NgayBatDau: z.date().nullable(),
+  NgayKetThuc: z.date().nullable(),
+  SoTiet: z.number().min(0).nullable(),
+  SoGioTinChiQuyDoi: z.number().min(0, 'Credits must be non-negative'),
+  BangChungSoGiayChungNhan: z.string().nullable(),
+  FileMinhChungUrl: z.string().nullable(),
+}).refine(
+  (data) => {
+    if (data.NgayBatDau !== null && data.NgayKetThuc !== null) {
+      return data.NgayKetThuc >= data.NgayBatDau;
+    }
+    return true;
+  },
+  {
+    message: 'End date must be after or equal to start date',
+    path: ['NgayKetThuc'],
+  }
+);
+
+// Activity approval schema
+export const ApproveActivitySchema = z.object({
+  MaGhiNhan: UUIDSchema,
+  TrangThaiDuyet: z.enum(['DaDuyet', 'TuChoi']),
+  GhiChuDuyet: z.string().nullable(),
+});
 
 // NhatKyHeThong (Audit Log) schema
 export const NhatKyHeThongSchema = z.object({
@@ -328,6 +346,8 @@ export type CreateGhiNhanHoatDong = z.infer<typeof CreateGhiNhanHoatDongSchema>;
 export type UpdateGhiNhanHoatDong = z.infer<typeof UpdateGhiNhanHoatDongSchema>;
 
 export type FileUpload = z.infer<typeof FileUploadSchema>;
+export type SubmitActivity = z.infer<typeof SubmitActivitySchema>;
+export type ApproveActivity = z.infer<typeof ApproveActivitySchema>;
 
 export type NhatKyHeThong = z.infer<typeof NhatKyHeThongSchema>;
 export type CreateNhatKyHeThong = z.infer<typeof CreateNhatKyHeThongSchema>;

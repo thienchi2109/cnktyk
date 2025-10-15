@@ -86,12 +86,12 @@ export async function GET(request: NextRequest) {
           
           // Get total approved credits
           const creditsResult: any = await db.query(
-            `SELECT COALESCE(SUM("SoTinChiQuyDoi"), 0) as total_credits
+            `SELECT COALESCE(SUM("SoGioTinChiQuyDoi"), 0) as total_credits
              FROM "GhiNhanHoatDong"
              WHERE "MaNhanVien" = $1 AND "TrangThaiDuyet" = 'DaDuyet'`,
             [practitioner.MaNhanVien]
           );
-          const creditsEarned = parseFloat(creditsResult.rows[0]?.total_credits || '0');
+          const creditsEarned = parseFloat(creditsResult[0]?.total_credits || '0');
           const creditsRequired = 120; // Default requirement
           const compliancePercent = Math.round((creditsEarned / creditsRequired) * 100);
           
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
              WHERE "MaNhanVien" = $1`,
             [practitioner.MaNhanVien]
           );
-          const lastActivityDate = lastActivityResult.rows[0]?.last_date;
+          const lastActivityDate = lastActivityResult[0]?.last_date;
           
           additionalData = {
             ...additionalData,

@@ -30,16 +30,21 @@ import { formatDate } from '@/lib/utils';
 interface Submission {
   MaGhiNhan: string;
   TenHoatDong: string;
-  VaiTro: string | null;
-  SoGio: number | null;
-  SoTinChiQuyDoi: number;
+  NgayGhiNhan: string;
   TrangThaiDuyet: 'ChoDuyet' | 'DaDuyet' | 'TuChoi';
-  ThoiGianBatDau: string | null;
-  ThoiGianKetThuc: string | null;
-  CreatedAt: string;
-  ThoiGianDuyet: string | null;
-  GhiChu: string | null;
+  NgayDuyet: string | null;
+  NguoiDuyet: string | null;
+  GhiChuDuyet: string | null;
   FileMinhChungUrl: string | null;
+  // Migration 003 fields
+  HinhThucCapNhatKienThucYKhoa: string | null;
+  ChiTietVaiTro: string | null;
+  DonViToChuc: string | null;
+  NgayBatDau: string | null;
+  NgayKetThuc: string | null;
+  SoTiet: number | null;
+  SoGioTinChiQuyDoi: number | null;
+  BangChungSoGiayChungNhan: string | null;
   practitioner?: {
     HoVaTen: string;
     SoCCHN: string | null;
@@ -135,7 +140,8 @@ export function SubmissionsList({
     return (
       submission.TenHoatDong.toLowerCase().includes(searchLower) ||
       submission.practitioner?.HoVaTen.toLowerCase().includes(searchLower) ||
-      submission.VaiTro?.toLowerCase().includes(searchLower) ||
+      submission.ChiTietVaiTro?.toLowerCase().includes(searchLower) ||
+      submission.HinhThucCapNhatKienThucYKhoa?.toLowerCase().includes(searchLower) ||
       ''
     );
   });
@@ -306,8 +312,11 @@ export function SubmissionsList({
                           {submission.TenHoatDong}
                         </div>
                         <div className="flex items-center space-x-2 text-sm text-gray-500">
-                          {submission.VaiTro && (
-                            <span>Vai trò: {submission.VaiTro}</span>
+                          {submission.HinhThucCapNhatKienThucYKhoa && (
+                            <span>Hình thức: {submission.HinhThucCapNhatKienThucYKhoa}</span>
+                          )}
+                          {submission.ChiTietVaiTro && (
+                            <span>• Vai trò: {submission.ChiTietVaiTro}</span>
                           )}
                           {submission.activityCatalog && (
                             <Badge variant="outline" className="text-xs">
@@ -335,12 +344,12 @@ export function SubmissionsList({
                     
                     <TableCell>
                       <div className="text-sm">
-                        {submission.SoGio && (
-                          <div>{submission.SoGio} giờ</div>
+                        {submission.SoTiet && (
+                          <div>{submission.SoTiet} tiết</div>
                         )}
-                        {submission.ThoiGianBatDau && (
+                        {submission.NgayBatDau && (
                           <div className="text-gray-500">
-                            {formatDate(submission.ThoiGianBatDau)}
+                            {formatDate(submission.NgayBatDau)}
                           </div>
                         )}
                       </div>
@@ -348,26 +357,26 @@ export function SubmissionsList({
                     
                     <TableCell>
                       <span className="font-medium text-medical-blue">
-                        {submission.SoTinChiQuyDoi} tín chỉ
+                        {submission.SoGioTinChiQuyDoi || 0} tín chỉ
                       </span>
                     </TableCell>
                     
                     <TableCell>
                       {getStatusBadge(submission.TrangThaiDuyet)}
-                      {submission.TrangThaiDuyet === 'TuChoi' && submission.GhiChu && (
+                      {submission.TrangThaiDuyet === 'TuChoi' && submission.GhiChuDuyet && (
                         <div className="text-xs text-red-600 mt-1 max-w-xs truncate">
-                          {submission.GhiChu}
+                          {submission.GhiChuDuyet}
                         </div>
                       )}
                     </TableCell>
                     
                     <TableCell>
                       <div className="text-sm text-gray-500">
-                        {formatDate(submission.CreatedAt)}
+                        {formatDate(submission.NgayGhiNhan)}
                       </div>
-                      {submission.ThoiGianDuyet && (
+                      {submission.NgayDuyet && (
                         <div className="text-xs text-gray-400">
-                          Duyệt: {formatDate(submission.ThoiGianDuyet)}
+                          Duyệt: {formatDate(submission.NgayDuyet)}
                         </div>
                       )}
                     </TableCell>

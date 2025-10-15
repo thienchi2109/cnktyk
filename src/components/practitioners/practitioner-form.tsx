@@ -18,9 +18,22 @@ import { CreateNhanVienSchema, type CreateNhanVien } from '@/lib/db/schemas';
 // Form schema with additional client-side validation
 const PractitionerFormSchema = CreateNhanVienSchema.extend({
   TrangThaiLamViec: z.enum(['DangLamViec', 'DaNghi', 'TamHoan']).default('DangLamViec'),
-  Email: z.string().email('Invalid email format').optional().or(z.literal('')),
-  DienThoai: z.string().regex(/^[0-9+\-\s()]*$/, 'Invalid phone number format').optional().or(z.literal('')),
-});
+  Email: z.string().email('Định dạng email không hợp lệ').optional().or(z.literal('')),
+  DienThoai: z.string().regex(/^[0-9+\-\s()]*$/, 'Định dạng số điện thoại không hợp lệ').optional().or(z.literal('')),
+}).refine(
+  (data) => {
+    // Validate MaDonVi is a valid UUID if provided
+    if (data.MaDonVi && data.MaDonVi.length > 0) {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      return uuidRegex.test(data.MaDonVi);
+    }
+    return false; // MaDonVi is required
+  },
+  {
+    message: 'Vui lòng chọn đơn vị y tế',
+    path: ['MaDonVi'],
+  }
+);
 
 type PractitionerFormData = z.infer<typeof PractitionerFormSchema>;
 
@@ -51,7 +64,7 @@ export function PractitionerForm({
       HoVaTen: initialData?.HoVaTen || '',
       SoCCHN: initialData?.SoCCHN || '',
       NgayCapCCHN: initialData?.NgayCapCCHN || undefined,
-      MaDonVi: initialData?.MaDonVi || unitId || '',
+      MaDonVi: initialData?.MaDonVi || unitId || (units.length > 0 ? units[0].MaDonVi : ''),
       TrangThaiLamViec: initialData?.TrangThaiLamViec || 'DangLamViec',
       Email: initialData?.Email || '',
       DienThoai: initialData?.DienThoai || '',
@@ -108,12 +121,12 @@ export function PractitionerForm({
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
         <CardTitle>
-          {mode === 'create' ? 'Register New Practitioner' : 'Edit Practitioner'}
+          {mode === 'create' ? 'Đăng ký người hành nghề mới' : 'Chỉnh sửa người hành nghề'}
         </CardTitle>
         <CardDescription>
           {mode === 'create' 
-            ? 'Add a new healthcare practitioner to the system'
-            : 'Update practitioner information'
+            ? 'Thêm người hành nghề y tế mới vào hệ thống'
+            : 'Cập nhật thông tin người hành nghề'
           }
         </CardDescription>
       </CardHeader>
@@ -127,15 +140,15 @@ export function PractitionerForm({
 
           {/* Basic Information */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium">Basic Information</h3>
+            <h3 className="text-lg font-medium">Thông tin cơ bản</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="HoVaTen">Full Name *</Label>
+                <Label htmlFor="HoVaTen">Họ và tên *</Label>
                 <Input
                   id="HoVaTen"
                   {...form.register('HoVaTen')}
-                  placeholder="Enter full name"
+                  placeholder="Nhập họ và tên"
                   className={form.formState.errors.HoVaTen ? 'border-red-500' : ''}
                 />
                 {form.formState.errors.HoVaTen && (
@@ -146,11 +159,11 @@ export function PractitionerForm({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="ChucDanh">Position/Title</Label>
+                <Label htmlFor="ChucDanh">Chức danh</Label>
                 <Input
                   id="ChucDanh"
                   {...form.register('ChucDanh')}
-                  placeholder="e.g., Doctor, Nurse, Pharmacist"
+                  placeholder="VD: Bác sĩ, Điều dưỡng, Dược sĩ"
                 />
               </div>
             </div>
@@ -173,7 +186,7 @@ export function PractitionerForm({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="DienThoai">Phone Number</Label>
+                <Label htmlFor="DienThoai">Số điện thoại</Label>
                 <Input
                   id="DienThoai"
                   {...form.register('DienThoai')}
@@ -191,23 +204,23 @@ export function PractitionerForm({
 
           {/* License Information */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium">License Information</h3>
+            <h3 className="text-lg font-medium">Thông tin chứng chỉ</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="SoCCHN">CCHN License Number</Label>
+                <Label htmlFor="SoCCHN">Số chứng chỉ hành nghề</Label>
                 <Input
                   id="SoCCHN"
                   {...form.register('SoCCHN')}
-                  placeholder="Enter CCHN number"
+                  placeholder="Nhập số CCHN"
                 />
                 <p className="text-sm text-gray-500">
-                  Leave empty if not applicable
+                  Để trống nếu không có
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="NgayCapCCHN">License Issue Date</Label>
+                <Label htmlFor="NgayCapCCHN">Ngày cấp chứng chỉ</Label>
                 <Input
                   id="NgayCapCCHN"
                   type="date"
@@ -221,20 +234,20 @@ export function PractitionerForm({
 
           {/* Work Information */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium">Work Information</h3>
+            <h3 className="text-lg font-medium">Thông tin công tác</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {units.length > 0 && (
                 <div className="space-y-2">
-                  <Label htmlFor="MaDonVi">Healthcare Unit *</Label>
+                  <Label htmlFor="MaDonVi">Đơn vị y tế *</Label>
                   <Select
                     value={form.watch('MaDonVi')}
                     onValueChange={(value) => form.setValue('MaDonVi', value)}
                   >
                     <SelectTrigger className={form.formState.errors.MaDonVi ? 'border-red-500' : ''}>
-                      <SelectValue placeholder="Select unit" />
+                      <SelectValue placeholder="Chọn đơn vị" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-50 bg-white">
                       {units.map((unit) => (
                         <SelectItem key={unit.MaDonVi} value={unit.MaDonVi}>
                           {unit.TenDonVi}
@@ -251,7 +264,7 @@ export function PractitionerForm({
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="TrangThaiLamViec">Work Status</Label>
+                <Label htmlFor="TrangThaiLamViec">Trạng thái làm việc</Label>
                 <Select
                   value={form.watch('TrangThaiLamViec')}
                   onValueChange={(value) => form.setValue('TrangThaiLamViec', value as any)}
@@ -259,10 +272,10 @@ export function PractitionerForm({
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="DangLamViec">Active</SelectItem>
-                    <SelectItem value="TamHoan">Suspended</SelectItem>
-                    <SelectItem value="DaNghi">Inactive</SelectItem>
+                  <SelectContent className="z-50 bg-white">
+                    <SelectItem value="DangLamViec">Đang làm việc</SelectItem>
+                    <SelectItem value="TamHoan">Tạm hoãn</SelectItem>
+                    <SelectItem value="DaNghi">Đã nghỉ</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -279,7 +292,7 @@ export function PractitionerForm({
                 disabled={isLoading}
               >
                 <X className="w-4 h-4 mr-2" />
-                Cancel
+                Hủy
               </Button>
             )}
             <Button type="submit" disabled={isLoading}>
@@ -288,7 +301,7 @@ export function PractitionerForm({
               ) : (
                 <Save className="w-4 h-4 mr-2" />
               )}
-              {mode === 'create' ? 'Register Practitioner' : 'Update Practitioner'}
+              {mode === 'create' ? 'Đăng ký người hành nghề' : 'Cập nhật thông tin'}
             </Button>
           </div>
         </form>

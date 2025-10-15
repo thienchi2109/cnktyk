@@ -11,7 +11,7 @@ async function seedTestAccounts() {
 
     // Step 1: Create organizational units
     console.log('1. Creating organizational units...');
-    
+
     await db.query(`
       INSERT INTO "DonVi" ("MaDonVi", "TenDonVi", "CapQuanLy", "MaDonViCha", "TrangThai", "LoaiDonVi")
       VALUES 
@@ -24,7 +24,7 @@ async function seedTestAccounts() {
 
     // Step 2: Create user accounts
     console.log('2. Creating user accounts...');
-    
+
     await db.query(`
       INSERT INTO "TaiKhoan" ("MaTaiKhoan", "TenDangNhap", "MatKhauBam", "QuyenHan", "MaDonVi", "TrangThai")
       VALUES 
@@ -39,7 +39,7 @@ async function seedTestAccounts() {
 
     // Step 3: Create practitioner records
     console.log('3. Creating practitioner records...');
-    
+
     await db.query(`
       INSERT INTO "NhanVien" ("MaNhanVien", "HoVaTen", "SoCCHN", "NgayCapCCHN", "MaDonVi", "TrangThaiLamViec", "Email", "DienThoai", "ChucDanh")
       VALUES 
@@ -56,7 +56,7 @@ async function seedTestAccounts() {
       FROM "TaiKhoan" 
       ORDER BY "TenDangNhap"
     `);
-    
+
     console.log('\n📋 Created Accounts:');
     accounts.forEach((acc: any) => {
       console.log(`   - ${acc.TenDangNhap} (${acc.QuyenHan})`);

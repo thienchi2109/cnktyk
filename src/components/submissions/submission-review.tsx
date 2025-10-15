@@ -28,17 +28,21 @@ import { formatDate } from '@/lib/utils';
 interface SubmissionDetails {
   MaGhiNhan: string;
   TenHoatDong: string;
-  VaiTro: string | null;
-  SoGio: number | null;
-  SoTinChiQuyDoi: number;
+  NgayGhiNhan: string;
   TrangThaiDuyet: 'ChoDuyet' | 'DaDuyet' | 'TuChoi';
-  ThoiGianBatDau: string | null;
-  ThoiGianKetThuc: string | null;
-  CreatedAt: string;
-  ThoiGianDuyet: string | null;
-  GhiChu: string | null;
+  NgayDuyet: string | null;
+  NguoiDuyet: string | null;
+  GhiChuDuyet: string | null;
   FileMinhChungUrl: string | null;
-  FileMinhChungSize: number | null;
+  // Migration 003 fields
+  HinhThucCapNhatKienThucYKhoa: string | null;
+  ChiTietVaiTro: string | null;
+  DonViToChuc: string | null;
+  NgayBatDau: string | null;
+  NgayKetThuc: string | null;
+  SoTiet: number | null;
+  SoGioTinChiQuyDoi: number | null;
+  BangChungSoGiayChungNhan: string | null;
   practitioner: {
     HoVaTen: string;
     SoCCHN: string | null;
@@ -314,43 +318,66 @@ export function SubmissionReview({
             )}
           </div>
 
-          {submission.VaiTro && (
+          {submission.HinhThucCapNhatKienThucYKhoa && (
             <div>
-              <Label className="text-sm font-medium text-gray-700">Vai trò</Label>
-              <p className="text-gray-900">{submission.VaiTro}</p>
+              <Label className="text-sm font-medium text-gray-700">Hình thức cập nhật kiến thức</Label>
+              <p className="text-gray-900">{submission.HinhThucCapNhatKienThucYKhoa}</p>
             </div>
           )}
 
-          {submission.SoGio && (
+          {submission.ChiTietVaiTro && (
             <div>
-              <Label className="text-sm font-medium text-gray-700">Số giờ tham gia</Label>
-              <p className="text-gray-900">{submission.SoGio} giờ</p>
+              <Label className="text-sm font-medium text-gray-700">Chi tiết vai trò</Label>
+              <p className="text-gray-900">{submission.ChiTietVaiTro}</p>
+            </div>
+          )}
+
+          {submission.DonViToChuc && (
+            <div>
+              <Label className="text-sm font-medium text-gray-700">Đơn vị tổ chức</Label>
+              <p className="text-gray-900">{submission.DonViToChuc}</p>
             </div>
           )}
 
           <div>
-            <Label className="text-sm font-medium text-gray-700">Số tín chỉ quy đổi</Label>
-            <p className="text-medical-blue font-semibold text-lg">{submission.SoTinChiQuyDoi} tín chỉ</p>
-            {submission.activityCatalog && submission.SoGio && (
+            <Label className="text-sm font-medium text-gray-700">Số giờ tín chỉ quy đổi</Label>
+            <p className="text-medical-blue font-semibold text-lg">{submission.SoGioTinChiQuyDoi || 0} tín chỉ</p>
+            {submission.activityCatalog && submission.SoTiet && (
               <p className="text-sm text-gray-500">
-                {submission.SoGio}h × {submission.activityCatalog.TyLeQuyDoi} = {submission.SoTinChiQuyDoi} tín chỉ
+                {submission.SoTiet} tiết × {submission.activityCatalog.TyLeQuyDoi} = {submission.SoGioTinChiQuyDoi} tín chỉ
               </p>
             )}
           </div>
 
-          {submission.ThoiGianBatDau && (
+          {submission.NgayBatDau && (
             <div>
-              <Label className="text-sm font-medium text-gray-700">Thời gian bắt đầu</Label>
-              <p className="text-gray-900">{formatDate(submission.ThoiGianBatDau)}</p>
+              <Label className="text-sm font-medium text-gray-700">Ngày bắt đầu</Label>
+              <p className="text-gray-900">{formatDate(submission.NgayBatDau)}</p>
             </div>
           )}
 
-          {submission.ThoiGianKetThuc && (
+          {submission.NgayKetThuc && (
             <div>
-              <Label className="text-sm font-medium text-gray-700">Thời gian kết thúc</Label>
-              <p className="text-gray-900">{formatDate(submission.ThoiGianKetThuc)}</p>
+              <Label className="text-sm font-medium text-gray-700">Ngày kết thúc</Label>
+              <p className="text-gray-900">{formatDate(submission.NgayKetThuc)}</p>
             </div>
           )}
+
+          {submission.SoTiet && (
+            <div>
+              <Label className="text-sm font-medium text-gray-700">Số tiết</Label>
+              <p className="text-gray-900">{submission.SoTiet}</p>
+            </div>
+          )}
+
+          {submission.BangChungSoGiayChungNhan && (
+            <div>
+              <Label className="text-sm font-medium text-gray-700">Số giấy chứng nhận</Label>
+              <p className="text-gray-900">{submission.BangChungSoGiayChungNhan}</p>
+            </div>
+          )}
+
+
         </div>
       </GlassCard>
 
@@ -367,11 +394,6 @@ export function SubmissionReview({
               <FileText className="h-8 w-8 text-medical-blue" />
               <div>
                 <p className="font-medium text-gray-900">Tệp minh chứng</p>
-                {submission.FileMinhChungSize && (
-                  <p className="text-sm text-gray-500">
-                    {formatFileSize(submission.FileMinhChungSize)}
-                  </p>
-                )}
               </div>
             </div>
             
@@ -398,11 +420,11 @@ export function SubmissionReview({
             <div className="w-2 h-2 bg-medical-blue rounded-full"></div>
             <div>
               <p className="font-medium text-gray-900">Hoạt động được gửi</p>
-              <p className="text-sm text-gray-500">{formatDate(submission.CreatedAt)}</p>
+              <p className="text-sm text-gray-500">{formatDate(submission.NgayGhiNhan)}</p>
             </div>
           </div>
 
-          {submission.ThoiGianDuyet && (
+          {submission.NgayDuyet && (
             <div className="flex items-center space-x-3">
               <div className={`w-2 h-2 rounded-full ${
                 submission.TrangThaiDuyet === 'DaDuyet' ? 'bg-green-500' : 'bg-red-500'
@@ -411,9 +433,9 @@ export function SubmissionReview({
                 <p className="font-medium text-gray-900">
                   {submission.TrangThaiDuyet === 'DaDuyet' ? 'Hoạt động được phê duyệt' : 'Hoạt động bị từ chối'}
                 </p>
-                <p className="text-sm text-gray-500">{formatDate(submission.ThoiGianDuyet)}</p>
-                {submission.GhiChu && (
-                  <p className="text-sm text-gray-700 mt-1">{submission.GhiChu}</p>
+                <p className="text-sm text-gray-500">{formatDate(submission.NgayDuyet)}</p>
+                {submission.GhiChuDuyet && (
+                  <p className="text-sm text-gray-700 mt-1">{submission.GhiChuDuyet}</p>
                 )}
               </div>
             </div>

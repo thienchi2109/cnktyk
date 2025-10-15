@@ -28,19 +28,13 @@ export function mapDbToActivity(row: any): Activity {
     MaNhanVien: row.MaNhanVien,
     MaDanhMuc: row.MaDanhMuc || null,
     TenHoatDong: row.TenHoatDong,
-    VaiTro: row.VaiTro || null,
-    ThoiGianBatDau: row.ThoiGianBatDau ? new Date(row.ThoiGianBatDau) : null,
-    ThoiGianKetThuc: row.ThoiGianKetThuc ? new Date(row.ThoiGianKetThuc) : null,
-    SoGio: row.SoGio !== null ? parseFloat(row.SoGio) : null,
-    SoGioTinChiQuyDoi: parseFloat(row.SoGioTinChiQuyDoi),
+    NgayGhiNhan: new Date(row.NgayGhiNhan),
     FileMinhChungUrl: row.FileMinhChungUrl || null,
-    FileMinhChungETag: row.FileMinhChungETag || null,
-    FileMinhChungSha256: row.FileMinhChungSha256 || null,
-    FileMinhChungSize: row.FileMinhChungSize !== null ? parseInt(row.FileMinhChungSize, 10) : null,
     NguoiNhap: row.NguoiNhap,
     TrangThaiDuyet: row.TrangThaiDuyet as TrangThaiDuyet,
-    ThoiGianDuyet: row.ThoiGianDuyet ? new Date(row.ThoiGianDuyet) : null,
-    GhiChu: row.GhiChu || null,
+    NgayDuyet: row.NgayDuyet ? new Date(row.NgayDuyet) : null,
+    NguoiDuyet: row.NguoiDuyet || null,
+    GhiChuDuyet: row.GhiChuDuyet || null,
     // Extended fields
     HinhThucCapNhatKienThucYKhoa: row.HinhThucCapNhatKienThucYKhoa || null,
     ChiTietVaiTro: row.ChiTietVaiTro || null,
@@ -48,9 +42,8 @@ export function mapDbToActivity(row: any): Activity {
     NgayBatDau: row.NgayBatDau ? new Date(row.NgayBatDau) : null,
     NgayKetThuc: row.NgayKetThuc ? new Date(row.NgayKetThuc) : null,
     SoTiet: row.SoTiet !== null ? parseFloat(row.SoTiet) : null,
+    SoGioTinChiQuyDoi: row.SoGioTinChiQuyDoi !== null ? parseFloat(row.SoGioTinChiQuyDoi) : null,
     BangChungSoGiayChungNhan: row.BangChungSoGiayChungNhan || null,
-    CreatedAt: new Date(row.CreatedAt),
-    UpdatedAt: new Date(row.UpdatedAt),
   };
 }
 
@@ -104,13 +97,10 @@ export function mapImportToDb(
 export function serializeActivity(activity: Activity): any {
   return {
     ...activity,
-    ThoiGianBatDau: activity.ThoiGianBatDau?.toISOString() || null,
-    ThoiGianKetThuc: activity.ThoiGianKetThuc?.toISOString() || null,
-    ThoiGianDuyet: activity.ThoiGianDuyet?.toISOString() || null,
+    NgayGhiNhan: activity.NgayGhiNhan.toISOString(),
+    NgayDuyet: activity.NgayDuyet?.toISOString() || null,
     NgayBatDau: activity.NgayBatDau?.toISOString() || null,
     NgayKetThuc: activity.NgayKetThuc?.toISOString() || null,
-    CreatedAt: activity.CreatedAt.toISOString(),
-    UpdatedAt: activity.UpdatedAt.toISOString(),
   };
 }
 
@@ -120,13 +110,10 @@ export function serializeActivity(activity: Activity): any {
 export function deserializeActivity(data: any): Activity {
   return {
     ...data,
-    ThoiGianBatDau: data.ThoiGianBatDau ? new Date(data.ThoiGianBatDau) : null,
-    ThoiGianKetThuc: data.ThoiGianKetThuc ? new Date(data.ThoiGianKetThuc) : null,
-    ThoiGianDuyet: data.ThoiGianDuyet ? new Date(data.ThoiGianDuyet) : null,
+    NgayGhiNhan: new Date(data.NgayGhiNhan),
+    NgayDuyet: data.NgayDuyet ? new Date(data.NgayDuyet) : null,
     NgayBatDau: data.NgayBatDau ? new Date(data.NgayBatDau) : null,
     NgayKetThuc: data.NgayKetThuc ? new Date(data.NgayKetThuc) : null,
-    CreatedAt: new Date(data.CreatedAt),
-    UpdatedAt: new Date(data.UpdatedAt),
   };
 }
 
