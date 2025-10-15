@@ -1,5 +1,21 @@
--- CNKTYKLT – Initial schema migration (PostgreSQL/Neon)
--- One-time migration: creates types, tables, constraints, indexes, triggers, and materialized views.
+-- CNKTYKLT – Complete Database Schema (PostgreSQL/Neon)
+-- This file reflects the ACTUAL current database schema including all migrations
+-- Version: 1.3 (includes Migration 002 and Migration 003)
+-- Last Updated: 2025-10-15
+-- 
+-- Migrations Applied:
+-- - v_1_init_schema.sql (Initial schema)
+-- - 002_add_nhanvien_extended_fields.sql (NhanVien extended fields)
+-- - 003_add_activity_extended_fields.sql (GhiNhanHoatDong extended fields)
+--
+-- Note: This schema uses Vietnamese column names as per Migration 003
+-- Key changes from original:
+-- - GhiNhanHoatDong: ThoiGianBatDau → NgayBatDau, ThoiGianKetThuc → NgayKetThuc
+-- - GhiNhanHoatDong: CreatedAt → NgayGhiNhan, ThoiGianDuyet → NgayDuyet
+-- - GhiNhanHoatDong: GhiChu → GhiChuDuyet, SoTinChiQuyDoi → SoGioTinChiQuyDoi
+-- - GhiNhanHoatDong: Removed UpdatedAt column
+-- - GhiNhanHoatDong: Removed VaiTro, SoGio, FileMinhChungETag, FileMinhChungSha256, FileMinhChungSize
+--
 -- Assumes: RLS disabled at DB-level; app enforces authorization via WHERE clauses.
 
 BEGIN;
@@ -61,6 +77,7 @@ CREATE TABLE IF NOT EXISTS "TaiKhoan" (
 );
 
 -- NhanVien (practitioners)
+-- Updated with Migration 002 extended fields
 CREATE TABLE IF NOT EXISTS "NhanVien" (
   "MaNhanVien"        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   "HoVaTen"           TEXT NOT NULL,
@@ -71,7 +88,15 @@ CREATE TABLE IF NOT EXISTS "NhanVien" (
   "Email"             TEXT,
   "DienThoai"         TEXT,
   "ChucDanh"          TEXT,
-  CONSTRAINT fk_nhanvien_donvi FOREIGN KEY ("MaDonVi") REFERENCES "DonVi" ("MaDonVi") ON UPDATE CASCADE ON DELETE RESTRICT
+  -- Migration 002: Extended fields
+  "MaNhanVienNoiBo"   TEXT,
+  "NgaySinh"          DATE,
+  "GioiTinh"          TEXT CHECK ("GioiTinh" IN ('Nam', 'Nữ', 'Khác')),
+  "KhoaPhong"         TEXT,
+  "NoiCapCCHN"        TEXT,
+  "PhamViChuyenMon"   TEXT,
+  CONSTRAINT fk_nhanvien_donvi FOREIGN KEY ("MaDonVi") REFERENCES "DonVi" ("MaDonVi") ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT chk_nv_age CHECK ("NgaySinh" IS NULL OR "NgaySinh" <= CURRENT_DATE - INTERVAL '18 years')
 );
 
 -- DanhMucHoatDong (activity catalog)
@@ -105,30 +130,35 @@ CREATE TABLE IF NOT EXISTS "QuyTacTinChi" (
 );
 
 -- GhiNhanHoatDong (activity entries)
+-- Updated after Migration 003: Extended fields for medical knowledge update tracking
 CREATE TABLE IF NOT EXISTS "GhiNhanHoatDong" (
   "MaGhiNhan"        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   "MaNhanVien"       UUID NOT NULL,
   "MaDanhMuc"        UUID NULL,
   "TenHoatDong"      TEXT NOT NULL,
-  "VaiTro"           TEXT,
-  "ThoiGianBatDau"   TIMESTAMPTZ,
-  "ThoiGianKetThuc"  TIMESTAMPTZ,
-  "SoGio"            NUMERIC(6,2) CHECK ("SoGio" IS NULL OR "SoGio" >= 0),
-  "SoTinChiQuyDoi"   NUMERIC(6,2) NOT NULL CHECK ("SoTinChiQuyDoi" >= 0),
-  "FileMinhChungUrl"   TEXT,
-  "FileMinhChungETag"  TEXT,
-  "FileMinhChungSha256" TEXT,
-  "FileMinhChungSize"  BIGINT,
+  "NgayGhiNhan"      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "FileMinhChungUrl" TEXT,
   "NguoiNhap"        UUID NOT NULL,
   "TrangThaiDuyet"   trang_thai_duyet NOT NULL DEFAULT 'ChoDuyet',
-  "ThoiGianDuyet"    TIMESTAMPTZ,
-  "GhiChu"           TEXT,
-  "CreatedAt"        TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "UpdatedAt"        TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "NgayDuyet"        TIMESTAMPTZ,
+  "NguoiDuyet"       UUID,
+  "GhiChuDuyet"      TEXT,
+  
+  -- Migration 003: Extended fields for detailed activity tracking
+  "HinhThucCapNhatKienThucYKhoa" TEXT,  -- Form of medical knowledge update (e.g., Conference, Training)
+  "ChiTietVaiTro"    TEXT,              -- Detailed role (e.g., Speaker, Participant, Presenter)
+  "DonViToChuc"      TEXT,              -- Organizing unit/institution
+  "NgayBatDau"       DATE,              -- Start date
+  "NgayKetThuc"      DATE,              -- End date
+  "SoTiet"           NUMERIC(6,2) CHECK ("SoTiet" IS NULL OR "SoTiet" >= 0),  -- Number of sessions/periods
+  "SoGioTinChiQuyDoi" NUMERIC(6,2) CHECK ("SoGioTinChiQuyDoi" IS NULL OR "SoGioTinChiQuyDoi" >= 0),  -- Converted credit hours
+  "BangChungSoGiayChungNhan" TEXT,      -- Certificate number as evidence
+  
   CONSTRAINT fk_gnhd_nhanvien FOREIGN KEY ("MaNhanVien") REFERENCES "NhanVien" ("MaNhanVien") ON UPDATE CASCADE ON DELETE CASCADE,
   CONSTRAINT fk_gnhd_danhmuc FOREIGN KEY ("MaDanhMuc")  REFERENCES "DanhMucHoatDong" ("MaDanhMuc") ON UPDATE CASCADE ON DELETE SET NULL,
   CONSTRAINT fk_gnhd_nguoinhap FOREIGN KEY ("NguoiNhap") REFERENCES "TaiKhoan" ("MaTaiKhoan") ON UPDATE CASCADE ON DELETE RESTRICT,
-  CONSTRAINT chk_gnhd_time CHECK ("ThoiGianKetThuc" IS NULL OR "ThoiGianBatDau" IS NULL OR "ThoiGianKetThuc" >= "ThoiGianBatDau")
+  CONSTRAINT fk_gnhd_nguoiduyet FOREIGN KEY ("NguoiDuyet") REFERENCES "TaiKhoan" ("MaTaiKhoan") ON UPDATE CASCADE ON DELETE SET NULL,
+  CONSTRAINT chk_gnhd_time CHECK ("NgayKetThuc" IS NULL OR "NgayBatDau" IS NULL OR "NgayKetThuc" >= "NgayBatDau")
 );
 
 -- NhatKyHeThong (audit log)
@@ -186,22 +216,26 @@ CREATE INDEX IF NOT EXISTS idx_dmhd_hieuluc ON "DanhMucHoatDong" ("HieuLucTu", "
 CREATE INDEX IF NOT EXISTS idx_quytac_tran_gin ON "QuyTacTinChi" USING GIN (("TranTheoLoai"));
 
 -- GhiNhanHoatDong (time-ordered access)
-CREATE INDEX IF NOT EXISTS idx_gnhd_nv_time_desc ON "GhiNhanHoatDong" ("MaNhanVien", "ThoiGianBatDau" DESC, "MaGhiNhan" DESC);
-CREATE INDEX IF NOT EXISTS idx_gnhd_status_time ON "GhiNhanHoatDong" ("TrangThaiDuyet", "ThoiGianBatDau" DESC);
-CREATE INDEX IF NOT EXISTS idx_gnhd_pending_only ON "GhiNhanHoatDong" ("ThoiGianBatDau" DESC) WHERE "TrangThaiDuyet" = 'ChoDuyet';
+-- Updated after Migration 003: Use NgayBatDau and NgayGhiNhan instead of ThoiGianBatDau
+CREATE INDEX IF NOT EXISTS idx_gnhd_nv_time_desc ON "GhiNhanHoatDong" ("MaNhanVien", "NgayBatDau" DESC, "MaGhiNhan" DESC);
+CREATE INDEX IF NOT EXISTS idx_gnhd_status_time ON "GhiNhanHoatDong" ("TrangThaiDuyet", "NgayBatDau" DESC);
+CREATE INDEX IF NOT EXISTS idx_gnhd_pending_only ON "GhiNhanHoatDong" ("NgayBatDau" DESC) WHERE "TrangThaiDuyet" = 'ChoDuyet';
+CREATE INDEX IF NOT EXISTS idx_gnhd_record_date ON "GhiNhanHoatDong" ("NgayGhiNhan" DESC);
+CREATE INDEX IF NOT EXISTS idx_gnhd_approval_date ON "GhiNhanHoatDong" ("NgayDuyet" DESC) WHERE "NgayDuyet" IS NOT NULL;
 
 -- ThongBao
 CREATE INDEX IF NOT EXISTS idx_tb_nguoinhan_time ON "ThongBao" ("MaNguoiNhan", "TaoLuc" DESC);
 
 -- === Materialized Views (reporting) ===
 -- Aggregate credits per practitioner; refreshed by nightly cron
+-- Updated after Migration 003: Use SoGioTinChiQuyDoi and NgayBatDau/NgayKetThuc
 CREATE MATERIALIZED VIEW IF NOT EXISTS "BaoCaoTienDoNhanVien" AS
 SELECT nv."MaNhanVien",
        nv."HoVaTen",
        nv."MaDonVi",
-       COALESCE(SUM(g."SoTinChiQuyDoi"),0) AS tong_tin_chi,
-       MIN(g."ThoiGianBatDau") AS tu_ngay,
-       MAX(g."ThoiGianKetThuc") AS den_ngay
+       COALESCE(SUM(g."SoGioTinChiQuyDoi"),0) AS tong_tin_chi,
+       MIN(g."NgayBatDau") AS tu_ngay,
+       MAX(g."NgayKetThuc") AS den_ngay
 FROM "NhanVien" nv
 LEFT JOIN "GhiNhanHoatDong" g ON g."MaNhanVien" = nv."MaNhanVien" AND g."TrangThaiDuyet" = 'DaDuyet'
 GROUP BY nv."MaNhanVien", nv."HoVaTen", nv."MaDonVi";
