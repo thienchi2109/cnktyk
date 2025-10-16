@@ -211,17 +211,18 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
                   </SheetDescription>
                 </SheetHeader>
                 <div className="mt-6">
-                      <PractitionerForm
-                        unitId={userRole === 'DonVi' ? userUnitId : undefined}
-                        units={userRole === 'SoYTe' ? units : units.filter(u => u.MaDonVi === userUnitId)}
-                        onSuccess={() => {
-                          setShowCreateDialog(false);
-                          queryClient.invalidateQueries({ queryKey: ['practitioners'] });
-                        }}
-                        onCancel={() => setShowCreateDialog(false)}
-                        mode="create"
-                        variant="sheet"
-                      />
+                  <PractitionerForm
+                    unitId={userRole === 'DonVi' ? userUnitId : undefined}
+                    units={userRole === 'SoYTe' ? units : units.filter(u => u.MaDonVi === userUnitId)}
+                    userRole={userRole}
+                    onSuccess={() => {
+                      setShowCreateDialog(false);
+                      queryClient.invalidateQueries({ queryKey: ['practitioners'] });
+                    }}
+                    onCancel={() => setShowCreateDialog(false)}
+                    mode="create"
+                    variant="sheet"
+                  />
                 </div>
               </SheetContent>
             </Sheet>
@@ -423,6 +424,7 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
         onOpenChange={setShowDetailSheet}
         canEdit={canEditPractitioner}
         units={units}
+        userRole={userRole}
         onUpdate={() => queryClient.invalidateQueries({ queryKey: ['practitioners'] })}
       />
 

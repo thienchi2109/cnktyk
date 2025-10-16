@@ -502,6 +502,7 @@ export function PractitionerProfile({ practitionerId, userRole, userUnitId, unit
               units={units}
               mode="edit"
               variant="sheet"
+              userRole={userRole}
               onSuccess={() => {
                 setShowEditSheet(false);
                 fetchPractitioner();

@@ -112,12 +112,6 @@ const getNavigationItems = (userRole?: string): NavigationItem[] => {
         href: '/reports'
       },
       {
-        id: 'bulk-import',
-        label: 'Nhập dữ liệu',
-        icon: <Upload className="h-4 w-4" />,
-        href: '/import'
-      },
-      {
         id: 'user-management',
         label: 'Người dùng',
         icon: <Users className="h-4 w-4" />,

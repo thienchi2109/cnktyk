@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { 
   Sheet, 
   SheetContent, 
@@ -39,6 +40,7 @@ interface PractitionerDetailSheetProps {
   canEdit?: boolean;
   units?: Array<{ MaDonVi: string; TenDonVi: string }>;
   onUpdate?: () => void;
+  userRole?: 'SoYTe' | 'DonVi' | 'NguoiHanhNghe' | 'Auditor' | string;
 }
 
 export function PractitionerDetailSheet({
@@ -47,11 +49,13 @@ export function PractitionerDetailSheet({
   onOpenChange,
   canEdit = false,
   units = [],
-  onUpdate
+  onUpdate,
+  userRole
 }: PractitionerDetailSheetProps) {
   const [practitioner, setPractitioner] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (open && practitionerId) {
@@ -122,6 +126,25 @@ export function PractitionerDetailSheet({
     }
   };
 
+  const handleDeactivate = async () => {
+    if (!practitionerId) return;
+    const ok = window.confirm('Xác nhận vô hiệu hóa người hành nghề này?');
+    if (!ok) return;
+    try {
+      const res = await fetch(`/api/practitioners/${practitionerId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Xóa (vô hiệu) thất bại');
+      }
+      // Invalidate list cache
+      queryClient.invalidateQueries({ queryKey: ['practitioners'] });
+      if (onUpdate) onUpdate();
+      onOpenChange(false);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Không thể vô hiệu hóa');
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
@@ -145,6 +168,7 @@ export function PractitionerDetailSheet({
               units={units}
               mode="edit"
               variant="sheet"
+              userRole={userRole}
               onSuccess={() => {
                 setIsEditing(false);
                 fetchPractitionerDetails();
@@ -281,6 +305,18 @@ export function PractitionerDetailSheet({
           >
             <Edit className="w-5 h-5 mr-2" />
             Chỉnh sửa
+          </Button>
+        )}
+
+        {/* Deactivate Button - Bottom Left */}
+        {canEdit && !isEditing && practitioner && practitioner.TrangThaiLamViec !== 'DaNghi' && (
+          <Button
+            className="fixed bottom-6 left-6 rounded-full shadow-lg hover:shadow-xl transition-shadow"
+            size="lg"
+            variant="destructive"
+            onClick={handleDeactivate}
+          >
+            Vô hiệu hóa
           </Button>
         )}
       </SheetContent>

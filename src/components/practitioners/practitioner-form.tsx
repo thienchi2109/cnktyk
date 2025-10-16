@@ -45,6 +45,7 @@ interface PractitionerFormProps {
   onCancel?: () => void;
   mode?: 'create' | 'edit';
   variant?: 'card' | 'sheet'; // 'card' for standalone pages, 'sheet' for off-canvas
+  userRole?: 'SoYTe' | 'DonVi' | 'NguoiHanhNghe' | 'Auditor' | string;
 }
 
 export function PractitionerForm({
@@ -54,7 +55,8 @@ export function PractitionerForm({
   onSuccess,
   onCancel,
   mode = 'create',
-  variant = 'card'
+  variant = 'card',
+  userRole
 }: PractitionerFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -73,6 +75,9 @@ export function PractitionerForm({
       ChucDanh: initialData?.ChucDanh || '',
     },
   });
+
+  const isSelfLimited = userRole === 'NguoiHanhNghe' && mode === 'edit';
+  const disableUnitChange = userRole === 'DonVi' && mode === 'edit';
 
   const onSubmit = async (data: z.infer<typeof PractitionerFormSchema>) => {
     setIsLoading(true);
@@ -139,6 +144,7 @@ export function PractitionerForm({
                   {...form.register('HoVaTen')}
                   placeholder="Nhập họ và tên"
                   className={form.formState.errors.HoVaTen ? 'border-red-500' : ''}
+                  disabled={isSelfLimited}
                 />
                 {form.formState.errors.HoVaTen && (
                   <p className="text-sm text-red-500">
@@ -153,6 +159,7 @@ export function PractitionerForm({
                   id="ChucDanh"
                   {...form.register('ChucDanh')}
                   placeholder="VD: Bác sĩ, Điều dưỡng, Dược sĩ"
+                  disabled={isSelfLimited}
                 />
               </div>
             </div>
@@ -202,6 +209,7 @@ export function PractitionerForm({
                   id="SoCCHN"
                   {...form.register('SoCCHN')}
                   placeholder="Nhập số CCHN"
+                  disabled={isSelfLimited}
                 />
                 <p className="text-sm text-gray-500">
                   Để trống nếu không có
@@ -216,6 +224,7 @@ export function PractitionerForm({
                   {...form.register('NgayCapCCHN', {
                     setValueAs: (value: string) => value ? new Date(value) : undefined
                   })}
+                  disabled={isSelfLimited}
                 />
               </div>
             </div>
@@ -232,6 +241,7 @@ export function PractitionerForm({
                   <Select
                     value={form.watch('MaDonVi')}
                     onValueChange={(value) => form.setValue('MaDonVi', value)}
+                    disabled={isSelfLimited || disableUnitChange}
                   >
                     <SelectTrigger className={form.formState.errors.MaDonVi ? 'border-red-500' : ''}>
                       <SelectValue placeholder="Chọn đơn vị" />
@@ -257,6 +267,7 @@ export function PractitionerForm({
                 <Select
                   value={form.watch('TrangThaiLamViec')}
                   onValueChange={(value) => form.setValue('TrangThaiLamViec', value as any)}
+                  disabled={isSelfLimited}
                 >
                   <SelectTrigger>
                     <SelectValue />
