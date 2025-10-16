@@ -48,19 +48,23 @@ export const authConfig: NextAuthConfig = {
           const validatedFields = LoginSchema.safeParse(credentials);
           
           if (!validatedFields.success) {
-            console.error("Invalid login fields:", validatedFields.error);
+            console.error("[AUTH] Invalid login fields:", validatedFields.error);
             return null;
           }
 
           const { TenDangNhap, MatKhau } = validatedFields.data;
 
+          console.log("[AUTH] Attempting authentication for:", TenDangNhap);
+
           // Authenticate user using existing utility
           const authResult = await authenticateUser(TenDangNhap, MatKhau);
           
           if (!authResult.success || !authResult.user) {
-            console.error("Authentication failed:", authResult.message);
+            console.error("[AUTH] Authentication failed:", authResult.message);
             return null;
           }
+
+          console.log("[AUTH] Authentication successful for:", authResult.user.username);
 
           // Return user object that matches our User interface
           return {
@@ -70,7 +74,7 @@ export const authConfig: NextAuthConfig = {
             unitId: authResult.user.unitId || undefined,
           };
         } catch (error) {
-          console.error("Authorization error:", error);
+          console.error("[AUTH] Authorization error:", error);
           return null;
         }
       },
@@ -106,14 +110,27 @@ export const authConfig: NextAuthConfig = {
       return token;
     },
     async session({ session, token }) {
+      console.log("[AUTH] Session callback - token:", { 
+        sub: token.sub, 
+        role: token.role, 
+        username: token.username,
+        hasSessionStart: typeof token.sessionStart === 'number' 
+      });
+
       // Check if token is valid and not expired
-      if (!token.sub || !token.role || typeof token.sessionStart !== 'number') {
+      if (!token.sub || !token.role) {
+        console.error("[AUTH] Invalid token - missing sub or role");
         return { ...session, user: undefined } as any;
       }
 
-      // Check session expiry
-      if (Date.now() - (token.sessionStart as number) > 2 * 60 * 60 * 1000) {
-        return { ...session, user: undefined } as any;
+      // For new sessions, sessionStart might not be set yet
+      // Only check expiry if sessionStart exists
+      if (typeof token.sessionStart === 'number') {
+        const sessionAge = Date.now() - token.sessionStart;
+        if (sessionAge > 2 * 60 * 60 * 1000) {
+          console.error("[AUTH] Session expired - age:", sessionAge);
+          return { ...session, user: undefined } as any;
+        }
       }
 
       // Update session user with our custom fields
@@ -124,6 +141,7 @@ export const authConfig: NextAuthConfig = {
         (session.user as any).unitId = token.unitId;
       }
 
+      console.log("[AUTH] Session callback - returning valid session");
       return session;
     },
   },

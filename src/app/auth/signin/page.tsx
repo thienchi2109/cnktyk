@@ -27,6 +27,7 @@ import {
   ChevronDown
 } from "lucide-react";
 import Image from "next/image";
+import { LoadingOverlay } from "@/components/auth/loading-overlay";
 
 function SignInForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -91,8 +92,12 @@ function SignInForm() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Simple Premium Background */}
+    <>
+      {/* Loading Overlay */}
+      <LoadingOverlay isVisible={isLoading} />
+      
+      <div className="min-h-screen relative overflow-hidden">
+        {/* Simple Premium Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
         {/* Clean Gradient Orbs */}
         <div className="absolute top-16 left-16 w-96 h-96 bg-gradient-to-r from-blue-300/15 to-cyan-300/15 rounded-full blur-3xl animate-pulse-glow"></div>
@@ -404,7 +409,7 @@ function SignInForm() {
                       {/* SoYTe Account */}
                       <button
                         type="button"
-                        onClick={() => handleQuickLogin('soyte_admin', 'password')}
+                        onClick={() => handleQuickLogin('admin', '1234')}
                         disabled={isLoading}
                         className="flex items-center gap-2 p-2.5 rounded-lg border border-blue-200 bg-blue-50/80 hover:bg-blue-100/80 hover:border-blue-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
                       >
@@ -412,15 +417,15 @@ function SignInForm() {
                           <Building2 className="h-3.5 w-3.5 text-blue-600" />
                         </div>
                         <div className="flex-1 text-left">
-                          <div className="text-xs font-semibold text-blue-900">Quản trị Sở Y Tế</div>
-                          <div className="text-[10px] text-blue-600">soyte_admin - Toàn quyền hệ thống</div>
+                          <div className="text-xs font-semibold text-blue-900">Admin - Sở Y Tế</div>
+                          <div className="text-[10px] text-blue-600">admin - Toàn quyền hệ thống</div>
                         </div>
                       </button>
 
                       {/* DonVi Account */}
                       <button
                         type="button"
-                        onClick={() => handleQuickLogin('benhvien_qldt', 'password')}
+                        onClick={() => handleQuickLogin('qldv', '1234')}
                         disabled={isLoading}
                         className="flex items-center gap-2 p-2.5 rounded-lg border border-green-200 bg-green-50/80 hover:bg-green-100/80 hover:border-green-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
                       >
@@ -429,14 +434,14 @@ function SignInForm() {
                         </div>
                         <div className="flex-1 text-left">
                           <div className="text-xs font-semibold text-green-900">Quản lý Đơn vị</div>
-                          <div className="text-[10px] text-green-600">benhvien_qldt - Quản lý bệnh viện</div>
+                          <div className="text-[10px] text-green-600">qldv - Quản lý đơn vị</div>
                         </div>
                       </button>
 
                       {/* NguoiHanhNghe Account */}
                       <button
                         type="button"
-                        onClick={() => handleQuickLogin('bacsi_nguyen', 'password')}
+                        onClick={() => handleQuickLogin('nhanvien', '1234')}
                         disabled={isLoading}
                         className="flex items-center gap-2 p-2.5 rounded-lg border border-purple-200 bg-purple-50/80 hover:bg-purple-100/80 hover:border-purple-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed group"
                       >
@@ -444,14 +449,14 @@ function SignInForm() {
                           <UserCog className="h-3.5 w-3.5 text-purple-600" />
                         </div>
                         <div className="flex-1 text-left">
-                          <div className="text-xs font-semibold text-purple-900">Người hành nghề Y tế</div>
-                          <div className="text-[10px] text-purple-600">bacsi_nguyen - Bác sĩ điều trị</div>
+                          <div className="text-xs font-semibold text-purple-900">Nhân viên Y tế</div>
+                          <div className="text-[10px] text-purple-600">nhanvien - Người hành nghề</div>
                         </div>
                       </button>
                     </div>
                     
                     <div className="mt-2 pt-2 border-t border-amber-200/50">
-                      <p className="text-[10px] text-amber-700 text-center">Tất cả mật khẩu: <code className="bg-amber-100 px-1 py-0.5 rounded text-amber-800 font-mono text-[10px]">password</code></p>
+                      <p className="text-[10px] text-amber-700 text-center">Tất cả mật khẩu: <code className="bg-amber-100 px-1 py-0.5 rounded text-amber-800 font-mono text-[10px]">1234</code></p>
                     </div>
                   </div>
                 </div>
@@ -468,7 +473,8 @@ function SignInForm() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 

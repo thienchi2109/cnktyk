@@ -80,6 +80,11 @@ html.dark {
   100% { background-position: 200% 0; }
 }
 
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 /* Animation keyframes */
 @keyframes fade-in {
   from { opacity: 0; }
@@ -163,6 +168,11 @@ html.dark {
 .backdrop-blur-sm {
   -webkit-backdrop-filter: blur(4px) !important;
   backdrop-filter: blur(4px) !important;
+}
+
+/* Animation utilities */
+.animate-shimmer {
+  animation: shimmer 2s infinite;
 }
 
 /* Fix for bg-white opacity */

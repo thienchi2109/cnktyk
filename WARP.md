@@ -15,6 +15,32 @@ This file provides guidance to WARP (warp.dev) when working with code in this re
 - Zod for validation
 - Target deployment: Cloudflare Workers + Pages
 
+## AI Assistant Guidelines
+
+### MCP Tool Prioritization
+
+When working with this codebase, prioritize tools in the following order:
+
+1. **Database Exploration** → **Neon MCP Tools**
+   - Use Neon MCP tools for exploring database schema, tables, and data
+   - Tools: `describe_project`, `describe_branch`, `describe_table_schema`, `get_database_tables`, `list_branches`, `run_sql`, `explain_sql_statement`
+   - These tools provide direct access to the live Neon PostgreSQL database
+   - Preferred over manual SQL queries or schema documentation
+
+2. **Codebase Exploration** → **Knowledge Graph (gkg) MCP Tools**
+   - Use gkg MCP tools for understanding code structure, finding definitions, and tracing references
+   - Tools: `search_codebase_definitions`, `get_references`, `read_definitions`, `get_definition`, `import_usage`, `repo_map`, `list_projects`
+   - These tools provide semantic code analysis and cross-reference tracking
+   - More efficient than manual grep/search for understanding code relationships
+
+3. **Reasoning & Decision Making** → **Human MCP Tools**
+   - Use human MCP tools for complex analysis, critical decisions, and structured thinking
+   - Tools: `brain_analyze_simple`, `brain_reflect_enhanced`, `mcp__reasoning__sequentialthinking`
+   - Apply when making architectural decisions, debugging complex issues, or evaluating trade-offs
+   - Helpful for breaking down multi-step problems systematically
+
+**General Principle:** Use the most specialized tool for the task. Neon for DB, gkg for code, human for thinking.
+
 ## Common Commands
 
 ### Development

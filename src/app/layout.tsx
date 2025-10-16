@@ -29,17 +29,21 @@ const systemMonoFonts = [
 ];
 
 import { AuthProvider } from "@/components/providers/session-provider";
+import { auth } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "Hệ thống quản lý đào tạo nhân lực y tế",
   description: "Healthcare practitioner compliance tracking system for the Department of Health",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Fetch session on server to prevent unnecessary client-side fetch
+  const session = await auth();
+
   return (
     <html lang="en" className="light">
       <body
@@ -48,7 +52,7 @@ export default function RootLayout({
           fontFamily: systemFonts.join(', '),
         }}
       >
-        <AuthProvider>
+        <AuthProvider session={session}>
           {children}
         </AuthProvider>
       </body>
