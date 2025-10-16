@@ -185,12 +185,10 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
         {canCreatePractitioner && (
           <div className="flex gap-3">
             {/* Bulk Import Button - DonVi only */}
-            {userRole === 'DonVi' && (
+{userRole === 'DonVi' && (
               <Button
-                variant="outline"
                 onClick={() => setShowBulkImportSheet(true)}
                 className="rounded-full shadow-sm hover:shadow-md transition-shadow"
-                size="default"
               >
                 <Upload className="w-4 h-4 mr-2" />
                 Nhập hàng loạt
