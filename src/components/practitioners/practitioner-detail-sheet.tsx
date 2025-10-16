@@ -14,6 +14,7 @@ import {
   SheetDescription 
 } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   User, 
@@ -25,26 +26,37 @@ import {
   CheckCircle,
   Clock,
   AlertTriangle,
-  FileText
+  FileText,
+  Edit,
+  X
 } from 'lucide-react';
+import { PractitionerForm } from './practitioner-form';
 
 interface PractitionerDetailSheetProps {
   practitionerId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  canEdit?: boolean;
+  units?: Array<{ MaDonVi: string; TenDonVi: string }>;
+  onUpdate?: () => void;
 }
 
 export function PractitionerDetailSheet({
   practitionerId,
   open,
-  onOpenChange
+  onOpenChange,
+  canEdit = false,
+  units = [],
+  onUpdate
 }: PractitionerDetailSheetProps) {
   const [practitioner, setPractitioner] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     if (open && practitionerId) {
       fetchPractitionerDetails();
+      setIsEditing(false); // Reset edit mode when opening
     }
   }, [open, practitionerId]);
 
@@ -112,11 +124,11 @@ export function PractitionerDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Chi tiết người hành nghề</SheetTitle>
+          <SheetTitle>{isEditing ? 'Chỉnh sửa người hành nghề' : 'Chi tiết người hành nghề'}</SheetTitle>
           <SheetDescription>
-            Thông tin chi tiết và trạng thái tuân thủ
+            {isEditing ? 'Cập nhật thông tin người hành nghề' : 'Thông tin chi tiết và trạng thái tuân thủ'}
           </SheetDescription>
         </SheetHeader>
 
@@ -125,6 +137,21 @@ export function PractitionerDetailSheet({
             <Skeleton className="h-8 w-full" />
             <Skeleton className="h-32 w-full" />
             <Skeleton className="h-32 w-full" />
+          </div>
+        ) : isEditing && practitioner ? (
+          <div className="mt-6">
+            <PractitionerForm
+              initialData={practitioner}
+              units={units}
+              mode="edit"
+              variant="sheet"
+              onSuccess={() => {
+                setIsEditing(false);
+                fetchPractitionerDetails();
+                if (onUpdate) onUpdate();
+              }}
+              onCancel={() => setIsEditing(false)}
+            />
           </div>
         ) : practitioner ? (
           <div className="mt-6 space-y-6">
@@ -243,6 +270,18 @@ export function PractitionerDetailSheet({
           <div className="mt-6 text-center text-gray-500">
             Không tìm thấy thông tin người hành nghề
           </div>
+        )}
+
+        {/* Floating Edit Button - Bottom Right */}
+        {canEdit && !isEditing && practitioner && (
+          <Button
+            className="fixed bottom-6 right-6 rounded-full shadow-lg hover:shadow-xl transition-shadow"
+            size="lg"
+            onClick={() => setIsEditing(true)}
+          >
+            <Edit className="w-5 h-5 mr-2" />
+            Chỉnh sửa
+          </Button>
         )}
       </SheetContent>
     </Sheet>

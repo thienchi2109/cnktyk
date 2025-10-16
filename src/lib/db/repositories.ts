@@ -229,6 +229,128 @@ export class NhanVienRepository extends BaseRepository<NhanVien, CreateNhanVien,
       status
     };
   }
+
+  /**
+   * Find practitioners with server-side pagination and filtering
+   * This method optimizes database queries by:
+   * 1. Calculating compliance status in a single CTE
+   * 2. Applying all filters at the SQL level
+   * 3. Using LIMIT/OFFSET for pagination
+   * 4. Including accurate total count with COUNT(*) OVER()
+   */
+  async findPaginated(query: import('./schemas').PaginatedQuery): Promise<import('./schemas').PaginatedResult<import('./schemas').NhanVienWithCompliance>> {
+    const {
+      page = 1,
+      limit = 10,
+      unitId,
+      search,
+      status,
+      complianceStatus,
+      orderBy = 'HoVaTen',
+      orderDirection = 'ASC'
+    } = query;
+
+    const offset = (page - 1) * limit;
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    // Build optimized query with CTE for compliance calculation
+    let sql = `
+      WITH compliance_data AS (
+        SELECT 
+          "MaNhanVien",
+          COALESCE(SUM("SoGioTinChiQuyDoi"), 0) as total_credits,
+          120 as required_credits,
+          ROUND((COALESCE(SUM("SoGioTinChiQuyDoi"), 0) / 120.0) * 100, 2) as compliance_percentage,
+          CASE
+            WHEN (COALESCE(SUM("SoGioTinChiQuyDoi"), 0) / 120.0) * 100 >= 90 THEN 'compliant'
+            WHEN (COALESCE(SUM("SoGioTinChiQuyDoi"), 0) / 120.0) * 100 >= 70 THEN 'at_risk'
+            ELSE 'non_compliant'
+          END as compliance_status
+        FROM "GhiNhanHoatDong"
+        WHERE "TrangThaiDuyet" = 'DaDuyet'
+        GROUP BY "MaNhanVien"
+      ),
+      filtered_practitioners AS (
+        SELECT 
+          n.*,
+          COALESCE(c.total_credits, 0) as total_credits,
+          COALESCE(c.required_credits, 120) as required_credits,
+          COALESCE(c.compliance_percentage, 0) as compliance_percentage,
+          COALESCE(c.compliance_status, 'non_compliant') as compliance_status,
+          COUNT(*) OVER() as total_count
+        FROM "NhanVien" n
+        LEFT JOIN compliance_data c ON n."MaNhanVien" = c."MaNhanVien"
+        WHERE 1=1
+    `;
+
+    // Add filters dynamically
+    if (unitId) {
+      sql += ` AND n."MaDonVi" = $${paramIndex++}`;
+      params.push(unitId);
+    }
+
+    if (search) {
+      sql += ` AND LOWER(n."HoVaTen") LIKE LOWER($${paramIndex++})`;
+      params.push(`%${search}%`);
+    }
+
+    if (status) {
+      sql += ` AND n."TrangThaiLamViec" = $${paramIndex++}`;
+      params.push(status);
+    }
+
+    if (complianceStatus) {
+      sql += ` AND c.compliance_status = $${paramIndex++}`;
+      params.push(complianceStatus);
+    }
+
+    // Close CTE and add pagination
+    sql += `
+      )
+      SELECT *
+      FROM filtered_practitioners
+      ORDER BY "${orderBy}" ${orderDirection}
+      LIMIT $${paramIndex++} OFFSET $${paramIndex++}
+    `;
+
+    params.push(limit, offset);
+
+    // Execute query
+    const results = await db.query<any>(sql, params);
+
+    // Extract total count from first row (or 0 if no results)
+    const totalCount = results.length > 0 ? parseInt(results[0].total_count) : 0;
+
+    // Map results to NhanVienWithCompliance type
+    const data = results.map(row => ({
+      MaNhanVien: row.MaNhanVien,
+      HoVaTen: row.HoVaTen,
+      SoCCHN: row.SoCCHN,
+      NgayCapCCHN: row.NgayCapCCHN,
+      MaDonVi: row.MaDonVi,
+      TrangThaiLamViec: row.TrangThaiLamViec,
+      Email: row.Email,
+      DienThoai: row.DienThoai,
+      ChucDanh: row.ChucDanh,
+      complianceStatus: {
+        totalCredits: parseFloat(row.total_credits),
+        requiredCredits: parseInt(row.required_credits),
+        compliancePercentage: parseFloat(row.compliance_percentage),
+        status: row.compliance_status as 'compliant' | 'at_risk' | 'non_compliant'
+      }
+    }));
+
+    return {
+      data,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limit)
+      }
+    };
+  }
 }
 
 // GhiNhanHoatDong (Activity Record) Repository

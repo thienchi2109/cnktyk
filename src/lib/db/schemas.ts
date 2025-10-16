@@ -199,6 +199,54 @@ export const FileUploadSchema = z.object({
   }
 );
 
+// ============================================================
+// PAGINATION SCHEMAS (Phase 1: Server-Side Pagination)
+// ============================================================
+
+// Compliance status types
+export const ComplianceStatusTypeSchema = z.enum(['compliant', 'at_risk', 'non_compliant']);
+
+export type ComplianceStatusType = z.infer<typeof ComplianceStatusTypeSchema>;
+
+export interface ComplianceStatus {
+  totalCredits: number;
+  requiredCredits: number;
+  compliancePercentage: number;
+  status: ComplianceStatusType;
+}
+
+// Paginated query parameters
+export interface PaginatedQuery {
+  page: number;
+  limit: number;
+  unitId?: string;
+  search?: string;
+  status?: string;
+  complianceStatus?: ComplianceStatusType;
+  orderBy?: string;
+  orderDirection?: 'ASC' | 'DESC';
+}
+
+// Pagination metadata
+export interface PaginationMetadata {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+// Generic paginated result
+export interface PaginatedResult<T> {
+  data: T[];
+  pagination: PaginationMetadata;
+}
+
+// Practitioner with compliance status (for paginated results)
+export interface NhanVienWithCompliance extends Omit<z.infer<typeof NhanVienSchema>, 'NgayCapCCHN'> {
+  NgayCapCCHN: Date | null;
+  complianceStatus: ComplianceStatus;
+}
+
 // NhatKyHeThong (Audit Log) schema
 export const NhatKyHeThongSchema = z.object({
   MaNhatKy: UUIDSchema,

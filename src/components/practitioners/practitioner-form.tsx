@@ -44,6 +44,7 @@ interface PractitionerFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
   mode?: 'create' | 'edit';
+  variant?: 'card' | 'sheet'; // 'card' for standalone pages, 'sheet' for off-canvas
 }
 
 export function PractitionerForm({
@@ -52,7 +53,8 @@ export function PractitionerForm({
   units = [],
   onSuccess,
   onCancel,
-  mode = 'create'
+  mode = 'create',
+  variant = 'card'
 }: PractitionerFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -117,20 +119,7 @@ export function PractitionerForm({
     }
   };
 
-  return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle>
-          {mode === 'create' ? 'Đăng ký người hành nghề mới' : 'Chỉnh sửa người hành nghề'}
-        </CardTitle>
-        <CardDescription>
-          {mode === 'create' 
-            ? 'Thêm người hành nghề y tế mới vào hệ thống'
-            : 'Cập nhật thông tin người hành nghề'
-          }
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+  const formContent = (
         <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
           {error && (
             <Alert variant="destructive">
@@ -281,31 +270,102 @@ export function PractitionerForm({
               </div>
             </div>
           </div>
-
-          {/* Form Actions */}
-          <div className="flex justify-end space-x-4 pt-6 border-t">
-            {onCancel && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onCancel}
-                disabled={isLoading}
-              >
-                <X className="w-4 h-4 mr-2" />
-                Hủy
-              </Button>
-            )}
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4 mr-2" />
-              )}
-              {mode === 'create' ? 'Đăng ký người hành nghề' : 'Cập nhật thông tin'}
-            </Button>
-          </div>
         </form>
-      </CardContent>
-    </Card>
+  );
+
+  // Form action buttons (for card variant)
+  const formActions = (
+    <div className="flex justify-end space-x-4 pt-6 border-t">
+      {onCancel && (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          disabled={isLoading}
+        >
+          <X className="w-4 h-4 mr-2" />
+          Hủy
+        </Button>
+      )}
+      <Button
+        type="submit"
+        disabled={isLoading}
+        onClick={form.handleSubmit(onSubmit as any)}
+      >
+        {isLoading ? (
+          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+        ) : (
+          <Save className="w-4 h-4 mr-2" />
+        )}
+        {mode === 'create' ? 'Đăng ký người hành nghề' : 'Cập nhật thông tin'}
+      </Button>
+    </div>
+  );
+
+  // Floating action buttons (for sheet variant)
+  const floatingActions = (
+    <div className="fixed bottom-6 right-6 flex gap-3 z-50">
+      {/* Secondary Action Button - Cancel (only if onCancel provided) */}
+      {onCancel && (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          disabled={isLoading}
+          className="rounded-full shadow-lg hover:shadow-xl transition-shadow bg-white"
+          size="lg"
+        >
+          <X className="w-5 h-5 mr-2" />
+          Hủy
+        </Button>
+      )}
+      
+      {/* Primary Action Button - Save/Update */}
+      <Button
+        type="submit"
+        disabled={isLoading}
+        onClick={form.handleSubmit(onSubmit as any)}
+        className="rounded-full shadow-lg hover:shadow-xl transition-shadow"
+        size="lg"
+      >
+        {isLoading ? (
+          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+        ) : (
+          <Save className="w-5 h-5 mr-2" />
+        )}
+        {mode === 'create' ? 'Đăng ký' : 'Cập nhật'}
+      </Button>
+    </div>
+  );
+
+  // Render with Card wrapper for standalone pages
+  if (variant === 'card') {
+    return (
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle>
+            {mode === 'create' ? 'Đăng ký người hành nghề mới' : 'Chỉnh sửa người hành nghề'}
+          </CardTitle>
+          <CardDescription>
+            {mode === 'create' 
+              ? 'Thêm người hành nghề y tế mới vào hệ thống'
+              : 'Cập nhật thông tin người hành nghề'
+            }
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {formContent}
+          {formActions}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Render with floating action buttons for sheet/drawer context
+  return (
+    <>
+      {formContent}
+      {floatingActions}
+    </>
   );
 }

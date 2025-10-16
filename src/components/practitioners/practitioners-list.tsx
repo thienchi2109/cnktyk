@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Search, Filter, Plus, Eye, Edit, Trash2, AlertTriangle, CheckCircle, Clock, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,9 +10,10 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { PractitionerForm } from './practitioner-form';
 import { PractitionerDetailSheet } from './practitioner-detail-sheet';
+import { BulkImportSheet } from './bulk-import-sheet';
 
 interface ComplianceStatus {
   totalCredits: number;
@@ -47,7 +47,6 @@ interface PractitionersListProps {
 }
 
 export function PractitionersList({ userRole, userUnitId, units = [] }: PractitionersListProps) {
-  const router = useRouter();
   const [practitioners, setPractitioners] = useState<Practitioner[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,9 +57,11 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedPractitionerId, setSelectedPractitionerId] = useState<string | null>(null);
   const [showDetailSheet, setShowDetailSheet] = useState(false);
+  const [showBulkImportSheet, setShowBulkImportSheet] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
+  // Phase 1: Server-side pagination and filtering
   const fetchPractitioners = async () => {
     setLoading(true);
     setError(null);
@@ -74,6 +75,8 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
       if (searchTerm) params.append('search', searchTerm);
       if (statusFilter !== 'all') params.append('status', statusFilter);
       if (unitFilter !== 'all') params.append('unitId', unitFilter);
+      // Phase 1 Improvement: Send compliance filter to server
+      if (complianceFilter !== 'all') params.append('complianceStatus', complianceFilter);
 
       const response = await fetch(`/api/practitioners?${params}`);
       
@@ -93,7 +96,7 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
 
   useEffect(() => {
     fetchPractitioners();
-  }, [page, searchTerm, statusFilter, unitFilter]);
+  }, [page, searchTerm, statusFilter, unitFilter, complianceFilter]); // Added complianceFilter
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
@@ -112,6 +115,7 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
 
   const handleComplianceFilter = (value: string) => {
     setComplianceFilter(value);
+    setPage(1); // Reset to first page when filter changes
   };
 
   const getStatusBadge = (status: string) => {
@@ -157,14 +161,8 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
     }
   };
 
-  const filteredPractitioners = practitioners.filter(practitioner => {
-    if (complianceFilter !== 'all') {
-      if (complianceFilter !== practitioner.complianceStatus.status) {
-        return false;
-      }
-    }
-    return true;
-  });
+  // Phase 1: No client-side filtering needed - all filtering done on server
+  const filteredPractitioners = practitioners;
 
   const canCreatePractitioner = ['SoYTe', 'DonVi'].includes(userRole);
   const canEditPractitioner = ['SoYTe', 'DonVi'].includes(userRole);
@@ -197,7 +195,9 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
             {userRole === 'DonVi' && (
               <Button
                 variant="outline"
-                onClick={() => router.push('/import')}
+                onClick={() => setShowBulkImportSheet(true)}
+                className="rounded-full shadow-sm hover:shadow-md transition-shadow"
+                size="default"
               >
                 <Upload className="w-4 h-4 mr-2" />
                 Nhập hàng loạt
@@ -205,32 +205,35 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
             )}
             
             {/* Add Single Practitioner */}
-            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-              <DialogTrigger asChild>
-                <Button>
+            <Sheet open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+              <SheetTrigger asChild>
+                <Button className="rounded-full shadow-sm hover:shadow-md transition-shadow">
                   <Plus className="w-4 h-4 mr-2" />
                   Thêm người hành nghề
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Đăng ký người hành nghề mới</DialogTitle>
-                  <DialogDescription>
+              </SheetTrigger>
+              <SheetContent className="w-full sm:max-w-3xl overflow-y-auto" side="right">
+                <SheetHeader>
+                  <SheetTitle>Đăng ký người hành nghề mới</SheetTitle>
+                  <SheetDescription>
                     Thêm người hành nghề y tế mới vào hệ thống
-                  </DialogDescription>
-                </DialogHeader>
-                <PractitionerForm
-                  unitId={userRole === 'DonVi' ? userUnitId : undefined}
-                  units={userRole === 'SoYTe' ? units : units.filter(u => u.MaDonVi === userUnitId)}
-                  onSuccess={() => {
-                    setShowCreateDialog(false);
-                    fetchPractitioners();
-                  }}
-                  onCancel={() => setShowCreateDialog(false)}
-                  mode="create"
-                />
-              </DialogContent>
-            </Dialog>
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="mt-6">
+                  <PractitionerForm
+                    unitId={userRole === 'DonVi' ? userUnitId : undefined}
+                    units={userRole === 'SoYTe' ? units : units.filter(u => u.MaDonVi === userUnitId)}
+                    onSuccess={() => {
+                      setShowCreateDialog(false);
+                      fetchPractitioners();
+                    }}
+                    onCancel={() => setShowCreateDialog(false)}
+                    mode="create"
+                    variant="sheet"
+                  />
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
         )}
       </div>
@@ -377,29 +380,18 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedPractitionerId(practitioner.MaNhanVien);
-                              setShowDetailSheet(true);
-                            }}
-                            title="Xem chi tiết"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          {canEditPractitioner && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => router.push(`/practitioners/${practitioner.MaNhanVien}/edit`)}
-                              title="Chỉnh sửa"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedPractitionerId(practitioner.MaNhanVien);
+                            setShowDetailSheet(true);
+                          }}
+                          title="Xem chi tiết"
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          Xem
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -438,6 +430,16 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
         practitionerId={selectedPractitionerId}
         open={showDetailSheet}
         onOpenChange={setShowDetailSheet}
+        canEdit={canEditPractitioner}
+        units={units}
+        onUpdate={fetchPractitioners}
+      />
+
+      {/* Bulk Import Sheet */}
+      <BulkImportSheet
+        open={showBulkImportSheet}
+        onOpenChange={setShowBulkImportSheet}
+        onImportSuccess={fetchPractitioners}
       />
     </div>
   );

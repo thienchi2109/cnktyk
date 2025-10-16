@@ -26,6 +26,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { PractitionerForm } from './practitioner-form';
 
 interface ComplianceStatus {
   totalCredits: number;
@@ -66,13 +68,15 @@ interface PractitionerProfileProps {
   practitionerId: string;
   userRole: string;
   userUnitId?: string;
+  units?: Array<{ MaDonVi: string; TenDonVi: string }>;
 }
 
-export function PractitionerProfile({ practitionerId, userRole, userUnitId }: PractitionerProfileProps) {
+export function PractitionerProfile({ practitionerId, userRole, userUnitId, units = [] }: PractitionerProfileProps) {
   const router = useRouter();
   const [practitioner, setPractitioner] = useState<Practitioner | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showEditSheet, setShowEditSheet] = useState(false);
 
   useEffect(() => {
     fetchPractitioner();
@@ -230,9 +234,9 @@ export function PractitionerProfile({ practitionerId, userRole, userUnitId }: Pr
           </div>
         </div>
         {canEdit && (
-          <Button onClick={() => router.push(`/practitioners/${practitionerId}/edit`)}>
+          <Button onClick={() => setShowEditSheet(true)}>
             <Edit className="w-4 h-4 mr-2" />
-            Edit Profile
+            Chỉnh sửa
           </Button>
         )}
       </div>
@@ -472,6 +476,41 @@ export function PractitionerProfile({ practitionerId, userRole, userUnitId }: Pr
           </Card>
         </div>
       </div>
+
+      {/* Edit Sheet */}
+      <Sheet open={showEditSheet} onOpenChange={setShowEditSheet}>
+        <SheetContent className="w-full sm:max-w-3xl overflow-y-auto" side="right">
+          <SheetHeader>
+            <SheetTitle>Chỉnh sửa người hành nghề</SheetTitle>
+            <SheetDescription>
+              Cập nhật thông tin người hành nghề
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-6">
+            <PractitionerForm
+              initialData={practitioner ? {
+                MaNhanVien: practitioner.MaNhanVien,
+                HoVaTen: practitioner.HoVaTen,
+                SoCCHN: practitioner.SoCCHN || null,
+                NgayCapCCHN: practitioner.NgayCapCCHN ? new Date(practitioner.NgayCapCCHN) : null,
+                MaDonVi: practitioner.MaDonVi,
+                TrangThaiLamViec: practitioner.TrangThaiLamViec,
+                Email: practitioner.Email || null,
+                DienThoai: practitioner.DienThoai || null,
+                ChucDanh: practitioner.ChucDanh || null,
+              } : undefined}
+              units={units}
+              mode="edit"
+              variant="sheet"
+              onSuccess={() => {
+                setShowEditSheet(false);
+                fetchPractitioner();
+              }}
+              onCancel={() => setShowEditSheet(false)}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

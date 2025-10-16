@@ -5,6 +5,7 @@ import { CreateNhanVienSchema } from '@/lib/db/schemas';
 import { z } from 'zod';
 
 // GET /api/practitioners - List practitioners with filtering and search
+// Phase 1: Server-side pagination and filtering optimization
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth();
@@ -15,128 +16,58 @@ export async function GET(request: NextRequest) {
     const unitId = searchParams.get('unitId');
     const search = searchParams.get('search');
     const status = searchParams.get('status');
-    const includeProgress = searchParams.get('includeProgress') === 'true';
-    const userId = searchParams.get('userId');
+    const complianceStatus = searchParams.get('complianceStatus') as 'compliant' | 'at_risk' | 'non_compliant' | null;
 
-    let practitioners: any[] = [];
-
-    // Role-based access control
-    if (session.user.role === 'SoYTe') {
-      // SoYTe can see all practitioners
-      if (unitId) {
-        practitioners = await nhanVienRepo.findByUnit(unitId);
-      } else {
-        practitioners = await nhanVienRepo.findAll();
-      }
-    } else if (session.user.role === 'DonVi' && session.user.unitId) {
-      // DonVi can only see practitioners in their unit
-      practitioners = await nhanVienRepo.findByUnit(session.user.unitId);
+    // Build query parameters based on role
+    let queryUnitId: string | undefined = undefined;
+    
+    if (session.user.role === 'DonVi' && session.user.unitId) {
+      // DonVi can only see their own unit
+      queryUnitId = session.user.unitId;
+    } else if (session.user.role === 'SoYTe') {
+      // SoYTe can filter by unit (or see all)
+      queryUnitId = unitId || undefined;
     } else if (session.user.role === 'NguoiHanhNghe') {
-      // Practitioners can only see themselves
-      // If userId is provided, find by matching email (assuming username is email)
-      if (userId) {
-        const allPractitioners = await nhanVienRepo.findAll();
-        // Try to find by email matching username
-        const user = await import('@/lib/db/repositories').then(m => m.taiKhoanRepo.findById(userId));
-        if (user) {
-          practitioners = allPractitioners.filter(p => p.Email === user.TenDangNhap);
-        } else {
-          practitioners = [];
+      // Practitioners see only themselves - handle separately (no pagination needed)
+      const practitioner = await nhanVienRepo.findById(session.user.id);
+      const complianceStatusData = await nhanVienRepo.getComplianceStatus(session.user.id);
+      
+      return NextResponse.json({
+        success: true,
+        data: practitioner ? [{
+          ...practitioner,
+          complianceStatus: complianceStatusData
+        }] : [],
+        pagination: {
+          page: 1,
+          limit: 10,
+          total: practitioner ? 1 : 0,
+          totalPages: 1
         }
-      } else {
-        const practitioner = await nhanVienRepo.findById(session.user.id);
-        practitioners = practitioner ? [practitioner] : [];
-      }
+      });
     } else if (session.user.role === 'Auditor') {
-      // Auditors can see all practitioners (read-only)
-      if (unitId) {
-        practitioners = await nhanVienRepo.findByUnit(unitId);
-      } else {
-        practitioners = await nhanVienRepo.findAll();
-      }
+      // Auditors can see all (or filter by unit)
+      queryUnitId = unitId || undefined;
     } else {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    // Apply search filter
-    if (search && search.trim() !== '') {
-      // Determine the unitId to use for search based on role
-      let searchUnitId: string | undefined = undefined;
-      if (session.user.role === 'DonVi' && session.user.unitId) {
-        searchUnitId = session.user.unitId;
-      } else if (unitId) {
-        searchUnitId = unitId;
-      }
-      
-      practitioners = await nhanVienRepo.searchByName(search, searchUnitId);
-    }
-
-    // Apply status filter
-    if (status && practitioners) {
-      practitioners = practitioners.filter((p: any) => p.TrangThaiLamViec === status);
-    }
-
-    // Apply pagination
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    const paginatedPractitioners = practitioners?.slice(startIndex, endIndex) || [];
-
-    // Get compliance status and progress for each practitioner if requested
-    const practitionersWithData = await Promise.all(
-      paginatedPractitioners.map(async (practitioner: any) => {
-        const complianceStatus = await nhanVienRepo.getComplianceStatus(practitioner.MaNhanVien);
-        
-        let additionalData: any = { complianceStatus };
-        
-        if (includeProgress) {
-          // Get credit progress
-          const { db } = await import('@/lib/db/client');
-          
-          // Get total approved credits
-          const creditsResult: any = await db.query(
-            `SELECT COALESCE(SUM("SoGioTinChiQuyDoi"), 0) as total_credits
-             FROM "GhiNhanHoatDong"
-             WHERE "MaNhanVien" = $1 AND "TrangThaiDuyet" = 'DaDuyet'`,
-            [practitioner.MaNhanVien]
-          );
-          const creditsEarned = parseFloat(creditsResult[0]?.total_credits || '0');
-          const creditsRequired = 120; // Default requirement
-          const compliancePercent = Math.round((creditsEarned / creditsRequired) * 100);
-          
-          // Get last activity date
-          const lastActivityResult: any = await db.query(
-            `SELECT MAX("NgayGhiNhan") as last_date
-             FROM "GhiNhanHoatDong"
-             WHERE "MaNhanVien" = $1`,
-            [practitioner.MaNhanVien]
-          );
-          const lastActivityDate = lastActivityResult[0]?.last_date;
-          
-          additionalData = {
-            ...additionalData,
-            creditsEarned,
-            creditsRequired,
-            compliancePercent,
-            lastActivityDate
-          };
-        }
-        
-        return {
-          ...practitioner,
-          ...additionalData
-        };
-      })
-    );
+    // Use new optimized findPaginated method
+    const result = await nhanVienRepo.findPaginated({
+      page,
+      limit,
+      unitId: queryUnitId,
+      search: search || undefined,
+      status: status || undefined,
+      complianceStatus: complianceStatus || undefined,
+      orderBy: 'HoVaTen',
+      orderDirection: 'ASC'
+    });
 
     return NextResponse.json({
       success: true,
-      data: practitionersWithData,
-      pagination: {
-        page,
-        limit,
-        total: practitioners?.length || 0,
-        totalPages: Math.ceil((practitioners?.length || 0) / limit),
-      },
+      data: result.data,
+      pagination: result.pagination
     });
   } catch (error) {
     console.error('Error fetching practitioners:', error);
