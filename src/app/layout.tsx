@@ -29,6 +29,7 @@ const systemMonoFonts = [
 ];
 
 import { AuthProvider } from "@/components/providers/session-provider";
+import { QueryProvider } from "@/components/providers/query-provider";
 import { auth } from "@/lib/auth";
 
 export const metadata: Metadata = {
@@ -52,9 +53,11 @@ export default async function RootLayout({
           fontFamily: systemFonts.join(', '),
         }}
       >
-        <AuthProvider session={session}>
-          {children}
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider session={session}>
+            {children}
+          </AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );

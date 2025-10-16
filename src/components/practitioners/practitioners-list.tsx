@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { usePractitioners, practitionersQueryKey, fetchPractitionersApi } from '@/hooks/use-practitioners';
 import { Search, Filter, Plus, Eye, Edit, Trash2, AlertTriangle, CheckCircle, Clock, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,9 +49,6 @@ interface PractitionersListProps {
 }
 
 export function PractitionersList({ userRole, userUnitId, units = [] }: PractitionersListProps) {
-  const [practitioners, setPractitioners] = useState<Practitioner[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [unitFilter, setUnitFilter] = useState<string>('all');
@@ -59,44 +58,38 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
   const [showDetailSheet, setShowDetailSheet] = useState(false);
   const [showBulkImportSheet, setShowBulkImportSheet] = useState(false);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
 
-  // Phase 1: Server-side pagination and filtering
-  const fetchPractitioners = async () => {
-    setLoading(true);
-    setError(null);
+  const queryClient = useQueryClient();
 
-    try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: '10',
-      });
+  const { data, isLoading, isError, error } = usePractitioners({
+    page,
+    limit: 10,
+    searchTerm,
+    statusFilter,
+    unitFilter,
+    complianceFilter,
+  });
 
-      if (searchTerm) params.append('search', searchTerm);
-      if (statusFilter !== 'all') params.append('status', statusFilter);
-      if (unitFilter !== 'all') params.append('unitId', unitFilter);
-      // Phase 1 Improvement: Send compliance filter to server
-      if (complianceFilter !== 'all') params.append('complianceStatus', complianceFilter);
+  const practitioners: Practitioner[] = data?.data || [];
+  const totalPages: number = data?.pagination?.totalPages || 1;
 
-      const response = await fetch(`/api/practitioners?${params}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch practitioners');
-      }
-
-      const data = await response.json();
-      setPractitioners(data.data || []);
-      setTotalPages(data.pagination?.totalPages || 1);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Prefetch next page for smoother navigation
   useEffect(() => {
-    fetchPractitioners();
-  }, [page, searchTerm, statusFilter, unitFilter, complianceFilter]); // Added complianceFilter
+    if (page < totalPages) {
+      const nextOpts = {
+        page: page + 1,
+        limit: 10,
+        searchTerm,
+        statusFilter,
+        unitFilter,
+        complianceFilter,
+      };
+      queryClient.prefetchQuery({
+        queryKey: practitionersQueryKey(nextOpts),
+        queryFn: () => fetchPractitionersApi(nextOpts),
+      });
+    }
+  }, [page, totalPages, searchTerm, statusFilter, unitFilter, complianceFilter, queryClient]);
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
@@ -167,7 +160,7 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
   const canCreatePractitioner = ['SoYTe', 'DonVi'].includes(userRole);
   const canEditPractitioner = ['SoYTe', 'DonVi'].includes(userRole);
 
-  if (loading && practitioners.length === 0) {
+  if (isLoading && practitioners.length === 0) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-64" />
@@ -220,17 +213,17 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
                   </SheetDescription>
                 </SheetHeader>
                 <div className="mt-6">
-                  <PractitionerForm
-                    unitId={userRole === 'DonVi' ? userUnitId : undefined}
-                    units={userRole === 'SoYTe' ? units : units.filter(u => u.MaDonVi === userUnitId)}
-                    onSuccess={() => {
-                      setShowCreateDialog(false);
-                      fetchPractitioners();
-                    }}
-                    onCancel={() => setShowCreateDialog(false)}
-                    mode="create"
-                    variant="sheet"
-                  />
+                      <PractitionerForm
+                        unitId={userRole === 'DonVi' ? userUnitId : undefined}
+                        units={userRole === 'SoYTe' ? units : units.filter(u => u.MaDonVi === userUnitId)}
+                        onSuccess={() => {
+                          setShowCreateDialog(false);
+                          queryClient.invalidateQueries({ queryKey: ['practitioners'] });
+                        }}
+                        onCancel={() => setShowCreateDialog(false)}
+                        mode="create"
+                        variant="sheet"
+                      />
                 </div>
               </SheetContent>
             </Sheet>
@@ -311,10 +304,10 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
       </Card>
 
       {/* Error Alert */}
-      {error && (
+      {isError && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{(error as Error)?.message || 'An error occurred'}</AlertDescription>
         </Alert>
       )}
 
@@ -432,14 +425,14 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
         onOpenChange={setShowDetailSheet}
         canEdit={canEditPractitioner}
         units={units}
-        onUpdate={fetchPractitioners}
+        onUpdate={() => queryClient.invalidateQueries({ queryKey: ['practitioners'] })}
       />
 
       {/* Bulk Import Sheet */}
       <BulkImportSheet
         open={showBulkImportSheet}
         onOpenChange={setShowBulkImportSheet}
-        onImportSuccess={fetchPractitioners}
+        onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ['practitioners'] })}
       />
     </div>
   );

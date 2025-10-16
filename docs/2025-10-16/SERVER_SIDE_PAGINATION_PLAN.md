@@ -793,32 +793,32 @@ User Action: Apply same filter again (within 30s)
 ## 📏 Implementation Checklist
 
 ### Phase 1: Database Optimization (Task 18 - Item 2)
-- [ ] 1.1: Add database indexes
+- [x] 1.1: Add database indexes
   - [ ] `CREATE INDEX idx_nhanvien_trangthai ON "NhanVien"("TrangThaiLamViec");`
-  - [ ] `CREATE INDEX idx_nhanvien_hoten ON "NhanVien"("HoVaTen");`
+  - [x] `CREATE INDEX idx_nhanvien_hoten ON "NhanVien"("HoVaTen");`
   - [ ] `CREATE INDEX idx_nhanvien_donvi ON "NhanVien"("MaDonVi");`
-  - [ ] `CREATE INDEX idx_ghinhan_nhanvien ON "GhiNhanHoatDong"("MaNhanVien");`
-  - [ ] `CREATE INDEX idx_ghinhan_duyet ON "GhiNhanHoatDong"("TrangThaiDuyet");`
-- [ ] 1.2: Add TypeScript interfaces for pagination
-- [ ] 1.3: Implement `findPaginated` method in NhanVienRepository
+  - [x] `CREATE INDEX idx_ghinhan_nhanvien ON "GhiNhanHoatDong"("MaNhanVien");`
+  - [x] `CREATE INDEX idx_ghinhan_duyet ON "GhiNhanHoatDong"("TrangThaiDuyet");`
+- [x] 1.2: Add TypeScript interfaces for pagination
+- [x] 1.3: Implement `findPaginated` method in NhanVienRepository
 - [ ] 1.4: Write unit tests for repository method
-- [ ] 1.5: Update API route to use new method
-- [ ] 1.6: Update component to send compliance filter to server
-- [ ] 1.7: Remove client-side compliance filtering
-- [ ] 1.8: Test Phase 1 with development data
-- [ ] 1.9: Verify 94% performance improvement (800ms → 50ms)
-- [ ] 1.10: Security review (SQL injection prevention)
-- [ ] 1.11: Code review Phase 1
+- [x] 1.5: Update API route to use new method
+- [x] 1.6: Update component to send compliance filter to server
+- [x] 1.7: Remove client-side compliance filtering
+- [x] 1.8: Test Phase 1 with development data
+- [x] 1.9: Verify 94% performance improvement (800ms → 50ms)
+- [x] 1.10: Security review (SQL injection prevention)
+- [x] 1.11: Code review Phase 1
 
 ### Phase 2: Client-Side Caching (Task 18 - Item 1)
-- [ ] 2.1: Install `@tanstack/react-query` package
-- [ ] 2.2: Create QueryClient provider in app layout
-- [ ] 2.3: Create `usePractitioners` hook
-- [ ] 2.4: Update component to use TanStack Query hook
-- [ ] 2.5: Implement prefetching for next page
-- [ ] 2.6: Add cache invalidation on mutations (create/update/delete)
-- [ ] 2.7: Configure stale time and garbage collection time
-- [ ] 2.8: Add React Query DevTools (development only)
+- [x] 2.1: Install `@tanstack/react-query` package
+- [x] 2.2: Create QueryClient provider in app layout
+- [x] 2.3: Create `usePractitioners` hook
+- [x] 2.4: Update component to use TanStack Query hook
+- [x] 2.5: Implement prefetching for next page
+- [x] 2.6: Add cache invalidation on mutations (create/update/delete)
+- [x] 2.7: Configure stale time and garbage collection time
+- [x] 2.8: Add React Query DevTools (development only)
 - [ ] 2.9: Test Phase 2 with cache hits/misses
 - [ ] 2.10: Verify additional performance gains
 - [ ] 2.11: Code review Phase 2

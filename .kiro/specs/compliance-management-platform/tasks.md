@@ -141,10 +141,10 @@
   - _Requirements: 8.1, 8.2, 8.3, 8.4_
 
 - [ ] 18. Add performance optimization and caching
-  - Implement TanStack Query for efficient data fetching and caching
-  - Optimize database queries with proper indexing and pagination
-  - Add image optimization for evidence file thumbnails
-  - Implement code splitting and lazy loading for better performance
+  - [x] Optimize database queries with proper indexing and pagination
+  - [x] Implement TanStack Query for efficient data fetching and caching
+  - [ ] Add image optimization for evidence file thumbnails
+  - [ ] Implement code splitting and lazy loading for better performance
   - _Requirements: All requirements (performance enhancement)_
 
 - [ ]* 19. Create comprehensive test suite
