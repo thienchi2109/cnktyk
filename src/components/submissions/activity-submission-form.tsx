@@ -258,10 +258,10 @@ export function ActivitySubmissionForm({
               <div>
                 <Label htmlFor="MaNhanVien">Chọn nhân viên *</Label>
                 <Select onValueChange={(value) => setValue('MaNhanVien', value)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="relative z-10 data-[state=open]:z-50">
                     <SelectValue placeholder="Chọn nhân viên..." />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[9999] bg-white">
                     {practitioners.map((practitioner) => (
                       <SelectItem key={practitioner.MaNhanVien} value={practitioner.MaNhanVien}>
                         <div className="flex flex-col">
@@ -294,10 +294,10 @@ export function ActivitySubmissionForm({
             <div className="md:col-span-2">
               <Label htmlFor="MaDanhMuc">Chọn từ danh mục hoạt động (tùy chọn)</Label>
               <Select onValueChange={(value) => setValue('MaDanhMuc', value === '__none__' ? undefined : value)}>
-                <SelectTrigger>
+                <SelectTrigger className="relative z-10 data-[state=open]:z-50">
                   <SelectValue placeholder="Chọn hoạt động từ danh mục..." />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[9999] bg-white">
                   <SelectItem value="__none__">Hoạt động tự do (không từ danh mục)</SelectItem>
                   {activityCatalog.map((activity) => (
                     <SelectItem key={activity.MaDanhMuc} value={activity.MaDanhMuc}>
