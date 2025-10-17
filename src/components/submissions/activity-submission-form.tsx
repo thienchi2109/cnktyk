@@ -293,12 +293,12 @@ export function ActivitySubmissionForm({
             {/* Activity Catalog Selection */}
             <div className="md:col-span-2">
               <Label htmlFor="MaDanhMuc">Chọn từ danh mục hoạt động (tùy chọn)</Label>
-              <Select onValueChange={(value) => setValue('MaDanhMuc', value || undefined)}>
+              <Select onValueChange={(value) => setValue('MaDanhMuc', value === '__none__' ? undefined : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Chọn hoạt động từ danh mục..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Hoạt động tự do (không từ danh mục)</SelectItem>
+                  <SelectItem value="__none__">Hoạt động tự do (không từ danh mục)</SelectItem>
                   {activityCatalog.map((activity) => (
                     <SelectItem key={activity.MaDanhMuc} value={activity.MaDanhMuc}>
                       <div className="flex flex-col">
