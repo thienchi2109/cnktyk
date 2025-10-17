@@ -29,7 +29,6 @@ export default async function NewSubmissionPage() {
       <ActivitySubmissionForm
         userRole={user.role}
         practitioners={practitioners}
-        onCancel={() => redirect('/submissions')}
       />
     </div>
   );
