@@ -25,7 +25,6 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { PractitionerForm } from './practitioner-form';
 
@@ -110,11 +109,11 @@ export function PractitionerProfile({ practitionerId, userRole, userUnitId, unit
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'DangLamViec':
-        return <Badge variant="default" className="bg-green-100 text-green-800">Active</Badge>;
+        return <Badge variant="default" className="bg-green-100 text-green-800">Đang làm việc</Badge>;
       case 'TamHoan':
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Suspended</Badge>;
+        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Tạm hoãn</Badge>;
       case 'DaNghi':
-        return <Badge variant="destructive" className="bg-red-100 text-red-800">Inactive</Badge>;
+        return <Badge variant="destructive" className="bg-red-100 text-red-800">Đã nghỉ</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -149,11 +148,11 @@ export function PractitionerProfile({ practitionerId, userRole, userUnitId, unit
   const getActivityStatusBadge = (status: string) => {
     switch (status) {
       case 'DaDuyet':
-        return <Badge variant="default" className="bg-green-100 text-green-800">Approved</Badge>;
+        return <Badge variant="default" className="bg-green-100 text-green-800">Đã duyệt</Badge>;
       case 'ChoDuyet':
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Pending</Badge>;
+        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Chờ duyệt</Badge>;
       case 'TuChoi':
-        return <Badge variant="destructive" className="bg-red-100 text-red-800">Rejected</Badge>;
+        return <Badge variant="destructive" className="bg-red-100 text-red-800">Từ chối</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -161,7 +160,7 @@ export function PractitionerProfile({ practitionerId, userRole, userUnitId, unit
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString('vi-VN', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
@@ -195,7 +194,7 @@ export function PractitionerProfile({ practitionerId, userRole, userUnitId, unit
       <div className="space-y-4">
         <Button variant="outline" onClick={() => router.back()}>
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
+          Quay lại
         </Button>
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
@@ -210,10 +209,10 @@ export function PractitionerProfile({ practitionerId, userRole, userUnitId, unit
       <div className="space-y-4">
         <Button variant="outline" onClick={() => router.back()}>
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
+          Quay lại
         </Button>
         <Alert>
-          <AlertDescription>Practitioner not found.</AlertDescription>
+          <AlertDescription>Không tìm thấy người hành nghề.</AlertDescription>
         </Alert>
       </div>
     );
@@ -226,11 +225,11 @@ export function PractitionerProfile({ practitionerId, userRole, userUnitId, unit
         <div className="flex items-center space-x-4">
           <Button variant="outline" onClick={() => router.back()}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
+            Quay lại
           </Button>
           <div>
             <h1 className="text-3xl font-bold">{practitioner.HoVaTen}</h1>
-            <p className="text-gray-600">{practitioner.ChucDanh || 'Healthcare Practitioner'}</p>
+            <p className="text-gray-600">{practitioner.ChucDanh || 'Người hành nghề y tế'}</p>
           </div>
         </div>
         {canEdit && (
@@ -249,22 +248,22 @@ export function PractitionerProfile({ practitionerId, userRole, userUnitId, unit
             <CardHeader>
               <CardTitle className="flex items-center">
                 <User className="w-5 h-5 mr-2" />
-                Basic Information
+                Thông tin cơ bản
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-3">
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Full Name</label>
+                    <label className="text-sm font-medium text-gray-500">Họ và tên</label>
                     <p className="text-lg">{practitioner.HoVaTen}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Position</label>
+                    <label className="text-sm font-medium text-gray-500">Chức danh</label>
                     <p>{practitioner.ChucDanh || 'Not specified'}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Work Status</label>
+                    <label className="text-sm font-medium text-gray-500">Trạng thái làm việc</label>
                     <div className="mt-1">
                       {getStatusBadge(practitioner.TrangThaiLamViec)}
                     </div>
@@ -272,11 +271,11 @@ export function PractitionerProfile({ practitionerId, userRole, userUnitId, unit
                 </div>
                 <div className="space-y-3">
                   <div>
-                    <label className="text-sm font-medium text-gray-500">CCHN License</label>
-                    <p>{practitioner.SoCCHN || 'Not provided'}</p>
+                    <label className="text-sm font-medium text-gray-500">Số CCHN</label>
+                    <p>{practitioner.SoCCHN || 'Chưa cung cấp'}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-500">License Issue Date</label>
+                    <label className="text-sm font-medium text-gray-500">Ngày cấp</label>
                     <p>{formatDate(practitioner.NgayCapCCHN)}</p>
                   </div>
                 </div>
@@ -289,7 +288,7 @@ export function PractitionerProfile({ practitionerId, userRole, userUnitId, unit
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Mail className="w-5 h-5 mr-2" />
-                Contact Information
+                Thông tin liên hệ
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -298,14 +297,14 @@ export function PractitionerProfile({ practitionerId, userRole, userUnitId, unit
                   <Mail className="w-4 h-4 text-gray-400" />
                   <div>
                     <label className="text-sm font-medium text-gray-500">Email</label>
-                    <p>{practitioner.Email || 'Not provided'}</p>
+                    <p>{practitioner.Email || 'Chưa cung cấp'}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
                   <Phone className="w-4 h-4 text-gray-400" />
                   <div>
-                    <label className="text-sm font-medium text-gray-500">Phone</label>
-                    <p>{practitioner.DienThoai || 'Not provided'}</p>
+                    <label className="text-sm font-medium text-gray-500">Số điện thoại</label>
+                    <p>{practitioner.DienThoai || 'Chưa cung cấp'}</p>
                   </div>
                 </div>
               </div>
@@ -317,26 +316,26 @@ export function PractitionerProfile({ practitionerId, userRole, userUnitId, unit
             <CardHeader>
               <CardTitle className="flex items-center">
                 <FileText className="w-5 h-5 mr-2" />
-                Recent Activities
+                Hoạt động gần đây
               </CardTitle>
               <CardDescription>
-                Latest continuing education activities
+                Các hoạt động đào tạo liên tục gần đây
               </CardDescription>
             </CardHeader>
             <CardContent>
               {practitioner.recentActivities.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">No activities recorded yet.</p>
+                <p className="text-gray-500 text-center py-4">Chưa có hoạt động nào.</p>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Activity</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Hours</TableHead>
-                        <TableHead>Credits</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Date</TableHead>
+                        <TableHead>Hoạt động</TableHead>
+                        <TableHead>Vai trò</TableHead>
+                        <TableHead>Giờ</TableHead>
+                        <TableHead>Tín chỉ</TableHead>
+                        <TableHead>Trạng thái</TableHead>
+                        <TableHead>Ngày</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -346,7 +345,7 @@ export function PractitionerProfile({ practitionerId, userRole, userUnitId, unit
                             {activity.TenHoatDong}
                           </TableCell>
                           <TableCell>
-                            {activity.VaiTro || 'Participant'}
+                            {activity.VaiTro || 'Tham gia'}
                           </TableCell>
                           <TableCell>
                             {activity.SoGio || 'N/A'}
@@ -377,7 +376,7 @@ export function PractitionerProfile({ practitionerId, userRole, userUnitId, unit
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Award className="w-5 h-5 mr-2" />
-                Compliance Status
+                Trạng thái tuân thủ
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -386,7 +385,7 @@ export function PractitionerProfile({ practitionerId, userRole, userUnitId, unit
                   <div className="flex items-center space-x-2">
                     {getComplianceIcon(practitioner.complianceStatus.status)}
                     <span className={`font-medium ${getComplianceStatusColor(practitioner.complianceStatus.status)}`}>
-                      {practitioner.complianceStatus.compliancePercentage.toFixed(1)}% Complete
+                      {practitioner.complianceStatus.compliancePercentage.toFixed(1)}% Hoàn thành
                     </span>
                   </div>
                 </div>
@@ -398,13 +397,13 @@ export function PractitionerProfile({ practitionerId, userRole, userUnitId, unit
                 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <label className="text-gray-500">Current Credits</label>
+                    <label className="text-gray-500">Tín chỉ hiện có</label>
                     <p className="font-semibold text-lg">
                       {practitioner.complianceStatus.totalCredits}
                     </p>
                   </div>
                   <div>
-                    <label className="text-gray-500">Required Credits</label>
+                    <label className="text-gray-500">Tín chỉ yêu cầu</label>
                     <p className="font-semibold text-lg">
                       {practitioner.complianceStatus.requiredCredits}
                     </p>
@@ -413,8 +412,8 @@ export function PractitionerProfile({ practitionerId, userRole, userUnitId, unit
 
                 <div className="pt-2 border-t">
                   <div className="text-sm text-gray-600">
-                    <strong>Remaining:</strong> {' '}
-                    {Math.max(0, practitioner.complianceStatus.requiredCredits - practitioner.complianceStatus.totalCredits)} credits
+                    <strong>Còn thiếu:</strong> {' '}
+                    {Math.max(0, practitioner.complianceStatus.requiredCredits - practitioner.complianceStatus.totalCredits)} tín chỉ
                   </div>
                 </div>
 
@@ -422,7 +421,7 @@ export function PractitionerProfile({ practitionerId, userRole, userUnitId, unit
                   <Alert variant="destructive">
                     <AlertTriangle className="h-4 w-4" />
                     <AlertDescription>
-                      Compliance is below 70%. Immediate action required.
+                      Mức tuân thủ dưới 70%. Cần thực hiện ngay.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -431,7 +430,7 @@ export function PractitionerProfile({ practitionerId, userRole, userUnitId, unit
                   <Alert>
                     <Clock className="h-4 w-4" />
                     <AlertDescription>
-                      Compliance is between 70-89%. Consider submitting more activities.
+                      Mức tuân thủ 70–89%. Nên ghi nhận thêm hoạt động.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -444,29 +443,29 @@ export function PractitionerProfile({ practitionerId, userRole, userUnitId, unit
             <CardHeader>
               <CardTitle className="flex items-center">
                 <TrendingUp className="w-5 h-5 mr-2" />
-                Quick Stats
+                Thống kê nhanh
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Total Activities</span>
+                  <span className="text-gray-600">Tổng số hoạt động</span>
                   <span className="font-semibold">{practitioner.recentActivities.length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Approved</span>
+                  <span className="text-gray-600">Đã duyệt</span>
                   <span className="font-semibold text-green-600">
                     {practitioner.recentActivities.filter(a => a.TrangThaiDuyet === 'DaDuyet').length}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Pending</span>
+                  <span className="text-gray-600">Chờ duyệt</span>
                   <span className="font-semibold text-yellow-600">
                     {practitioner.recentActivities.filter(a => a.TrangThaiDuyet === 'ChoDuyet').length}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Rejected</span>
+                  <span className="text-gray-600">Từ chối</span>
                   <span className="font-semibold text-red-600">
                     {practitioner.recentActivities.filter(a => a.TrangThaiDuyet === 'TuChoi').length}
                   </span>

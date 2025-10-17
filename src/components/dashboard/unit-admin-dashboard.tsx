@@ -10,6 +10,9 @@ import { useState, useEffect } from 'react';
 import { useIsDesktop } from '@/hooks/use-media-query';
 import { GlassCard } from '@/components/ui/glass-card';
 import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { PractitionerForm } from '@/components/practitioners/practitioner-form';
 import { 
   Users, 
   Clock, 
@@ -33,6 +36,7 @@ import Link from 'next/link';
 interface UnitAdminDashboardProps {
   userId: string;
   unitId: string;
+  units?: Array<{ MaDonVi: string; TenDonVi: string }>;
 }
 
 interface UnitMetrics {
@@ -69,8 +73,10 @@ interface PendingApproval {
   daysWaiting: number;
 }
 
-export function UnitAdminDashboard({ userId, unitId }: UnitAdminDashboardProps) {
+export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDashboardProps) {
   const isDesktop = useIsDesktop();
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [metrics, setMetrics] = useState<UnitMetrics>({
     totalPractitioners: 0,
     activePractitioners: 0,
@@ -139,7 +145,7 @@ export function UnitAdminDashboard({ userId, unitId }: UnitAdminDashboardProps) 
     };
 
     fetchPractitioners();
-  }, [unitId]);
+  }, [unitId, refreshKey]);
 
   // Fetch pending approvals
   useEffect(() => {
@@ -379,12 +385,31 @@ export function UnitAdminDashboard({ userId, unitId }: UnitAdminDashboardProps) 
               <h2 className="text-xl font-bold text-gray-800">Quản lý người hành nghề</h2>
             </div>
             <div className="flex items-center gap-2">
-              <Link href="/practitioners/new">
-                <GlassButton size="sm" className="hidden md:flex items-center gap-2">
-                  <Plus className="w-4 h-4" />
-                  Thêm mới
-                </GlassButton>
-              </Link>
+              <Sheet open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+                <SheetTrigger asChild>
+                  <Button className="hidden md:flex items-center gap-2 rounded-full shadow-sm hover:shadow-md transition-shadow">
+                    <Plus className="w-4 h-4" />
+                    Thêm mới
+                  </Button>
+                </SheetTrigger>
+                <SheetContent className="w-full sm:max-w-3xl overflow-y-auto" side="right">
+                  <SheetHeader>
+                    <SheetTitle>Đăng ký người hành nghề mới</SheetTitle>
+                    <SheetDescription>Thêm người hành nghề y tế mới vào hệ thống</SheetDescription>
+                  </SheetHeader>
+                  <div className="mt-6">
+                    <PractitionerForm
+                      unitId={unitId}
+                      units={units}
+                      userRole="DonVi"
+                      onSuccess={() => { setShowCreateDialog(false); setRefreshKey((k) => k + 1); }}
+                      onCancel={() => setShowCreateDialog(false)}
+                      mode="create"
+                      variant="sheet"
+                    />
+                  </div>
+                </SheetContent>
+              </Sheet>
               <button
                 onClick={() => toggleSection('practitioners')}
                 className="p-2 hover:bg-white/20 rounded-lg transition-colors lg:hidden"

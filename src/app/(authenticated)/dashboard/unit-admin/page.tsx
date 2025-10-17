@@ -1,6 +1,7 @@
 import { requireAuth } from "@/lib/auth/server";
 import { redirect } from 'next/navigation';
 import { UnitAdminDashboard } from "@/components/dashboard/unit-admin-dashboard";
+import { donViRepo } from '@/lib/db/repositories';
 
 export default async function UnitAdminDashboardPage() {
   const session = await requireAuth();
@@ -23,5 +24,9 @@ export default async function UnitAdminDashboardPage() {
     );
   }
 
-  return <UnitAdminDashboard userId={user.id} unitId={user.unitId} />;
+  // Load unit info for create form
+  const unit = await donViRepo.findById(user.unitId);
+  const units = unit ? [{ MaDonVi: unit.MaDonVi, TenDonVi: unit.TenDonVi }] : [];
+
+  return <UnitAdminDashboard userId={user.id} unitId={user.unitId} units={units} />;
 }

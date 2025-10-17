@@ -120,7 +120,7 @@
   - Create export preview functionality with glass modal interface
   - _Requirements: 3.3, 3.4, 7.1, 7.2_
 
-- [ ] 16. Develop bulk import system (Excel-based for DonVi users)
+- [x] 16. Develop bulk import system (Excel-based for DonVi users)
   - Create Excel template generator with formatted sheets (Practitioners + Activities)
   - Build file upload and validation API with comprehensive error checking
   - Implement Excel parsing with exceljs library and business rule validation
