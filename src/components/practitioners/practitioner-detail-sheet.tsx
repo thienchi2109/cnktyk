@@ -14,7 +14,6 @@ import {
   SheetTitle, 
   SheetDescription 
 } from '@/components/ui/sheet';
-import { SheetFooter } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -184,10 +183,18 @@ export function PractitionerDetailSheet({
           <div className="mt-6 space-y-6">
             {/* Basic Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <User className="w-5 h-5" />
-                Thông tin cơ bản
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <User className="w-5 h-5" />
+                  Thông tin cơ bản
+                </h3>
+                {canEdit && !isEditing && (
+                  <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                    <Edit className="w-4 h-4 mr-2" />
+                    Chỉnh sửa
+                  </Button>
+                )}
+              </div>
               <div className="grid grid-cols-1 gap-4 p-4 bg-gray-50 rounded-lg">
                 <div>
                   <label className="text-sm font-medium text-gray-600">Họ và tên</label>
@@ -299,15 +306,6 @@ export function PractitionerDetailSheet({
           </div>
         )}
 
-        {/* Footer actions (details view) */}
-        {canEdit && !isEditing && practitioner && (
-          <SheetFooter className="-mx-6 px-6 py-4 mt-6 border-t bg-white">
-            <Button variant="outline" onClick={() => setIsEditing(true)}>
-              <Edit className="w-5 h-5 mr-2" />
-              Chỉnh sửa
-            </Button>
-          </SheetFooter>
-        )}
       </SheetContent>
     </Sheet>
   );
