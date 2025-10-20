@@ -5,8 +5,10 @@ import { z } from 'zod';
 import { useAuth } from '@/lib/auth/hooks';
 import { UserList } from '@/components/users/user-list';
 import { UserForm } from '@/components/forms/user-form';
-import { GlassModal } from '@/components/ui/glass-modal';
 import { GlassCard } from '@/components/ui/glass-card';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { CreateTaiKhoanSchema, UpdateTaiKhoanSchema } from '@/lib/db/schemas';
@@ -45,10 +47,10 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState('');
   const [unitFilter, setUnitFilter] = useState('');
   
-  // Modal states
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
+  // Sheet states
+  const [showCreateSheet, setShowCreateSheet] = useState(false);
+  const [showEditSheet, setShowEditSheet] = useState(false);
+  const [showViewSheet, setShowViewSheet] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -119,7 +121,7 @@ export default function UsersPage() {
         throw new Error(errorData.error || 'Failed to create user');
       }
 
-      setShowCreateModal(false);
+      setShowCreateSheet(false);
       await fetchUsers();
     } catch (error) {
       throw error; // Re-throw to be handled by the form
@@ -145,7 +147,7 @@ export default function UsersPage() {
         throw new Error(errorData.error || 'Failed to update user');
       }
 
-      setShowEditModal(false);
+      setShowEditSheet(false);
       setSelectedUser(null);
       await fetchUsers();
     } catch (error) {
@@ -199,19 +201,19 @@ export default function UsersPage() {
     setCurrentPage(page);
   };
 
-  // Handle modal actions
+  // Handle sheet actions
   const handleCreateClick = () => {
-    setShowCreateModal(true);
+    setShowCreateSheet(true);
   };
 
   const handleEditClick = (user: User) => {
     setSelectedUser(user);
-    setShowEditModal(true);
+    setShowEditSheet(true);
   };
 
   const handleViewClick = (user: User) => {
     setSelectedUser(user);
-    setShowViewModal(true);
+    setShowViewSheet(true);
   };
 
   if (authLoading) {
@@ -286,95 +288,151 @@ export default function UsersPage() {
           currentUserRole={user.role}
         />
 
-      {/* Create User Modal */}
-      <GlassModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        title="Tạo Tài Khoản Mới"
-        size="lg"
-      >
-        <UserForm
-          mode="create"
-          units={units}
-          onSubmit={handleCreateUser}
-          onCancel={() => setShowCreateModal(false)}
-          isLoading={isSubmitting}
-          currentUserRole={user.role}
-        />
-      </GlassModal>
+      {/* Create User Sheet */}
+      <Sheet open={showCreateSheet} onOpenChange={setShowCreateSheet}>
+        <SheetContent side="right" className="w-full sm:max-w-3xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Tạo Tài Khoản Mới</SheetTitle>
+            <SheetDescription>
+              Nhập thông tin để tạo tài khoản mới trong hệ thống
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-6">
+            <UserForm
+              mode="create"
+              variant="sheet"
+              units={units}
+              onSubmit={handleCreateUser}
+              onCancel={() => setShowCreateSheet(false)}
+              isLoading={isSubmitting}
+              currentUserRole={user.role}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
 
-      {/* Edit User Modal */}
-      <GlassModal
-        isOpen={showEditModal}
-        onClose={() => {
-          setShowEditModal(false);
-          setSelectedUser(null);
+      {/* Edit User Sheet */}
+      <Sheet 
+        open={showEditSheet} 
+        onOpenChange={(open) => {
+          setShowEditSheet(open);
+          if (!open) setSelectedUser(null);
         }}
-        title="Chỉnh Sửa Tài Khoản"
-        size="lg"
       >
-        {selectedUser && (
-          <UserForm
-            mode="edit"
-            initialData={selectedUser as Partial<UserFormData>}
-            units={units}
-            onSubmit={handleUpdateUser}
-            onCancel={() => {
-              setShowEditModal(false);
-              setSelectedUser(null);
-            }}
-            isLoading={isSubmitting}
-            currentUserRole={user?.role || 'NguoiHanhNghe'}
-          />
-        )}
-      </GlassModal>
+        <SheetContent side="right" className="w-full sm:max-w-3xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Chỉnh Sửa Tài Khoản</SheetTitle>
+            <SheetDescription>
+              Cập nhật thông tin tài khoản người dùng
+            </SheetDescription>
+          </SheetHeader>
+          {selectedUser && (
+            <div className="mt-6">
+              <UserForm
+                mode="edit"
+                variant="sheet"
+                initialData={selectedUser as Partial<UserFormData>}
+                units={units}
+                onSubmit={handleUpdateUser}
+                onCancel={() => {
+                  setShowEditSheet(false);
+                  setSelectedUser(null);
+                }}
+                isLoading={isSubmitting}
+                currentUserRole={user?.role || 'NguoiHanhNghe'}
+              />
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
 
-      {/* View User Modal */}
-      <GlassModal
-        isOpen={showViewModal}
-        onClose={() => {
-          setShowViewModal(false);
-          setSelectedUser(null);
+      {/* View User Sheet */}
+      <Sheet 
+        open={showViewSheet} 
+        onOpenChange={(open) => {
+          setShowViewSheet(open);
+          if (!open) setSelectedUser(null);
         }}
-        title="Thông Tin Tài Khoản"
-        size="lg"
       >
-        {selectedUser && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-gray-500">Tên Đăng Nhập</label>
-                <p className="mt-1 text-gray-900">{selectedUser.TenDangNhap}</p>
+        <SheetContent side="right" className="w-full sm:max-w-3xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Thông Tin Tài Khoản</SheetTitle>
+            <SheetDescription>
+              Xem chi tiết thông tin tài khoản người dùng
+            </SheetDescription>
+          </SheetHeader>
+          {selectedUser && (
+            <div className="mt-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Tên Đăng Nhập</label>
+                  <p className="mt-1 font-semibold text-gray-900">{selectedUser.TenDangNhap}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Quyền Hạn</label>
+                  <div className="mt-1">
+                    <Badge variant="outline">{selectedUser.QuyenHan}</Badge>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Đơn Vị</label>
+                  <p className="mt-1 text-gray-900">
+                    {selectedUser.MaDonVi 
+                      ? units.find(u => u.MaDonVi === selectedUser.MaDonVi)?.TenDonVi || 'Không xác định'
+                      : 'Không có'
+                    }
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Trạng Thái</label>
+                  <div className="mt-1">
+                    <Badge 
+                      variant={selectedUser.TrangThai ? 'default' : 'destructive'}
+                      className={selectedUser.TrangThai ? 'bg-green-100 text-green-800' : ''}
+                    >
+                      {selectedUser.TrangThai ? 'Hoạt động' : 'Vô hiệu hóa'}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="col-span-full">
+                  <label className="text-sm font-medium text-gray-600">Ngày Tạo</label>
+                  <p className="mt-1 text-gray-900">
+                    {new Date(selectedUser.TaoLuc).toLocaleDateString('vi-VN', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
               </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Quyền Hạn</label>
-                <p className="mt-1 text-gray-900">{selectedUser.QuyenHan}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Đơn Vị</label>
-                <p className="mt-1 text-gray-900">
-                  {selectedUser.MaDonVi 
-                    ? units.find(u => u.MaDonVi === selectedUser.MaDonVi)?.TenDonVi || 'Không xác định'
-                    : 'Không có'
-                  }
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Trạng Thái</label>
-                <p className="mt-1 text-gray-900">
-                  {selectedUser.TrangThai ? 'Hoạt động' : 'Vô hiệu hóa'}
-                </p>
-              </div>
-              <div className="col-span-2">
-                <label className="text-sm font-medium text-gray-500">Ngày Tạo</label>
-                <p className="mt-1 text-gray-900">
-                  {new Date(selectedUser.TaoLuc).toLocaleDateString('vi-VN')}
-                </p>
+              
+              <div className="flex gap-3 pt-4">
+                <Button
+                  onClick={() => {
+                    setShowViewSheet(false);
+                    setTimeout(() => {
+                      setShowEditSheet(true);
+                    }, 300);
+                  }}
+                >
+                  Chỉnh Sửa
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowViewSheet(false);
+                    setSelectedUser(null);
+                  }}
+                >
+                  Đóng
+                </Button>
               </div>
             </div>
-          </div>
-        )}
-      </GlassModal>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

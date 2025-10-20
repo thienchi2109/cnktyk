@@ -22,6 +22,7 @@ interface Unit {
 
 interface UserFormProps {
   mode: 'create' | 'edit';
+  variant?: 'card' | 'sheet';
   initialData?: Partial<UserFormData>;
   units: Unit[];
   onSubmit: (data: UserFormData | UpdateUserFormData) => Promise<void>;
@@ -39,6 +40,7 @@ const roleOptions = [
 
 export function UserForm({
   mode,
+  variant = 'card',
   initialData,
   units,
   onSubmit,
@@ -109,8 +111,11 @@ export function UserForm({
     return true;
   });
 
-  return (
-    <div className="space-y-6">
+  // Render header only for card variant
+  const renderHeader = () => {
+    if (variant === 'sheet') return null;
+    
+    return (
       <div className="flex items-center gap-3 mb-6">
         <div className="p-2 rounded-lg bg-medical-blue/10">
           <UserPlus className="h-6 w-6 text-medical-blue" />
@@ -127,8 +132,11 @@ export function UserForm({
           </p>
         </div>
       </div>
+    );
+  };
 
-      <GlassCard className="p-6">
+  const formContent = (
+    <>
 
       {submitError && (
         <Alert className="mb-4 border-medical-red/20 bg-medical-red/5">
@@ -239,6 +247,22 @@ export function UserForm({
           </GlassButton>
         </div>
       </form>
+    </>
+  );
+
+  if (variant === 'sheet') {
+    return (
+      <div className="space-y-6">
+        {formContent}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {renderHeader()}
+      <GlassCard className="p-6">
+        {formContent}
       </GlassCard>
     </div>
   );
