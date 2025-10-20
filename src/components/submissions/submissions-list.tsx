@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { 
   Clock, 
   CheckCircle, 
@@ -28,6 +27,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { formatDate } from '@/lib/utils';
+import { useSubmissions } from '@/hooks/use-submissions';
 
 interface Submission {
   MaGhiNhan: string;
@@ -65,6 +65,7 @@ interface SubmissionsListProps {
   userRole: string;
   onCreateSubmission?: () => void;
   onViewSubmission?: (submissionId: string) => void;
+  refreshKey?: number;
 }
 
 const statusLabels = {
@@ -95,74 +96,33 @@ const activityTypeLabels = {
 export function SubmissionsList({ 
   userRole, 
   onCreateSubmission, 
-  onViewSubmission 
+  onViewSubmission,
+  refreshKey,
 }: SubmissionsListProps) {
-  const router = useRouter();
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
 
-  // Fetch submissions with server-side filtering
-  const fetchSubmissions = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
+  const { data, isLoading, error } = useSubmissions({
+    page,
+    limit: 10,
+    status: statusFilter,
+    search: searchTerm,
+  });
 
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: '10',
-      });
-
-      if (statusFilter !== 'all') {
-        params.append('status', statusFilter);
-      }
-
-      if (searchTerm) {
-        params.append('search', searchTerm);
-      }
-
-      const response = await fetch(`/api/submissions?${params}`, {
-        cache: 'no-store',
-      });
-      
-      if (!response.ok) {
-        throw new Error('Không thể tải danh sách hoạt động');
-      }
-
-      const data = await response.json();
-      setSubmissions(data.submissions || []);
-      setTotalPages(data.pagination?.totalPages || 1);
-      setTotal(data.pagination?.total || 0);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Fetch on page, status, or search term change
-  useEffect(() => {
-    fetchSubmissions();
-  }, [page, statusFilter, searchTerm]);
+  const totalPages = (data && data.pagination ? data.pagination.totalPages : 1);
+  const total = (data && data.pagination ? data.pagination.total : 0);
 
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
   }, [statusFilter, searchTerm]);
 
-  // No client-side filtering needed - all done server-side
-  const filteredSubmissions = submissions;
+  const filteredSubmissions = ((data?.data as Submission[]) ?? []);
 
   const handleViewSubmission = (submissionId: string) => {
     if (onViewSubmission) {
       onViewSubmission(submissionId);
-    } else {
-      router.push(`/submissions/${submissionId}`);
     }
   };
 
@@ -200,7 +160,7 @@ export function SubmissionsList({
       <Alert className="border-red-200 bg-red-50">
         <AlertTriangle className="h-4 w-4 text-red-600" />
         <AlertDescription className="text-red-700">
-          {error}
+          {error instanceof Error ? error.message : 'Có lỗi xảy ra'}
         </AlertDescription>
       </Alert>
     );

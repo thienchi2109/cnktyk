@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { 
   CheckCircle, 
   XCircle, 
@@ -13,17 +12,21 @@ import {
   Download,
   ArrowLeft,
   AlertTriangle,
-  Info
+  Info,
+  Loader2
 } from 'lucide-react';
 
 import { GlassCard } from '@/components/ui/glass-card';
 import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDate } from '@/lib/utils';
+import { SheetFooter } from '@/components/ui/sheet';
+import { useSubmission, useReviewSubmissionMutation } from '@/hooks/use-submission';
 
 interface SubmissionDetails {
   MaGhiNhan: string;
@@ -90,86 +93,32 @@ export function SubmissionReview({
   onBack, 
   onReviewComplete 
 }: SubmissionReviewProps) {
-  const router = useRouter();
-  const [submission, setSubmission] = useState<SubmissionDetails | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isLoading, error } = useSubmission(submissionId);
   const [isProcessing, setIsProcessing] = useState(false);
+  const submission: SubmissionDetails | null = data?.submission || null;
   const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | 'request_info' | null>(null);
   const [comments, setComments] = useState('');
   const [reason, setReason] = useState('');
 
-  // Fetch submission details
-  useEffect(() => {
-    const fetchSubmission = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
 
-        const response = await fetch(`/api/submissions/${submissionId}`);
-        
-        if (!response.ok) {
-          throw new Error('Không thể tải thông tin hoạt động');
-        }
-
-        const data = await response.json();
-        setSubmission(data.submission);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (submissionId) {
-      fetchSubmission();
-    }
-  }, [submissionId]);
+  const reviewMutation = useReviewSubmissionMutation();
 
   const handleReviewSubmission = async (action: 'approve' | 'reject' | 'request_info') => {
-    if (!submission) return;
-
+    if (!submission || !submissionId) return;
+    setIsProcessing(true);
     try {
-      setIsProcessing(true);
-      setError(null);
-
-      const requestData: any = { action };
-      
-      if (action === 'approve' && comments) {
-        requestData.comments = comments;
-      } else if (action === 'reject' && reason) {
-        requestData.reason = reason;
-      } else if (action === 'request_info' && comments) {
-        requestData.comments = comments;
-      }
-
-      const response = await fetch(`/api/submissions/${submissionId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData),
+      await reviewMutation.mutateAsync({
+        id: submissionId,
+        action,
+        comments: action !== 'reject' ? comments : undefined,
+        reason: action === 'reject' ? reason : undefined,
       });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Không thể xử lý yêu cầu');
-      }
-
-      // Update local state
-      setSubmission(result.submission);
       setReviewAction(null);
       setComments('');
       setReason('');
-
-      // Notify parent component
-      if (onReviewComplete) {
-        onReviewComplete();
-      }
-
+      if (onReviewComplete) onReviewComplete();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+      // errors handled via mutation throw; keep local UI message minimal
     } finally {
       setIsProcessing(false);
     }
@@ -224,7 +173,7 @@ export function SubmissionReview({
         <Alert className="border-red-200 bg-red-50">
           <AlertTriangle className="h-4 w-4 text-red-600" />
           <AlertDescription className="text-red-700">
-            {error || 'Không tìm thấy hoạt động'}
+            {error instanceof Error ? error.message : 'Không tìm thấy hoạt động'}
           </AlertDescription>
         </Alert>
       </div>
@@ -520,45 +469,46 @@ export function SubmissionReview({
                   />
                 </div>
               )}
-
-              <div className="flex space-x-3">
-                <GlassButton
-                  onClick={() => handleReviewSubmission(reviewAction)}
-                  disabled={isProcessing || (reviewAction === 'reject' && !reason) || (reviewAction === 'request_info' && !comments)}
-                  className={`${
-                    reviewAction === 'approve' 
-                      ? 'bg-green-600 hover:bg-green-700' 
-                      : 'bg-red-600 hover:bg-red-700'
-                  } text-white`}
-                >
-                  {isProcessing ? (
-                    <Clock className="h-4 w-4 mr-2 animate-spin" />
-                  ) : reviewAction === 'approve' ? (
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                  ) : (
-                    <XCircle className="h-4 w-4 mr-2" />
-                  )}
-                  {isProcessing ? 'Đang xử lý...' : 
-                   reviewAction === 'approve' ? 'Xác nhận phê duyệt' :
-                   reviewAction === 'reject' ? 'Xác nhận từ chối' :
-                   'Xác nhận yêu cầu'}
-                </GlassButton>
-                
-                <GlassButton
-                  variant="ghost"
-                  onClick={() => {
-                    setReviewAction(null);
-                    setComments('');
-                    setReason('');
-                  }}
-                  disabled={isProcessing}
-                >
-                  Hủy
-                </GlassButton>
-              </div>
             </div>
           )}
         </GlassCard>
+      )}
+
+      {/* Footer actions for review confirmation (sheet footer) */}
+      {reviewAction && (
+<SheetFooter className="-mx-6 px-6 py-4 mt-6 border-t bg-white">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isProcessing}
+            onClick={() => {
+              setReviewAction(null);
+              setComments('');
+              setReason('');
+            }}
+          >
+            Hủy
+          </Button>
+          <Button
+            type="button"
+            disabled={isProcessing || (reviewAction === 'reject' && !reason) || (reviewAction === 'request_info' && !comments)}
+            onClick={() => handleReviewSubmission(reviewAction)}
+          >
+            {isProcessing ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : reviewAction === 'approve' ? (
+              <CheckCircle className="h-4 w-4 mr-2" />
+            ) : reviewAction === 'reject' ? (
+              <XCircle className="h-4 w-4 mr-2" />
+            ) : (
+              <Info className="h-4 w-4 mr-2" />
+            )}
+            {isProcessing ? 'Đang xử lý...' : 
+              reviewAction === 'approve' ? 'Xác nhận phê duyệt' :
+              reviewAction === 'reject' ? 'Xác nhận từ chối' :
+              'Xác nhận yêu cầu'}
+          </Button>
+        </SheetFooter>
       )}
     </div>
   );

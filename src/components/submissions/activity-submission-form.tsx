@@ -14,17 +14,20 @@ import {
   Save,
   X,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Loader2
 } from 'lucide-react';
 
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { FileUpload, UploadedFile } from '@/components/ui/file-upload';
+import { SheetFooter } from '@/components/ui/sheet';
+import { useActivities } from '@/hooks/use-activities';
 
 interface ActivityCatalog {
   MaDanhMuc: string;
@@ -48,6 +51,8 @@ interface ActivitySubmissionFormProps {
   practitioners?: Practitioner[];
   onSubmit?: (submissionId: string) => void;
   onCancel?: () => void;
+  redirectOnSuccess?: boolean;
+  variant?: 'sheet' | 'page';
 }
 
 const submissionSchema = z.object({
@@ -79,7 +84,8 @@ export function ActivitySubmissionForm({
   userRole, 
   practitioners = [], 
   onSubmit, 
-  onCancel 
+  onCancel,
+  redirectOnSuccess = true,
 }: ActivitySubmissionFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -87,6 +93,7 @@ export function ActivitySubmissionForm({
   const [success, setSuccess] = useState<string | null>(null);
   const [activityCatalog, setActivityCatalog] = useState<ActivityCatalog[]>([]);
   const [selectedActivity, setSelectedActivity] = useState<ActivityCatalog | null>(null);
+  const { data: activitiesData } = useActivities();
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [calculatedCredits, setCalculatedCredits] = useState<number>(0);
 
@@ -106,22 +113,12 @@ export function ActivitySubmissionForm({
 
   const watchedValues = watch();
 
-  // Fetch activity catalog
+  // Load activity catalog via React Query
   useEffect(() => {
-    const fetchActivityCatalog = async () => {
-      try {
-        const response = await fetch('/api/activities');
-        if (response.ok) {
-          const data = await response.json();
-          setActivityCatalog(data.activities || []);
-        }
-      } catch (error) {
-        console.error('Failed to fetch activity catalog:', error);
-      }
-    };
-
-    fetchActivityCatalog();
-  }, []);
+    if (activitiesData?.activities) {
+      setActivityCatalog(activitiesData.activities);
+    }
+  }, [activitiesData]);
 
   // Handle activity catalog selection
   useEffect(() => {
@@ -197,10 +194,12 @@ export function ActivitySubmissionForm({
         onSubmit(result.submission.MaGhiNhan);
       }
 
-      // Redirect after a short delay
-      setTimeout(() => {
-        router.push('/submissions');
-      }, 2000);
+      // Redirect after a short delay (only if enabled)
+      if (redirectOnSuccess !== false) {
+        setTimeout(() => {
+          router.push('/submissions');
+        }, 2000);
+      }
 
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Có lỗi xảy ra');
@@ -218,16 +217,6 @@ export function ActivitySubmissionForm({
           <p className="text-gray-600 mt-1">Gửi hoạt động đào tạo liên tục để được phê duyệt</p>
         </div>
         
-        {onCancel && (
-          <GlassButton
-            variant="ghost"
-            onClick={onCancel}
-            className="text-gray-600 hover:text-gray-800"
-          >
-            <X className="h-4 w-4 mr-2" />
-            Hủy
-          </GlassButton>
-        )}
       </div>
 
       {/* Alerts */}
@@ -469,27 +458,26 @@ export function ActivitySubmissionForm({
           />
         </GlassCard>
 
-        {/* Submit Buttons */}
-        <div className="flex justify-end space-x-4">
+        {/* Submit Buttons (sheet footer) */}
+<SheetFooter className="-mx-6 px-6 py-4 mt-6 border-t bg-white">
           {onCancel && (
-            <GlassButton
+            <Button
               type="button"
-              variant="ghost"
+              variant="outline"
               onClick={onCancel}
               disabled={isLoading}
             >
+              <X className="h-4 w-4 mr-2" />
               Hủy
-            </GlassButton>
+            </Button>
           )}
-          
-          <GlassButton
+          <Button
             type="submit"
             disabled={isLoading}
-            className="bg-medical-blue hover:bg-medical-blue/90"
           >
             {isLoading ? (
               <>
-                <Clock className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Đang gửi...
               </>
             ) : (
@@ -498,8 +486,8 @@ export function ActivitySubmissionForm({
                 Gửi hoạt động
               </>
             )}
-          </GlassButton>
-        </div>
+          </Button>
+        </SheetFooter>
       </form>
     </div>
   );

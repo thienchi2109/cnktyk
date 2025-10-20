@@ -51,7 +51,7 @@
 - Implemented database-level RBAC
 - Returns enriched data with pagination metadata
 
-### Frontend (2 files)
+### Frontend (sheets + list)
 
 **4. `src/app/(authenticated)/submissions/page.tsx`**
 - Changed container: `container mx-auto` → `max-w-7xl mx-auto`
@@ -65,6 +65,16 @@
 - Updated state management for server-side filtering
 - Updated empty state with centered icon pattern
 - Fixed filter alignment issue (added `mt-1` to Select)
+
+**6. Sheet forms (Create/View) moved in-page**
+- `ActivitySubmissionForm` and `SubmissionReview` now render in right-side Sheets on Submissions page
+- Footer actions are non-sticky (visible at the bottom of sheet content)
+- Removed separate routes: `/submissions/new` and `/submissions/[id]`
+
+**7. React Query integration**
+- `useSubmissions`, `useSubmission`, `useActivities` hooks added
+- Submissions API standardized to `{ data, pagination }`
+- Prefetch next page; placeholderData keeps previous page while loading
 
 ### Database (1 file)
 
