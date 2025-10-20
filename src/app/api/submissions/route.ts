@@ -9,7 +9,7 @@ import { ghiNhanHoatDongRepo, danhMucHoatDongRepo, nhanVienRepo } from '@/lib/db
 import { CreateGhiNhanHoatDong } from '@/lib/db/schemas';
 import { z } from 'zod';
 
-// GET /api/submissions - List activity submissions
+// GET /api/submissions - List activity submissions with server-side filtering and pagination
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
@@ -20,20 +20,36 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Parse query parameters
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const status = searchParams.get('status');
-    const practitionerId = searchParams.get('practitionerId');
-    const unitId = searchParams.get('unitId');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const status = searchParams.get('status') || undefined;
+    const searchTerm = searchParams.get('search') || undefined;
+    const practitionerId = searchParams.get('practitionerId') || undefined;
+    const unitId = searchParams.get('unitId') || undefined;
 
-    let submissions;
+    // Build filters object with RBAC enforcement
+    const filters: {
+      status?: string;
+      practitionerId?: string;
+      unitId?: string;
+      searchTerm?: string;
+      page: number;
+      limit: number;
+    } = {
+      page,
+      limit,
+      status,
+      searchTerm,
+    };
 
-    // Role-based access control
+    // Apply Role-Based Access Control (RBAC) at database level
     if (user.role === 'NguoiHanhNghe') {
       // Practitioners can only see their own submissions
-      const practitioner = await nhanVienRepo.findByUnit(user.unitId || '');
-      const userPractitioner = practitioner.find(p => p.Email === user.username);
+      // Find practitioner ID from user's email
+      const practitioners = await nhanVienRepo.findByUnit(user.unitId || '');
+      const userPractitioner = practitioners.find(p => p.Email === user.username);
       
       if (!userPractitioner) {
         return NextResponse.json(
@@ -42,27 +58,30 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      submissions = await ghiNhanHoatDongRepo.findByPractitioner(
-        userPractitioner.MaNhanVien,
-        limit
-      );
+      filters.practitionerId = userPractitioner.MaNhanVien;
     } else if (user.role === 'DonVi') {
-      // Unit admins can see submissions from their unit
-      const targetUnitId = unitId || user.unitId;
+      // Unit admins can see submissions from their unit only
+      filters.unitId = user.unitId || undefined;
       
+      // If specific practitioner requested, ensure they're in the same unit
       if (practitionerId) {
-        submissions = await ghiNhanHoatDongRepo.findByPractitioner(practitionerId, limit);
-      } else {
-        submissions = await ghiNhanHoatDongRepo.findPendingApprovals(targetUnitId || undefined);
+        const practitioner = await nhanVienRepo.findById(practitionerId);
+        if (practitioner && practitioner.MaDonVi === user.unitId) {
+          filters.practitionerId = practitionerId;
+        } else {
+          return NextResponse.json(
+            { error: 'Cannot access submissions from other units' },
+            { status: 403 }
+          );
+        }
       }
     } else if (user.role === 'SoYTe') {
-      // DoH admins can see all submissions
+      // SoYTe can see all submissions, apply optional filters
       if (practitionerId) {
-        submissions = await ghiNhanHoatDongRepo.findByPractitioner(practitionerId, limit);
-      } else if (unitId) {
-        submissions = await ghiNhanHoatDongRepo.findPendingApprovals(unitId);
-      } else {
-        submissions = await ghiNhanHoatDongRepo.findPendingApprovals();
+        filters.practitionerId = practitionerId;
+      }
+      if (unitId) {
+        filters.unitId = unitId;
       }
     } else {
       return NextResponse.json(
@@ -71,42 +90,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Filter by status if provided
-    if (status && status !== 'all') {
-      submissions = submissions.filter(s => s.TrangThaiDuyet === status);
-    }
-
-    // Get additional data for each submission
-    const enrichedSubmissions = await Promise.all(
-      submissions.map(async (submission) => {
-        const practitioner = await nhanVienRepo.findById(submission.MaNhanVien);
-        const activity = submission.MaDanhMuc 
-          ? await danhMucHoatDongRepo.findById(submission.MaDanhMuc)
-          : null;
-
-        return {
-          ...submission,
-          practitioner: practitioner ? {
-            HoVaTen: practitioner.HoVaTen,
-            SoCCHN: practitioner.SoCCHN,
-            ChucDanh: practitioner.ChucDanh,
-          } : null,
-          activityCatalog: activity ? {
-            TenDanhMuc: activity.TenDanhMuc,
-            LoaiHoatDong: activity.LoaiHoatDong,
-          } : null,
-        };
-      })
-    );
+    // Execute server-side search with JOINs (only 2 queries: SELECT + COUNT)
+    const result = await ghiNhanHoatDongRepo.search(filters);
 
     return NextResponse.json({
       success: true,
-      data: enrichedSubmissions,
-      pagination: {
-        page,
-        limit,
-        total: enrichedSubmissions.length,
-      },
+      submissions: result.data,
+      pagination: result.pagination,
     });
 
   } catch (error) {

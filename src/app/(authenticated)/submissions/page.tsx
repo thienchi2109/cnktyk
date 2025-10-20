@@ -18,7 +18,7 @@ export default async function SubmissionsPage() {
   }
 
   return (
-    <div className="container mx-auto">
+    <div className="max-w-7xl mx-auto">
         <Suspense fallback={
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-medical-blue"></div>

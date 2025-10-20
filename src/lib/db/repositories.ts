@@ -491,6 +491,161 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
       rejected: parseInt(rejected?.count || '0', 10),
     };
   }
+
+  /**
+   * Search submissions with server-side filtering and pagination
+   * Uses JOINs to avoid N+1 queries and fetch all related data in 2 queries
+   * 
+   * @param filters - Filter criteria including status, practitioner, unit, search term, and pagination
+   * @returns Paginated result with enriched submission data
+   */
+  async search(filters: {
+    status?: string;
+    practitionerId?: string;
+    unitId?: string;
+    searchTerm?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<import('./schemas').PaginatedResult<import('./schemas').SubmissionListItem>> {
+    const page = filters.page || 1;
+    const limit = filters.limit || 10;
+    const offset = (page - 1) * limit;
+
+    // Build WHERE clause with parameterized queries
+    const whereClauses: string[] = [];
+    const params: any[] = [];
+    let paramCount = 1;
+
+    // Filter by status
+    if (filters.status) {
+      whereClauses.push(`g."TrangThaiDuyet" = $${paramCount}`);
+      params.push(filters.status);
+      paramCount++;
+    }
+
+    // Filter by practitioner ID
+    if (filters.practitionerId) {
+      whereClauses.push(`g."MaNhanVien" = $${paramCount}`);
+      params.push(filters.practitionerId);
+      paramCount++;
+    }
+
+    // Filter by unit ID (via practitioner's unit)
+    if (filters.unitId) {
+      whereClauses.push(`n."MaDonVi" = $${paramCount}`);
+      params.push(filters.unitId);
+      paramCount++;
+    }
+
+    // Search by activity name or practitioner name (case-insensitive)
+    if (filters.searchTerm) {
+      whereClauses.push(`(
+        LOWER(g."TenHoatDong") LIKE LOWER($${paramCount})
+        OR LOWER(n."HoVaTen") LIKE LOWER($${paramCount})
+      )`);
+      params.push(`%${filters.searchTerm}%`);
+      paramCount++;
+    }
+
+    const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    // Main query with JOINs to fetch all data (avoiding N+1)
+    const dataQuery = `
+      SELECT 
+        g."MaGhiNhan",
+        g."TenHoatDong",
+        g."NgayGhiNhan",
+        g."TrangThaiDuyet",
+        g."SoGioTinChiQuyDoi",
+        g."NgayBatDau",
+        g."NgayKetThuc",
+        g."SoTiet",
+        g."HinhThucCapNhatKienThucYKhoa",
+        g."ChiTietVaiTro",
+        g."DonViToChuc",
+        g."BangChungSoGiayChungNhan",
+        g."FileMinhChungUrl",
+        g."NgayDuyet",
+        g."GhiChuDuyet",
+        -- Practitioner data
+        n."HoVaTen" AS "practitioner_HoVaTen",
+        n."SoCCHN" AS "practitioner_SoCCHN",
+        n."ChucDanh" AS "practitioner_ChucDanh",
+        -- Activity catalog data (nullable)
+        dm."TenDanhMuc" AS "activityCatalog_TenDanhMuc",
+        dm."LoaiHoatDong" AS "activityCatalog_LoaiHoatDong",
+        -- Unit data (nullable)
+        dv."TenDonVi" AS "unit_TenDonVi"
+      FROM "${this.tableName}" g
+      INNER JOIN "NhanVien" n ON n."MaNhanVien" = g."MaNhanVien"
+      LEFT JOIN "DanhMucHoatDong" dm ON dm."MaDanhMuc" = g."MaDanhMuc"
+      LEFT JOIN "DonVi" dv ON dv."MaDonVi" = n."MaDonVi"
+      ${whereClause}
+      ORDER BY g."NgayGhiNhan" DESC
+      LIMIT $${paramCount} OFFSET $${paramCount + 1}
+    `;
+
+    params.push(limit, offset);
+
+    // Count query (for total records)
+    const countQuery = `
+      SELECT COUNT(*)::int AS total
+      FROM "${this.tableName}" g
+      INNER JOIN "NhanVien" n ON n."MaNhanVien" = g."MaNhanVien"
+      ${whereClause}
+    `;
+
+    // Execute both queries in parallel
+    const [rows, countResult] = await Promise.all([
+      db.query<any>(dataQuery, params),
+      db.queryOne<{ total: number }>(countQuery, params.slice(0, -2)) // Remove limit/offset params for count
+    ]);
+
+    const total = countResult?.total || 0;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    // Map database rows to SubmissionListItem format
+    const data: import('./schemas').SubmissionListItem[] = rows.map(row => ({
+      MaGhiNhan: row.MaGhiNhan,
+      TenHoatDong: row.TenHoatDong,
+      NgayGhiNhan: row.NgayGhiNhan?.toISOString() || '',
+      TrangThaiDuyet: row.TrangThaiDuyet,
+      SoGioTinChiQuyDoi: parseFloat(row.SoGioTinChiQuyDoi) || 0,
+      NgayBatDau: row.NgayBatDau?.toISOString() || null,
+      NgayKetThuc: row.NgayKetThuc?.toISOString() || null,
+      SoTiet: row.SoTiet ? parseFloat(row.SoTiet) : null,
+      HinhThucCapNhatKienThucYKhoa: row.HinhThucCapNhatKienThucYKhoa,
+      ChiTietVaiTro: row.ChiTietVaiTro,
+      DonViToChuc: row.DonViToChuc,
+      BangChungSoGiayChungNhan: row.BangChungSoGiayChungNhan,
+      FileMinhChungUrl: row.FileMinhChungUrl,
+      NgayDuyet: row.NgayDuyet?.toISOString() || null,
+      NguoiDuyet: null, // Not fetched in this query (would require another JOIN with TaiKhoan)
+      GhiChuDuyet: row.GhiChuDuyet,
+      practitioner: {
+        HoVaTen: row.practitioner_HoVaTen,
+        SoCCHN: row.practitioner_SoCCHN,
+        ChucDanh: row.practitioner_ChucDanh,
+      },
+      activityCatalog: row.activityCatalog_TenDanhMuc ? {
+        TenDanhMuc: row.activityCatalog_TenDanhMuc,
+        LoaiHoatDong: row.activityCatalog_LoaiHoatDong,
+      } : null,
+      unit: row.unit_TenDonVi ? {
+        TenDonVi: row.unit_TenDonVi,
+      } : null,
+    }));
+
+    return {
+      data,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
+    };
+  }
 }
 
 // DonVi (Healthcare Unit) Repository

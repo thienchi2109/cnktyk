@@ -91,7 +91,8 @@ export function PractitionerDashboard({ userId }: PractitionerDashboardProps) {
         const response = await fetch(`/api/submissions?practitionerId=${practitionerId}&limit=10`);
         const result = await response.json();
 
-        if (result.success) {
+        // New API returns { data: [...], pagination: {...} }
+        if (result.data && Array.isArray(result.data)) {
           setRecentActivities(result.data.map((item: any) => ({
             id: item.MaGhiNhan,
             title: item.TenHoatDong,

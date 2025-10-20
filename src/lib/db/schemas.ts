@@ -139,9 +139,14 @@ export const GhiNhanHoatDongSchema = z.object({
   MaDanhMuc: UUIDSchema.nullable(),
   TenHoatDong: z.string().min(1, 'Activity name is required'),
   VaiTro: z.string().nullable(),
+  // Migration 003 fields
+  HinhThucCapNhatKienThucYKhoa: z.string().nullable(),
+  ChiTietVaiTro: z.string().nullable(),
+  DonViToChuc: z.string().nullable(),
   NgayBatDau: z.date().nullable(),
   NgayKetThuc: z.date().nullable(),
   SoTiet: z.number().min(0).nullable(),
+  BangChungSoGiayChungNhan: z.string().nullable(),
   SoGioTinChiQuyDoi: z.number().min(0, 'Credits must be non-negative'),
   FileMinhChungUrl: z.string().url().nullable().or(z.literal('')),
   FileMinhChungETag: z.string().nullable(),
@@ -245,6 +250,41 @@ export interface PaginatedResult<T> {
 export interface NhanVienWithCompliance extends Omit<z.infer<typeof NhanVienSchema>, 'NgayCapCCHN'> {
   NgayCapCCHN: Date | null;
   complianceStatus: ComplianceStatus;
+}
+
+// Submission list item with enriched data (for paginated results with JOINs)
+export interface SubmissionListItem {
+  MaGhiNhan: string;
+  TenHoatDong: string;
+  NgayGhiNhan: string;
+  TrangThaiDuyet: string;
+  SoGioTinChiQuyDoi: number;
+  NgayBatDau: string | null;
+  NgayKetThuc: string | null;
+  SoTiet: number | null;
+  HinhThucCapNhatKienThucYKhoa: string | null;
+  ChiTietVaiTro: string | null;
+  DonViToChuc: string | null;
+  BangChungSoGiayChungNhan: string | null;
+  FileMinhChungUrl: string | null;
+  NgayDuyet: string | null;
+  NguoiDuyet: string | null;
+  GhiChuDuyet: string | null;
+  // Joined practitioner data
+  practitioner: {
+    HoVaTen: string;
+    SoCCHN: string | null;
+    ChucDanh: string | null;
+  };
+  // Joined activity catalog data
+  activityCatalog: {
+    TenDanhMuc: string;
+    LoaiHoatDong: string;
+  } | null;
+  // Joined unit data
+  unit: {
+    TenDonVi: string;
+  } | null;
 }
 
 // NhatKyHeThong (Audit Log) schema

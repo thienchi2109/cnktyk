@@ -154,7 +154,8 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
         const response = await fetch(`/api/submissions?unitId=${unitId}&status=ChoDuyet&limit=20`);
         const result = await response.json();
 
-        if (result.success) {
+        // New API returns { data: [...], pagination: {...} }
+        if (result.data && Array.isArray(result.data)) {
           setPendingApprovals(result.data.map((item: any) => {
             const submittedDate = new Date(item.NgayGhiNhan);
             const daysWaiting = Math.floor((Date.now() - submittedDate.getTime()) / (1000 * 60 * 60 * 24));
