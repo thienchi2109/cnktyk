@@ -25,11 +25,10 @@ export default async function SubmissionDetailPage({ params }: SubmissionDetailP
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-medical-blue"></div>
           </div>
         }>
-          <SubmissionReview
-            submissionId={id}
-            userRole={user.role}
-            onBack={() => window.history.back()}
-          />
+        <SubmissionReview
+          submissionId={id}
+          userRole={user.role}
+        />
         </Suspense>
     </div>
   );
