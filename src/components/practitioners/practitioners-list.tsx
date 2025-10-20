@@ -164,7 +164,7 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
   if (isLoading && practitioners.length === 0) {
     return (
       <div className="space-y-6">
-      <GlassCard className="p-8">
+      <GlassCard className="p-12">
           <LoadingNotice message="Đang tải danh sách người hành nghề..." />
         </GlassCard>
       </div>

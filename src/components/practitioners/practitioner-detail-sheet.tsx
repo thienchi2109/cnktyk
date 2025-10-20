@@ -14,6 +14,7 @@ import {
   SheetTitle, 
   SheetDescription 
 } from '@/components/ui/sheet';
+import { SheetFooter } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -298,28 +299,14 @@ export function PractitionerDetailSheet({
           </div>
         )}
 
-        {/* Floating Edit Button - Bottom Right */}
+        {/* Footer actions (details view) */}
         {canEdit && !isEditing && practitioner && (
-          <Button
-            className="fixed bottom-6 right-6 rounded-full shadow-lg hover:shadow-xl transition-shadow"
-            size="lg"
-            onClick={() => setIsEditing(true)}
-          >
-            <Edit className="w-5 h-5 mr-2" />
-            Chỉnh sửa
-          </Button>
-        )}
-
-        {/* Deactivate Button - Bottom Left */}
-        {canEdit && !isEditing && practitioner && practitioner.TrangThaiLamViec !== 'DaNghi' && (
-          <Button
-            className="fixed bottom-6 left-6 rounded-full shadow-lg hover:shadow-xl transition-shadow"
-            size="lg"
-            variant="destructive"
-            onClick={handleDeactivate}
-          >
-            Vô hiệu hóa
-          </Button>
+          <SheetFooter className="-mx-6 px-6 py-4 mt-6 border-t bg-white">
+            <Button variant="outline" onClick={() => setIsEditing(true)}>
+              <Edit className="w-5 h-5 mr-2" />
+              Chỉnh sửa
+            </Button>
+          </SheetFooter>
         )}
       </SheetContent>
     </Sheet>

@@ -82,7 +82,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({
 
   if (loading) {
     return (
-      <GlassCard className={cn("p-8", className)}>
+      <GlassCard className={cn("p-12", className)}>
         <LoadingNotice message="Đang tải thông báo..." />
       </GlassCard>
     );
