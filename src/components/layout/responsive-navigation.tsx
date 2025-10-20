@@ -269,7 +269,7 @@ const HeaderNavigation = ({
   };
 
   return (
-    <nav className="hidden xl:flex items-center space-x-1">
+    <nav className="hidden xl:flex items-center space-x-2 lg:space-x-3">
       {items.map((item) => {
         const isActive = activeItem === item.id;
         const hasChildren = item.children && item.children.length > 0;
@@ -281,7 +281,7 @@ const HeaderNavigation = ({
               variant={isActive ? "default" : "ghost"}
               onClick={() => handleItemClick(item)}
               className={cn(
-                "flex items-center gap-2 px-3 py-2 text-sm",
+                "flex items-center gap-2 px-4 lg:px-5 py-2.5 text-sm",
                 hasChildren && "pr-2"
               )}
             >
