@@ -3,16 +3,16 @@
 import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { usePractitioners, practitionersQueryKey, fetchPractitionersApi } from '@/hooks/use-practitioners';
-import { Search, Filter, Plus, Eye, Edit, Trash2, AlertTriangle, CheckCircle, Clock, Upload } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Search, Filter, Plus, Eye, Edit, Trash2, AlertTriangle, CheckCircle, Clock, Upload, UserCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { GlassCard } from '@/components/ui/glass-card';
+import { GlassButton } from '@/components/ui/glass-button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select } from '@/components/ui/glass-select';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { PractitionerForm } from './practitioner-form';
 import { PractitionerDetailSheet } from './practitioner-detail-sheet';
 import { BulkImportSheet } from './bulk-import-sheet';
@@ -162,14 +162,13 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
 
   if (isLoading && practitioners.length === 0) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-32 w-full" />
-        <div className="space-y-2">
-          {[...Array(5)].map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full" />
-          ))}
-        </div>
+      <div className="space-y-6">
+        <GlassCard className="p-8">
+          <div className="flex items-center gap-3">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-medical-blue"></div>
+            <span className="text-gray-600">Đang tải...</span>
+          </div>
+        </GlassCard>
       </div>
     );
   }
@@ -177,245 +176,283 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Người hành nghề</h1>
-          <p className="text-gray-600">Quản lý người hành nghề y tế và trạng thái tuân thủ</p>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 rounded-lg bg-medical-blue/10">
+              <UserCircle className="h-6 w-6 text-medical-blue" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900">Người Hành Nghề</h1>
+          </div>
+          <p className="text-gray-600">
+            Quản lý người hành nghề y tế và trạng thái tuân thủ • {filteredPractitioners.length} người
+          </p>
         </div>
+        
         {canCreatePractitioner && (
           <div className="flex gap-3">
             {/* Bulk Import Button - DonVi only */}
-{userRole === 'DonVi' && (
-              <Button
+            {userRole === 'DonVi' && (
+              <GlassButton
                 onClick={() => setShowBulkImportSheet(true)}
-                className="rounded-full shadow-sm hover:shadow-md transition-shadow"
+                variant="secondary"
+                className="flex items-center gap-2"
               >
-                <Upload className="w-4 h-4 mr-2" />
-                Nhập hàng loạt
-              </Button>
+                <Upload className="h-4 w-4" />
+                Nhập Hàng Loạt
+              </GlassButton>
             )}
             
             {/* Add Single Practitioner */}
-            <Sheet open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-              <SheetTrigger asChild>
-                <Button className="rounded-full shadow-sm hover:shadow-md transition-shadow">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Thêm người hành nghề
-                </Button>
-              </SheetTrigger>
-              <SheetContent className="w-full sm:max-w-3xl overflow-y-auto" side="right">
-                <SheetHeader>
-                  <SheetTitle>Đăng ký người hành nghề mới</SheetTitle>
-                  <SheetDescription>
-                    Thêm người hành nghề y tế mới vào hệ thống
-                  </SheetDescription>
-                </SheetHeader>
-                <div className="mt-6">
-                  <PractitionerForm
-                    unitId={userRole === 'DonVi' ? userUnitId : undefined}
-                    units={userRole === 'SoYTe' ? units : units.filter(u => u.MaDonVi === userUnitId)}
-                    userRole={userRole}
-                    onSuccess={() => {
-                      setShowCreateDialog(false);
-                      queryClient.invalidateQueries({ queryKey: ['practitioners'] });
-                    }}
-                    onCancel={() => setShowCreateDialog(false)}
-                    mode="create"
-                    variant="sheet"
-                  />
-                </div>
-              </SheetContent>
-            </Sheet>
+            <GlassButton
+              onClick={() => setShowCreateDialog(true)}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Thêm Người Hành Nghề
+            </GlassButton>
           </div>
         )}
       </div>
 
+      {/* Create Sheet */}
+      <Sheet open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <SheetContent className="w-full sm:max-w-3xl overflow-y-auto" side="right">
+          <SheetHeader>
+            <SheetTitle>Đăng ký người hành nghề mới</SheetTitle>
+            <SheetDescription>
+              Thêm người hành nghề y tế mới vào hệ thống
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-6">
+            <PractitionerForm
+              unitId={userRole === 'DonVi' ? userUnitId : undefined}
+              units={userRole === 'SoYTe' ? units : units.filter(u => u.MaDonVi === userUnitId)}
+              userRole={userRole}
+              onSuccess={() => {
+                setShowCreateDialog(false);
+                queryClient.invalidateQueries({ queryKey: ['practitioners'] });
+              }}
+              onCancel={() => setShowCreateDialog(false)}
+              mode="create"
+              variant="sheet"
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+
       {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Tìm kiếm & Lọc</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Tìm kiếm</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Tìm theo tên..."
-                  value={searchTerm}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Trạng thái làm việc</label>
-              <Select value={statusFilter} onValueChange={handleStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="z-50 bg-white">
-                  <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                  <SelectItem value="DangLamViec">Đang làm việc</SelectItem>
-                  <SelectItem value="TamHoan">Tạm hoãn</SelectItem>
-                  <SelectItem value="DaNghi">Đã nghỉ</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {userRole === 'SoYTe' && units.length > 0 && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Đơn vị</label>
-                <Select value={unitFilter} onValueChange={handleUnitFilter}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="z-50 bg-white">
-                    <SelectItem value="all">Tất cả đơn vị</SelectItem>
-                    {units.map((unit) => (
-                      <SelectItem key={unit.MaDonVi} value={unit.MaDonVi}>
-                        {unit.TenDonVi}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Tuân thủ</label>
-              <Select value={complianceFilter} onValueChange={handleComplianceFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="z-50 bg-white">
-                  <SelectItem value="all">Tất cả mức độ</SelectItem>
-                  <SelectItem value="compliant">Đạt chuẩn (≥90%)</SelectItem>
-                  <SelectItem value="at_risk">Rủi ro (70-89%)</SelectItem>
-                  <SelectItem value="non_compliant">Chưa đạt (&lt;70%)</SelectItem>
-                </SelectContent>
-              </Select>
+      <GlassCard className="p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Filter className="h-5 w-5 text-medical-blue" />
+          <h3 className="font-semibold text-gray-900">Bộ Lọc & Tìm Kiếm</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <Label htmlFor="search" className="text-sm font-medium text-gray-700">Tìm kiếm</Label>
+            <div className="relative mt-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                id="search"
+                type="text"
+                placeholder="Nhập tên người hành nghề..."
+                value={searchTerm}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="pl-10"
+              />
             </div>
           </div>
-        </CardContent>
-      </Card>
+
+          <div>
+            <Label htmlFor="status-filter" className="text-sm font-medium text-gray-700">Trạng thái làm việc</Label>
+            <Select
+              value={statusFilter}
+              onChange={(e) => handleStatusFilter(e.target.value)}
+            >
+              <option value="all">Tất cả trạng thái</option>
+              <option value="DangLamViec">Đang làm việc</option>
+              <option value="TamHoan">Tạm hoãn</option>
+              <option value="DaNghi">Đã nghỉ</option>
+            </Select>
+          </div>
+
+          {userRole === 'SoYTe' && units.length > 0 && (
+            <div>
+              <Label htmlFor="unit-filter" className="text-sm font-medium text-gray-700">Đơn vị</Label>
+              <Select
+                value={unitFilter}
+                onChange={(e) => handleUnitFilter(e.target.value)}
+              >
+                <option value="all">Tất cả đơn vị</option>
+                {units.map((unit) => (
+                  <option key={unit.MaDonVi} value={unit.MaDonVi}>
+                    {unit.TenDonVi}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )}
+
+          <div>
+            <Label htmlFor="compliance-filter" className="text-sm font-medium text-gray-700">Tuân thủ</Label>
+            <Select
+              value={complianceFilter}
+              onChange={(e) => handleComplianceFilter(e.target.value)}
+            >
+              <option value="all">Tất cả mức độ</option>
+              <option value="compliant">Đạt chuẩn (≥90%)</option>
+              <option value="at_risk">Rủi ro (70-89%)</option>
+              <option value="non_compliant">Chưa đạt (&lt;70%)</option>
+            </Select>
+          </div>
+        </div>
+      </GlassCard>
 
       {/* Error Alert */}
       {isError && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{(error as Error)?.message || 'An error occurred'}</AlertDescription>
+        <Alert className="mb-6 border-medical-red/20 bg-medical-red/5">
+          <AlertTriangle className="h-4 w-4 text-medical-red" />
+          <AlertDescription className="text-medical-red">
+            {(error as Error)?.message || 'Đã xảy ra lỗi khi tải dữ liệu'}
+          </AlertDescription>
         </Alert>
       )}
 
       {/* Practitioners Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Người hành nghề ({filteredPractitioners.length})
-          </CardTitle>
-          <CardDescription>
-            Danh sách người hành nghề y tế và trạng thái tuân thủ
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {filteredPractitioners.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500">Không tìm thấy người hành nghề phù hợp với tiêu chí.</p>
+      <GlassCard className="overflow-hidden">
+        {isLoading ? (
+          <div className="p-12 text-center">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-medical-blue mx-auto mb-4"></div>
+            <p className="text-gray-600 font-medium">Đang tải danh sách người hành nghề...</p>
+          </div>
+        ) : filteredPractitioners.length === 0 ? (
+          <div className="p-12 text-center">
+            <div className="p-4 rounded-full bg-gray-100/50 w-fit mx-auto mb-4">
+              <UserCircle className="h-12 w-12 text-gray-400" />
             </div>
-          ) : (
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Không tìm thấy người hành nghề</h3>
+            <p className="text-gray-500">Thử điều chỉnh bộ lọc hoặc thêm người hành nghề mới</p>
+          </div>
+        ) : (
+          <>
             <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Họ và tên</TableHead>
-                    <TableHead>Chức danh</TableHead>
-                    <TableHead>Số CCHN</TableHead>
-                    <TableHead>Trạng thái</TableHead>
-                    <TableHead>Tuân thủ</TableHead>
-                    <TableHead>Tín chỉ</TableHead>
-                    <TableHead>Liên hệ</TableHead>
-                    <TableHead>Thao tác</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <table className="w-full">
+                <thead className="bg-gray-50/50 border-b border-gray-200/50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Họ và Tên
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Chức Danh
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Số CCHN
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Trạng Thái
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Tuân Thủ
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Tín Chỉ
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Liên Hệ
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Thao Tác
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200/50">
                   {filteredPractitioners.map((practitioner) => (
-                    <TableRow key={practitioner.MaNhanVien}>
-                      <TableCell className="font-medium">
-                        {practitioner.HoVaTen}
-                      </TableCell>
-                      <TableCell>
-                        {practitioner.ChucDanh || 'Not specified'}
-                      </TableCell>
-                      <TableCell>
+                    <tr key={practitioner.MaNhanVien} className="hover:bg-gray-50/30 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="font-medium text-gray-900">
+                          {practitioner.HoVaTen}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          ID: {practitioner.MaNhanVien.slice(0, 8)}...
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {practitioner.ChucDanh || 'Chưa xác định'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {practitioner.SoCCHN || 'N/A'}
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
                         {getStatusBadge(practitioner.TrangThaiLamViec)}
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
                         {getComplianceBadge(practitioner.complianceStatus)}
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {practitioner.complianceStatus.totalCredits} / {practitioner.complianceStatus.requiredCredits}
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm">
                           {practitioner.Email && (
-                            <div>{practitioner.Email}</div>
+                            <div className="text-gray-900">{practitioner.Email}</div>
                           )}
                           {practitioner.DienThoai && (
                             <div className="text-gray-500">{practitioner.DienThoai}</div>
                           )}
+                          {!practitioner.Email && !practitioner.DienThoai && (
+                            <span className="text-gray-400">Không có</span>
+                          )}
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedPractitionerId(practitioner.MaNhanVien);
-                            setShowDetailSheet(true);
-                          }}
-                          title="Xem chi tiết"
-                        >
-                          <Eye className="w-4 h-4 mr-2" />
-                          Xem
-                        </Button>
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end gap-2">
+                          <GlassButton
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => {
+                              setSelectedPractitionerId(practitioner.MaNhanVien);
+                              setShowDetailSheet(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </GlassButton>
+                        </div>
+                      </td>
+                    </tr>
                   ))}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
             </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center space-x-2">
-          <Button
-            variant="outline"
-            onClick={() => setPage(page - 1)}
-            disabled={page === 1}
-          >
-            Trước
-          </Button>
-          <span className="flex items-center px-4">
-            Trang {page} / {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            onClick={() => setPage(page + 1)}
-            disabled={page === totalPages}
-          >
-            Sau
-          </Button>
-        </div>
-      )}
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="px-6 py-4 border-t border-gray-200/50 flex items-center justify-between">
+                <div className="text-sm text-gray-500">
+                  Trang {page} / {totalPages}
+                </div>
+                <div className="flex gap-2">
+                  <GlassButton
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setPage(page - 1)}
+                    disabled={page === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </GlassButton>
+                  <GlassButton
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setPage(page + 1)}
+                    disabled={page === totalPages}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </GlassButton>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </GlassCard>
 
       {/* Practitioner Detail Sheet */}
       <PractitionerDetailSheet

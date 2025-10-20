@@ -7,7 +7,7 @@
 
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Download, FileSpreadsheet, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { Download, FileSpreadsheet, AlertCircle, CheckCircle, XCircle, Info, Eye, Upload } from 'lucide-react';
 import { ValidationResult } from '@/lib/import/excel-processor';
 import { 
   Sheet, 
@@ -199,26 +199,75 @@ export function BulkImportSheet({ open, onOpenChange, onImportSuccess }: BulkImp
           </div>
 
           {/* Selected File */}
-          {file && (
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
+          {file && !validationResult && (
+            <div className="space-y-4">
+              {/* File Info */}
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center gap-3 mb-2">
                   <FileSpreadsheet className="w-6 h-6 text-green-600" />
-                  <div>
-                    <p className="font-medium text-sm">{file.name}</p>
+                  <div className="flex-1">
+                    <p className="font-medium text-sm text-gray-900">{file.name}</p>
                     <p className="text-xs text-gray-500">
                       {(file.size / 1024 / 1024).toFixed(2)} MB
                     </p>
                   </div>
+                  <CheckCircle className="w-5 h-5 text-green-600" />
                 </div>
               </div>
-              <Button
-                onClick={handleValidate}
-                disabled={isValidating}
-                className="w-full"
-              >
-                {isValidating ? 'Đang kiểm tra...' : 'Kiểm tra file'}
-              </Button>
+
+              {/* Preview Tips */}
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <Info className="w-5 h-5 text-blue-600 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-sm text-blue-900 mb-2">
+                      Bước tiếp theo:
+                    </h4>
+                    <ul className="text-xs text-blue-800 space-y-1.5">
+                      <li className="flex items-start gap-2">
+                        <span className="text-blue-600 mt-0.5">•</span>
+                        <span>Hệ thống sẽ kiểm tra định dạng và nội dung file Excel</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-blue-600 mt-0.5">•</span>
+                        <span>Xem trước số lượng nhân viên và hoạt động sẽ được nhập</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-blue-600 mt-0.5">•</span>
+                        <span>Phát hiện và hiển thị các lỗi (nếu có) trước khi nhập</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-blue-600 mt-0.5">•</span>
+                        <span>Nhấn "Xem trước" để kiểm tra trước khi lưu vào hệ thống</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleValidate}
+                  disabled={isValidating}
+                  className="flex-1"
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  {isValidating ? 'Đang kiểm tra...' : 'Xem trước & Kiểm tra'}
+                </Button>
+                <Button
+                  onClick={() => {
+                    setFile(null);
+                    setValidationResult(null);
+                    setError(null);
+                  }}
+                  variant="outline"
+                  disabled={isValidating}
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Hủy
+                </Button>
+              </div>
             </div>
           )}
 
@@ -299,20 +348,39 @@ export function BulkImportSheet({ open, onOpenChange, onImportSuccess }: BulkImp
 
               {/* Success & Import Button */}
               {validationResult.isValid && (
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center gap-2 mb-3">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <p className="text-green-900 font-medium text-sm">
-                      File hợp lệ, sẵn sàng nhập dữ liệu
+                <div className="space-y-3">
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <p className="text-green-900 font-semibold text-sm">
+                        File hợp lệ!
+                      </p>
+                    </div>
+                    <p className="text-xs text-green-700 ml-7">
+                      Dữ liệu đã được xác thực thành công. Nhấn nút bên dưới để lưu vào hệ thống.
                     </p>
                   </div>
-                  <Button
-                    onClick={handleImport}
-                    disabled={isImporting}
-                    className="w-full bg-green-600 hover:bg-green-700"
-                  >
-                    {isImporting ? 'Đang nhập...' : 'Nhập dữ liệu'}
-                  </Button>
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={handleImport}
+                      disabled={isImporting}
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      {isImporting ? 'Đang nhập dữ liệu...' : 'Xác nhận & Nhập dữ liệu'}
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setFile(null);
+                        setValidationResult(null);
+                        setError(null);
+                      }}
+                      variant="outline"
+                      disabled={isImporting}
+                    >
+                      Hủy
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>

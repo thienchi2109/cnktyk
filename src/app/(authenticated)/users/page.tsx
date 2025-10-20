@@ -35,6 +35,7 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingUnits, setIsLoadingUnits] = useState(true);
   const [error, setError] = useState<string>('');
   
   // Pagination
@@ -89,6 +90,7 @@ export default function UsersPage() {
   // Fetch units
   const fetchUnits = async () => {
     try {
+      setIsLoadingUnits(true);
       const response = await fetch('/api/units');
       if (response.ok) {
         const data = await response.json();
@@ -96,15 +98,23 @@ export default function UsersPage() {
       }
     } catch (error) {
       console.error('Failed to fetch units:', error);
+    } finally {
+      setIsLoadingUnits(false);
     }
   };
 
   useEffect(() => {
     if (user && canManageUsers) {
       fetchUsers();
-      fetchUnits();
     }
   }, [user, currentPage, searchTerm, roleFilter, unitFilter, canManageUsers]);
+
+  // Fetch units only once on mount
+  useEffect(() => {
+    if (user && canManageUsers) {
+      fetchUnits();
+    }
+  }, [user, canManageUsers]);
 
   // Handle user creation
   const handleCreateUser = async (userData: UserFormData | z.infer<typeof UpdateTaiKhoanSchema>) => {
@@ -164,6 +174,7 @@ export default function UsersPage() {
     }
 
     try {
+      setIsLoading(true);
       const response = await fetch(`/api/users/${user.MaTaiKhoan}`, {
         method: 'DELETE',
       });
@@ -176,6 +187,7 @@ export default function UsersPage() {
       await fetchUsers();
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An error occurred');
+      setIsLoading(false);
     }
   };
 
@@ -277,6 +289,7 @@ export default function UsersPage() {
           totalPages={totalPages}
           totalUsers={totalUsers}
           isLoading={isLoading}
+          isLoadingUnits={isLoadingUnits}
           onPageChange={handlePageChange}
           onSearch={handleSearch}
           onFilterRole={handleRoleFilter}

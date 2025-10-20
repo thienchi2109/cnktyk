@@ -105,8 +105,8 @@ export function UserForm({
   // Filter role options based on current user's role
   const availableRoles = roleOptions.filter(role => {
     if (currentUserRole === 'DonVi') {
-      // Unit admins cannot create SoYTe users
-      return role.value !== 'SoYTe';
+      // Unit admins can ONLY manage NguoiHanhNghe (practitioner) accounts
+      return role.value === 'NguoiHanhNghe';
     }
     return true;
   });

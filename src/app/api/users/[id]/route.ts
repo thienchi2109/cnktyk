@@ -23,9 +23,11 @@ export async function GET(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Unit admins can only see users in their unit
-    if (session.user.role === 'DonVi' && user.MaDonVi !== session.user.unitId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    // Unit admins can only see NguoiHanhNghe users in their unit
+    if (session.user.role === 'DonVi') {
+      if (user.MaDonVi !== session.user.unitId || user.QuyenHan !== 'NguoiHanhNghe') {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      }
     }
 
     // Return user without sensitive data
@@ -107,6 +109,14 @@ export async function PUT(
       
       // Unit admins have restrictions
       if (session.user.role === 'DonVi') {
+        // DonVi can only edit NguoiHanhNghe accounts
+        if (existingUser.QuyenHan !== 'NguoiHanhNghe') {
+          return NextResponse.json(
+            { error: 'DonVi users can only manage NguoiHanhNghe (practitioner) accounts' },
+            { status: 403 }
+          );
+        }
+
         // Cannot change unit to outside their jurisdiction
         if (validatedData.MaDonVi && validatedData.MaDonVi !== session.user.unitId) {
           return NextResponse.json(
@@ -115,10 +125,10 @@ export async function PUT(
           );
         }
         
-        // Cannot create SoYTe users
-        if (validatedData.QuyenHan === 'SoYTe') {
+        // Cannot change role from NguoiHanhNghe to anything else
+        if (validatedData.QuyenHan && validatedData.QuyenHan !== 'NguoiHanhNghe') {
           return NextResponse.json(
-            { error: 'You cannot assign SoYTe role' },
+            { error: 'DonVi users can only manage NguoiHanhNghe (practitioner) accounts' },
             { status: 403 }
           );
         }
@@ -197,9 +207,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Unit admins can only deactivate users in their unit
-    if (session.user.role === 'DonVi' && existingUser.MaDonVi !== session.user.unitId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    // Unit admins can only deactivate NguoiHanhNghe users in their unit
+    if (session.user.role === 'DonVi') {
+      if (existingUser.MaDonVi !== session.user.unitId || existingUser.QuyenHan !== 'NguoiHanhNghe') {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      }
     }
 
     // Prevent self-deactivation

@@ -13,34 +13,32 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
-    const role = searchParams.get('role');
-    const unitId = searchParams.get('unitId');
-    const search = searchParams.get('search');
+    const role = searchParams.get('role') || undefined;
+    const unitId = searchParams.get('unitId') || undefined;
+    const search = searchParams.get('search') || undefined;
 
-    // Build query conditions based on user role and filters
-    let users;
+    // Build search filters based on user role and permissions
+    let users: any[];
     
     if (session.user.role === 'SoYTe') {
-      // SoYTe can see all users
-      if (role) {
-        users = await taiKhoanRepo.findByRole(role);
-      } else if (unitId) {
-        users = await taiKhoanRepo.findByUnit(unitId);
-      } else {
-        users = await taiKhoanRepo.findAll();
-      }
+      // SoYTe can see all users with any combination of filters
+      users = await taiKhoanRepo.search({
+        role,
+        unitId,
+        searchTerm: search,
+        includeInactive: false, // Only show active users
+      });
     } else if (session.user.role === 'DonVi' && session.user.unitId) {
-      // DonVi can only see users in their unit
-      users = await taiKhoanRepo.findByUnit(session.user.unitId);
+      // DonVi can ONLY see NguoiHanhNghe (practitioner) accounts in their unit
+      // Security: Force role to 'NguoiHanhNghe' regardless of requested filter
+      users = await taiKhoanRepo.search({
+        role: 'NguoiHanhNghe', // Force practitioner role only
+        unitId: session.user.unitId, // Force their unit
+        searchTerm: search,
+        includeInactive: false,
+      });
     } else {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
-
-    // Apply search filter if provided
-    if (search && users) {
-      users = users.filter(user => 
-        user.TenDangNhap.toLowerCase().includes(search.toLowerCase())
-      );
     }
 
     // Apply pagination
@@ -97,10 +95,11 @@ export async function POST(request: NextRequest) {
         );
       }
       
-      // Unit admins cannot create SoYTe users
-      if (validatedData.QuyenHan === 'SoYTe') {
+      // Unit admins can ONLY create NguoiHanhNghe (practitioner) accounts
+      // Security: DonVi should not be able to create admin or auditor accounts
+      if (validatedData.QuyenHan !== 'NguoiHanhNghe') {
         return NextResponse.json(
-          { error: 'You cannot create SoYTe users' },
+          { error: 'DonVi users can only create NguoiHanhNghe (practitioner) accounts' },
           { status: 403 }
         );
       }

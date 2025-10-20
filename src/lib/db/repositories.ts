@@ -142,6 +142,47 @@ export class TaiKhoanRepository extends BaseRepository<TaiKhoan, CreateTaiKhoan,
   async findByRole(role: string): Promise<TaiKhoan[]> {
     return db.query<TaiKhoan>(`SELECT * FROM "${this.tableName}" WHERE "QuyenHan" = $1 AND "TrangThai" = true`, [role]);
   }
+
+  async search(filters: {
+    role?: string;
+    unitId?: string;
+    searchTerm?: string;
+    includeInactive?: boolean;
+  }): Promise<TaiKhoan[]> {
+    let query = `SELECT * FROM "${this.tableName}" WHERE 1=1`;
+    const params: any[] = [];
+    let paramCount = 1;
+
+    // Filter by role
+    if (filters.role) {
+      query += ` AND "QuyenHan" = $${paramCount}`;
+      params.push(filters.role);
+      paramCount++;
+    }
+
+    // Filter by unit
+    if (filters.unitId) {
+      query += ` AND "MaDonVi" = $${paramCount}`;
+      params.push(filters.unitId);
+      paramCount++;
+    }
+
+    // Search by username (case-insensitive)
+    if (filters.searchTerm) {
+      query += ` AND LOWER("TenDangNhap") LIKE LOWER($${paramCount})`;
+      params.push(`%${filters.searchTerm}%`);
+      paramCount++;
+    }
+
+    // Filter active users only (unless includeInactive is true)
+    if (!filters.includeInactive) {
+      query += ` AND "TrangThai" = true`;
+    }
+
+    query += ` ORDER BY "TaoLuc" DESC`;
+
+    return db.query<TaiKhoan>(query, params);
+  }
 }
 
 // NhanVien (Practitioner) Repository

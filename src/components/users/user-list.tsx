@@ -43,6 +43,7 @@ interface UserListProps {
   totalPages: number;
   totalUsers: number;
   isLoading: boolean;
+  isLoadingUnits?: boolean;
   onPageChange: (page: number) => void;
   onSearch: (search: string) => void;
   onFilterRole: (role: string) => void;
@@ -75,6 +76,7 @@ export function UserList({
   totalPages,
   totalUsers,
   isLoading,
+  isLoadingUnits = false,
   onPageChange,
   onSearch,
   onFilterRole,
@@ -131,7 +133,10 @@ export function UserList({
             <h1 className="text-3xl font-bold text-gray-900">Quản Lý Tài Khoản</h1>
           </div>
           <p className="text-gray-600">
-            Quản lý người dùng trong hệ thống CNKTYKLT • {totalUsers} tài khoản
+            {currentUserRole === 'SoYTe' 
+              ? `Quản lý người dùng trong hệ thống CNKTYKLT • ${totalUsers} tài khoản`
+              : `Quản lý tài khoản người hành nghề trong đơn vị • ${totalUsers} tài khoản`
+            }
           </p>
         </div>
         
@@ -149,7 +154,9 @@ export function UserList({
           <Filter className="h-5 w-5 text-medical-blue" />
           <h3 className="font-semibold text-gray-900">Bộ Lọc & Tìm Kiếm</h3>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className={`grid grid-cols-1 gap-4 ${
+          currentUserRole === 'SoYTe' ? 'md:grid-cols-3' : 'md:grid-cols-2'
+        }`}>
           <div>
             <Label htmlFor="search" className="text-sm font-medium text-gray-700">Tìm kiếm</Label>
             <div className="relative mt-1">
@@ -165,33 +172,42 @@ export function UserList({
             </div>
           </div>
 
-          <div>
-            <Label htmlFor="role-filter" className="text-sm font-medium text-gray-700">Quyền hạn</Label>
-            <Select
-              value={selectedRole}
-              onChange={(e) => handleRoleFilter(e.target.value)}
-            >
-              <option value="">Tất cả quyền hạn</option>
-              {Object.entries(roleLabels).map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
-              ))}
-            </Select>
-          </div>
+          {/* Role filter - Only visible for SoYTe users */}
+          {currentUserRole === 'SoYTe' && (
+            <div>
+              <Label htmlFor="role-filter" className="text-sm font-medium text-gray-700">Quyền hạn</Label>
+              <Select
+                value={selectedRole}
+                onChange={(e) => handleRoleFilter(e.target.value)}
+              >
+                <option value="">Tất cả quyền hạn</option>
+                {Object.entries(roleLabels).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </Select>
+            </div>
+          )}
 
-          <div>
-            <Label htmlFor="unit-filter" className="text-sm font-medium text-gray-700">Đơn vị</Label>
-            <Select
-              value={selectedUnit}
-              onChange={(e) => handleUnitFilter(e.target.value)}
-            >
-              <option value="">Tất cả đơn vị</option>
-              {units.map((unit) => (
-                <option key={unit.MaDonVi} value={unit.MaDonVi}>
-                  {unit.TenDonVi} ({unit.CapQuanLy})
+          {/* Unit filter - Only visible for SoYTe users */}
+          {currentUserRole === 'SoYTe' && (
+            <div>
+              <Label htmlFor="unit-filter" className="text-sm font-medium text-gray-700">Đơn vị</Label>
+              <Select
+                value={selectedUnit}
+                onChange={(e) => handleUnitFilter(e.target.value)}
+                disabled={isLoadingUnits}
+              >
+                <option value="">
+                  {isLoadingUnits ? 'Đang tải...' : 'Tất cả đơn vị'}
                 </option>
-              ))}
-            </Select>
-          </div>
+                {units.map((unit) => (
+                  <option key={unit.MaDonVi} value={unit.MaDonVi}>
+                    {unit.TenDonVi} ({unit.CapQuanLy})
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )}
         </div>
       </GlassCard>
 

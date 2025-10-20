@@ -25,7 +25,7 @@ export default async function PractitionersPage() {
   }
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="max-w-7xl mx-auto">
       <PractitionersList
         userRole={session.user.role}
         userUnitId={session.user.unitId}
