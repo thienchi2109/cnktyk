@@ -17,6 +17,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingNotice } from '@/components/ui/loading-notice';
 import { 
   User, 
   Mail, 
@@ -157,6 +158,7 @@ export function PractitionerDetailSheet({
 
         {loading ? (
           <div className="space-y-4 mt-6">
+            <LoadingNotice message="Đang tải thông tin người hành nghề..." align="left" size="sm" />
             <Skeleton className="h-8 w-full" />
             <Skeleton className="h-32 w-full" />
             <Skeleton className="h-32 w-full" />

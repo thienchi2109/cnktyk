@@ -24,6 +24,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingNotice } from '@/components/ui/loading-notice';
 import { formatDate } from '@/lib/utils';
 import { SheetFooter } from '@/components/ui/sheet';
 import { useSubmission, useReviewSubmissionMutation } from '@/hooks/use-submission';
@@ -155,6 +156,7 @@ export function SubmissionReview({
   if (isLoading) {
     return (
       <div className="max-w-4xl mx-auto space-y-6">
+        <LoadingNotice message="Đang tải chi tiết hoạt động..." align="left" size="sm" />
         <Skeleton className="h-8 w-64" />
         <GlassCard className="p-6">
           <div className="space-y-4">

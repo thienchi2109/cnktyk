@@ -27,6 +27,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { formatDate } from '@/lib/utils';
+import { LoadingNotice } from '@/components/ui/loading-notice';
 import { useSubmissions } from '@/hooks/use-submissions';
 
 interface Submission {
@@ -240,9 +241,8 @@ export function SubmissionsList({
       {/* Submissions Table */}
       <GlassCard className="overflow-hidden">
         {isLoading ? (
-          <div className="p-12 text-center">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-medical-blue mx-auto mb-4"></div>
-            <p className="text-gray-600 font-medium">Đang tải danh sách hoạt động...</p>
+          <div className="p-12">
+            <LoadingNotice message="Đang tải danh sách hoạt động..." />
           </div>
         ) : filteredSubmissions.length === 0 ? (
           <div className="p-12 text-center">

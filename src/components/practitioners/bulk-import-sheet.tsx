@@ -238,7 +238,7 @@ export function BulkImportSheet({ open, onOpenChange, onImportSuccess }: BulkImp
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-blue-600 mt-0.5">•</span>
-                        <span>Nhấn "Xem trước" để kiểm tra trước khi lưu vào hệ thống</span>
+                        <span>Nhấn &quot;Xem trước&quot; để kiểm tra trước khi lưu vào hệ thống</span>
                       </li>
                     </ul>
                   </div>

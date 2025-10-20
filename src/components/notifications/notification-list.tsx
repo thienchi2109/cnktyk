@@ -5,6 +5,7 @@ import { Bell, Check, X, ExternalLink, Clock, AlertCircle, CheckCircle, Info } f
 import { GlassCard } from '@/components/ui/glass-card';
 import { GlassButton } from '@/components/ui/glass-button';
 import { Badge } from '@/components/ui/badge';
+import { LoadingNotice } from '@/components/ui/loading-notice';
 import { cn } from '@/lib/utils';
 import { ThongBao } from '@/lib/db/schemas';
 
@@ -81,19 +82,9 @@ export const NotificationList: React.FC<NotificationListProps> = ({
 
   if (loading) {
     return (
-      <div className={cn("space-y-4", className)}>
-        {[...Array(3)].map((_, i) => (
-          <GlassCard key={i} className="p-4 animate-pulse">
-            <div className="flex items-start gap-3">
-              <div className="h-5 w-5 bg-slate-200 rounded-full" />
-              <div className="flex-1 space-y-2">
-                <div className="h-4 bg-slate-200 rounded w-3/4" />
-                <div className="h-3 bg-slate-200 rounded w-1/2" />
-              </div>
-            </div>
-          </GlassCard>
-        ))}
-      </div>
+      <GlassCard className={cn("p-8", className)}>
+        <LoadingNotice message="Đang tải thông báo..." />
+      </GlassCard>
     );
   }
 

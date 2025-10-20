@@ -1,5 +1,22 @@
 # Changelog
 
+## [Unreleased] - 2025-10-20
+
+### Added
+- LoadingNotice component: `src/components/ui/loading-notice.tsx` (accessible spinner + message; size and alignment variants)
+
+### Changed
+- Standardized loading notifications across lists and sheets:
+  - Lists: Submissions, Practitioners, Users, Activities, Notifications now use LoadingNotice (replacing table/list skeletons). Chart skeletons remain.
+  - Sheets: ActivitySubmissionForm shows catalog loading; SubmissionReview and PractitionerDetailSheet show detail loading.
+
+### Fixed
+- Escaped quotes in `src/components/practitioners/bulk-import-sheet.tsx` to satisfy `react/no-unescaped-entities`.
+
+### Testing
+- TypeScript: 0 errors
+- ESLint: 0 errors (warnings non-blocking)
+
 ## [Unreleased] - 2025-10-16
 
 ### Added

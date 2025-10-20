@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingNotice } from '@/components/ui/loading-notice';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { PractitionerForm } from './practitioner-form';
 import { PractitionerDetailSheet } from './practitioner-detail-sheet';
@@ -163,11 +164,8 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
   if (isLoading && practitioners.length === 0) {
     return (
       <div className="space-y-6">
-        <GlassCard className="p-8">
-          <div className="flex items-center gap-3">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-medical-blue"></div>
-            <span className="text-gray-600">Đang tải...</span>
-          </div>
+      <GlassCard className="p-8">
+          <LoadingNotice message="Đang tải danh sách người hành nghề..." />
         </GlassCard>
       </div>
     );

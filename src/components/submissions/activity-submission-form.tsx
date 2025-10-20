@@ -27,6 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { FileUpload, UploadedFile } from '@/components/ui/file-upload';
 import { SheetFooter } from '@/components/ui/sheet';
+import { LoadingNotice } from '@/components/ui/loading-notice';
 import { useActivities } from '@/hooks/use-activities';
 
 interface ActivityCatalog {
@@ -93,7 +94,7 @@ export function ActivitySubmissionForm({
   const [success, setSuccess] = useState<string | null>(null);
   const [activityCatalog, setActivityCatalog] = useState<ActivityCatalog[]>([]);
   const [selectedActivity, setSelectedActivity] = useState<ActivityCatalog | null>(null);
-  const { data: activitiesData } = useActivities();
+  const { data: activitiesData, isLoading: isActivitiesLoading } = useActivities();
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [calculatedCredits, setCalculatedCredits] = useState<number>(0);
 
@@ -277,6 +278,12 @@ export function ActivitySubmissionForm({
             <BookOpen className="h-5 w-5 text-medical-blue" />
             <h3 className="text-lg font-semibold text-gray-900">Thông tin hoạt động</h3>
           </div>
+
+          {isActivitiesLoading && (
+            <div className="mb-4">
+              <LoadingNotice message="Đang tải danh mục hoạt động..." size="sm" align="left" />
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Activity Catalog Selection */}

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingNotice } from '@/components/ui/loading-notice';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Search, 
@@ -245,16 +246,8 @@ export function ActivitiesList({ userRole, onCreateActivity, onEditActivity, onD
       {/* Activities Table */}
       <GlassCard className="overflow-hidden">
         {isLoading ? (
-          <div className="p-6 space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="flex items-center space-x-4">
-                <Skeleton className="h-12 w-12 rounded-full" />
-                <div className="space-y-2 flex-1">
-                  <Skeleton className="h-4 w-[250px]" />
-                  <Skeleton className="h-4 w-[200px]" />
-                </div>
-              </div>
-            ))}
+          <div className="p-12">
+            <LoadingNotice message="Đang tải danh mục hoạt động..." />
           </div>
         ) : filteredActivities.length === 0 ? (
           <div className="p-8 text-center">
