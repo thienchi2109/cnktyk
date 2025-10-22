@@ -1,12 +1,13 @@
 "use client";
 
-import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
+import { useQuery, useQueryClient, keepPreviousData, useMutation } from "@tanstack/react-query";
 
 export interface UseSubmissionsOptions {
   page: number;
   limit: number;
   status?: string; // ChoDuyet | DaDuyet | TuChoi | 'all'
   search?: string;
+  refreshKey?: number;
 }
 
 export function submissionsQueryKey(o: UseSubmissionsOptions) {
@@ -16,6 +17,7 @@ export function submissionsQueryKey(o: UseSubmissionsOptions) {
     o.limit,
     o.status ?? "all",
     o.search ?? "",
+    o.refreshKey ?? 0,
   ] as const;
 }
 
@@ -55,4 +57,25 @@ export function useSubmissions(o: UseSubmissionsOptions) {
   }
 
   return query;
+}
+
+export function useBulkApproveSubmissions() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: { ids: string[]; comments?: string }) => {
+      const res = await fetch('/api/submissions/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approve', ids: args.ids, comments: args.comments }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || 'Failed to bulk approve');
+      }
+      return data as { processedCount: number; updatedIds: string[]; skippedIds: string[] };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['submissions'] });
+    },
+  });
 }

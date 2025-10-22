@@ -459,6 +459,44 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
     } as UpdateGhiNhanHoatDong);
   }
 
+  /**
+   * Bulk approve activities.
+   * If unitId is provided, only records from that unit will be approved.
+   * Only pending (ChoDuyet) items are affected.
+   */
+  async approveActivities(ids: string[], comments?: string | null, unitId?: string): Promise<{ updatedIds: string[] }> {
+    if (!ids || ids.length === 0) return { updatedIds: [] };
+
+    if (unitId) {
+      const rows = await db.query<{ MaGhiNhan: string }>(
+        `UPDATE "${this.tableName}" g
+         SET "TrangThaiDuyet" = 'DaDuyet',
+             "NgayDuyet" = NOW(),
+             "GhiChuDuyet" = COALESCE($3, "GhiChuDuyet")
+         FROM "NhanVien" n
+         WHERE g."MaNhanVien" = n."MaNhanVien"
+           AND g."MaGhiNhan" = ANY($1::uuid[])
+           AND g."TrangThaiDuyet" = 'ChoDuyet'
+           AND n."MaDonVi" = $2
+         RETURNING g."MaGhiNhan"`,
+        [ids, unitId, comments ?? null]
+      );
+      return { updatedIds: rows.map(r => r.MaGhiNhan) };
+    }
+
+    const rows = await db.query<{ MaGhiNhan: string }>(
+      `UPDATE "${this.tableName}" g
+       SET "TrangThaiDuyet" = 'DaDuyet',
+           "NgayDuyet" = NOW(),
+           "GhiChuDuyet" = COALESCE($2, "GhiChuDuyet")
+       WHERE g."MaGhiNhan" = ANY($1::uuid[])
+         AND g."TrangThaiDuyet" = 'ChoDuyet'
+       RETURNING g."MaGhiNhan"`,
+      [ids, comments ?? null]
+    );
+    return { updatedIds: rows.map(r => r.MaGhiNhan) };
+  }
+
   async getActivityStats(unitId?: string): Promise<{
     total: number;
     pending: number;

@@ -1,6 +1,7 @@
 import { requireAuth } from '@/lib/auth/server';
 import { ResponsiveNavigation } from '@/components/layout/responsive-navigation';
 import { db } from '@/lib/db/client';
+import { ghiNhanHoatDongRepo } from '@/lib/db/repositories';
 
 export default async function AuthenticatedLayout({
   children,
@@ -24,6 +25,20 @@ export default async function AuthenticatedLayout({
     console.error('Failed to fetch notification count:', error);
   }
 
+  // Fetch pending submissions count for Unit Admins
+  let submissionsPendingCount = 0;
+  try {
+    if (session.user.role === 'DonVi' && session.user.unitId) {
+      const stats = await ghiNhanHoatDongRepo.getActivityStats(session.user.unitId);
+      submissionsPendingCount = stats.pending;
+    }
+  } catch (error) {
+    console.error('Failed to fetch submissions pending count:', error);
+  }
+
+  // Expose a small cache-buster for client-initiated refreshes (e.g., after bulk approve)
+  const stats = { submissionsPendingCount };
+
   return (
     <ResponsiveNavigation
       user={{
@@ -31,6 +46,7 @@ export default async function AuthenticatedLayout({
         role: session.user.role,
       }}
       notifications={unreadCount}
+      submissionPendingCount={stats.submissionsPendingCount}
     >
       {children}
     </ResponsiveNavigation>

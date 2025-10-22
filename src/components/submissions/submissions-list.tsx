@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   Clock, 
   CheckCircle, 
@@ -28,7 +29,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { formatDate } from '@/lib/utils';
 import { LoadingNotice } from '@/components/ui/loading-notice';
-import { useSubmissions } from '@/hooks/use-submissions';
+import { useSubmissions, useBulkApproveSubmissions } from '@/hooks/use-submissions';
 
 interface Submission {
   MaGhiNhan: string;
@@ -100,15 +101,22 @@ export function SubmissionsList({
   onViewSubmission,
   refreshKey,
 }: SubmissionsListProps) {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const reviewerRole = ['DonVi', 'SoYTe'].includes(userRole);
+  const bulkApprove = useBulkApproveSubmissions();
 
   const { data, isLoading, error } = useSubmissions({
     page,
     limit: 10,
     status: statusFilter,
     search: searchTerm,
+    refreshKey,
   });
 
   const totalPages = (data && data.pagination ? data.pagination.totalPages : 1);
@@ -119,11 +127,44 @@ export function SubmissionsList({
     setPage(1);
   }, [statusFilter, searchTerm]);
 
+  // Clear selection when data changes or page/filter changes
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [page, statusFilter, searchTerm, data?.data]);
+
   const filteredSubmissions = ((data?.data as Submission[]) ?? []);
 
   const handleViewSubmission = (submissionId: string) => {
     if (onViewSubmission) {
       onViewSubmission(submissionId);
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const toggleSelectAll = () => {
+    const pageIds = filteredSubmissions
+      .filter(s => s.TrangThaiDuyet === 'ChoDuyet')
+      .map(s => s.MaGhiNhan);
+    const allSelected = pageIds.every(id => selectedIds.includes(id));
+    setSelectedIds(allSelected ? selectedIds.filter(id => !pageIds.includes(id)) : Array.from(new Set([...selectedIds, ...pageIds])));
+  };
+
+  const handleBulkApprove = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Phê duyệt ${selectedIds.length} hoạt động đã chọn?`)) return;
+    try {
+      const res = await bulkApprove.mutateAsync({ ids: selectedIds });
+      setSelectedIds([]);
+      setFeedback({ type: 'success', message: `Đã phê duyệt ${res.processedCount} hoạt động${res.skippedIds?.length ? `, bỏ qua ${res.skippedIds.length}` : ''}.` });
+      // Refresh header badge and page data
+      router.refresh();
+      setTimeout(() => setFeedback(null), 3000);
+    } catch (e) {
+      setFeedback({ type: 'error', message: e instanceof Error ? e.message : 'Thao tác thất bại' });
+      setTimeout(() => setFeedback(null), 3000);
     }
   };
 
@@ -183,21 +224,44 @@ export function SubmissionsList({
           <p className="text-gray-600">
             {userRole === 'NguoiHanhNghe' 
               ? `Theo dõi các hoạt động đào tạo liên tục • ${total} bản ghi`
-              : `Xem xét và phê duyệt các hoạt động đào tạo liên tục • ${total} bản ghi`
-            }
+              : `Xem xét và phê duyệt các hoạt động đào tạo liên tục • ${total} bản ghi`}
           </p>
         </div>
         
-        {canCreateSubmission() && onCreateSubmission && (
-          <GlassButton
-            onClick={onCreateSubmission}
-            className="flex items-center gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Ghi nhận hoạt động
-          </GlassButton>
-        )}
+        <div className="flex gap-2">
+          {reviewerRole && (
+            <GlassButton
+              onClick={handleBulkApprove}
+              disabled={selectedIds.length === 0 || bulkApprove.isPending}
+              className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+            >
+              {bulkApprove.isPending ? 'Đang xử lý...' : `Phê duyệt hàng loạt${selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}`}
+            </GlassButton>
+          )}
+          {canCreateSubmission() && onCreateSubmission && (
+            <GlassButton
+              onClick={onCreateSubmission}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Ghi nhận hoạt động
+            </GlassButton>
+          )}
+        </div>
       </div>
+
+      {feedback && (
+        <Alert className={feedback.type === 'success' ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
+          {feedback.type === 'success' ? (
+            <CheckCircle className="h-4 w-4 text-green-600" />
+          ) : (
+            <AlertTriangle className="h-4 w-4 text-red-600" />
+          )}
+          <AlertDescription className={feedback.type === 'success' ? 'text-green-700' : 'text-red-700'}>
+            {feedback.message}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Filters */}
       <GlassCard className="p-6">
@@ -253,18 +317,8 @@ export function SubmissionsList({
             <p className="text-gray-500">
               {searchTerm || statusFilter !== 'all'
                 ? 'Thử điều chỉnh bộ lọc hoặc thêm hoạt động mới'
-                : 'Chưa có hoạt động nào được ghi nhận'
-              }
+                : 'Chưa có hoạt động nào được ghi nhận'}
             </p>
-            {canCreateSubmission() && onCreateSubmission && (
-              <GlassButton
-                onClick={onCreateSubmission}
-                className="mt-4 flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Ghi nhận hoạt động đầu tiên
-              </GlassButton>
-            )}
           </div>
         ) : (
           <>
@@ -272,6 +326,16 @@ export function SubmissionsList({
               <table className="w-full">
                 <thead className="bg-gray-50/50 border-b border-gray-200/50">
                   <tr>
+                    {reviewerRole && (
+                      <th className="px-3 py-3">
+                        <input
+                          type="checkbox"
+                          aria-label="Chọn tất cả"
+                          checked={filteredSubmissions.filter(s=>s.TrangThaiDuyet==='ChoDuyet').every(s=>selectedIds.includes(s.MaGhiNhan)) && filteredSubmissions.some(s=>s.TrangThaiDuyet==='ChoDuyet')}
+                          onChange={toggleSelectAll}
+                        />
+                      </th>
+                    )}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hoạt động</th>
                     {userRole !== 'NguoiHanhNghe' && (
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Người hành nghề</th>
@@ -286,6 +350,18 @@ export function SubmissionsList({
                 <tbody className="divide-y divide-gray-200/50">
                   {filteredSubmissions.map((submission) => (
                     <tr key={submission.MaGhiNhan} className="hover:bg-gray-50/30 transition-colors">
+                      {reviewerRole && (
+                        <td className="px-3 py-4">
+                          {submission.TrangThaiDuyet === 'ChoDuyet' ? (
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(submission.MaGhiNhan)}
+                              onChange={() => toggleSelect(submission.MaGhiNhan)}
+                              aria-label="Chọn hoạt động"
+                            />
+                          ) : null}
+                        </td>
+                      )}
                       <td className="px-6 py-4">
                         <div className="space-y-1">
                           <div className="font-medium text-gray-900">

@@ -44,10 +44,13 @@ interface ResponsiveNavigationProps {
   activeItem?: string;
   onNavigate?: (item: NavigationItem) => void;
   className?: string;
+  submissionPendingCount?: number; // dynamic submissions badge for DonVi
 }
 
+type NavCounts = { submissionsPending?: number };
+
 // Navigation items based on user roles
-const getNavigationItems = (userRole?: string): NavigationItem[] => {
+const getNavigationItems = (userRole?: string, counts: NavCounts = {}): NavigationItem[] => {
   const baseItems: NavigationItem[] = [
     {
       id: 'dashboard',
@@ -90,6 +93,7 @@ const getNavigationItems = (userRole?: string): NavigationItem[] => {
 
   // Unit Administrator items
   if (userRole === 'DonVi') {
+    const pending = counts.submissionsPending || 0;
     return [
       ...baseItems,
       {
@@ -103,7 +107,7 @@ const getNavigationItems = (userRole?: string): NavigationItem[] => {
         label: 'Hoạt động',
         icon: <Activity className="h-4 w-4" />,
         href: '/submissions',
-        badge: 12
+        badge: pending > 0 ? pending : undefined
       },
       {
         id: 'reports',
@@ -391,10 +395,10 @@ const FooterNavigation = ({
 };
 
 export const ResponsiveNavigation = React.forwardRef<HTMLDivElement, ResponsiveNavigationProps>(
-  ({ children, user, notifications = 0, activeItem, onNavigate, className }, ref) => {
+  ({ children, user, notifications = 0, activeItem, onNavigate, className, submissionPendingCount }, ref) => {
     const router = useRouter();
     const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
-    const navigationItems = getNavigationItems(user?.role);
+    const navigationItems = getNavigationItems(user?.role, { submissionsPending: submissionPendingCount });
 
     const handleItemClick = (item: NavigationItem) => {
       setMobileMenuOpen(false);
