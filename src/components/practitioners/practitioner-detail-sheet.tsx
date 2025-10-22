@@ -189,7 +189,7 @@ export function PractitionerDetailSheet({
                   Thông tin cơ bản
                 </h3>
                 {canEdit && !isEditing && (
-                  <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                  <Button variant="secondary" size="sm" onClick={() => setIsEditing(true)}>
                     <Edit className="w-4 h-4 mr-2" />
                     Chỉnh sửa
                   </Button>

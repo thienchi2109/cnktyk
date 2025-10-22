@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -16,24 +16,30 @@ import { Loader2, Save, X } from 'lucide-react';
 import { CreateNhanVienSchema, type CreateNhanVien } from '@/lib/db/schemas';
 
 // Form schema with additional client-side validation
-const PractitionerFormSchema = CreateNhanVienSchema.extend({
-  TrangThaiLamViec: z.enum(['DangLamViec', 'DaNghi', 'TamHoan']).default('DangLamViec'),
-  Email: z.string().email('Định dạng email không hợp lệ').optional().or(z.literal('')),
-  DienThoai: z.string().regex(/^[0-9+\-\s()]*$/, 'Định dạng số điện thoại không hợp lệ').optional().or(z.literal('')),
-}).refine(
-  (data) => {
-    // Validate MaDonVi is a valid UUID if provided
-    if (data.MaDonVi && data.MaDonVi.length > 0) {
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      return uuidRegex.test(data.MaDonVi);
+// Must omit MaDonVi from CreateNhanVienSchema first, then re-add with custom validation
+// to avoid "Invalid uuid" error when form initializes with empty string
+const PractitionerFormSchema = CreateNhanVienSchema
+  .omit({ MaDonVi: true })
+  .extend({
+    MaDonVi: z.string().min(1, 'Vui lòng chọn đơn vị y tế'),
+    TrangThaiLamViec: z.enum(['DangLamViec', 'DaNghi', 'TamHoan']).default('DangLamViec'),
+    Email: z.string().email('Định dạng email không hợp lệ').optional().or(z.literal('')),
+    DienThoai: z.string().regex(/^[0-9+\-\s()]*$/, 'Định dạng số điện thoại không hợp lệ').optional().or(z.literal('')),
+  })
+  .refine(
+    (data) => {
+      // Validate MaDonVi is a valid UUID if provided
+      if (data.MaDonVi && data.MaDonVi.length > 0) {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        return uuidRegex.test(data.MaDonVi);
+      }
+      return false; // MaDonVi is required
+    },
+    {
+      message: 'Vui lòng chọn đơn vị y tế',
+      path: ['MaDonVi'],
     }
-    return false; // MaDonVi is required
-  },
-  {
-    message: 'Vui lòng chọn đơn vị y tế',
-    path: ['MaDonVi'],
-  }
-);
+  );
 
 type PractitionerFormData = z.infer<typeof PractitionerFormSchema>;
 
@@ -76,6 +82,27 @@ export function PractitionerForm({
     },
   });
 
+  // Keep form in sync when initialData/units arrive asynchronously (edit mode)
+  useEffect(() => {
+    if (mode === 'edit' && initialData) {
+      const nextUnitId = initialData.MaDonVi || unitId || (units[0]?.MaDonVi ?? '');
+      form.reset({
+        HoVaTen: initialData.HoVaTen || '',
+        SoCCHN: initialData.SoCCHN || '',
+        // Provide string for date input; on submit, setValueAs converts to Date
+        NgayCapCCHN: initialData.NgayCapCCHN
+          ? new Date(initialData.NgayCapCCHN as any).toISOString().slice(0, 10)
+          : undefined,
+        MaDonVi: nextUnitId,
+        TrangThaiLamViec: (initialData.TrangThaiLamViec as any) || 'DangLamViec',
+        Email: (initialData.Email as any) || '',
+        DienThoai: (initialData.DienThoai as any) || '',
+        ChucDanh: (initialData.ChucDanh as any) || '',
+      } as any);
+      form.clearErrors('MaDonVi');
+    }
+  }, [mode, initialData, unitId, units]);
+
   const isSelfLimited = userRole === 'NguoiHanhNghe' && mode === 'edit';
   const disableUnitChange = userRole === 'DonVi' && mode === 'edit';
 
@@ -85,14 +112,20 @@ export function PractitionerForm({
 
     try {
       // Convert empty strings to null for optional fields
-      const submitData = {
+      const submitData: any = {
         ...data,
         SoCCHN: data.SoCCHN || null,
-        NgayCapCCHN: data.NgayCapCCHN || null,
+        // NgayCapCCHN comes as string from date input; convert to Date or null
+        NgayCapCCHN: data.NgayCapCCHN ? new Date(data.NgayCapCCHN as any) : null,
         Email: data.Email || null,
         DienThoai: data.DienThoai || null,
         ChucDanh: data.ChucDanh || null,
       };
+
+      // DonVi and NguoiHanhNghe cannot change unit in edit mode; exclude MaDonVi from payload
+      if (mode === 'edit' && (userRole === 'DonVi' || userRole === 'NguoiHanhNghe')) {
+        delete submitData.MaDonVi;
+      }
 
       const url = mode === 'create' ? '/api/practitioners' : `/api/practitioners/${initialData?.MaNhanVien}`;
       const method = mode === 'create' ? 'POST' : 'PUT';
@@ -107,7 +140,10 @@ export function PractitionerForm({
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save practitioner');
+        console.error('API Error:', errorData);
+        const errorMsg = errorData.error || 'Failed to save practitioner';
+        const errorDetails = errorData.details ? `\n${JSON.stringify(errorData.details, null, 2)}` : '';
+        throw new Error(errorMsg + errorDetails);
       }
 
       const result = await response.json();
@@ -240,7 +276,10 @@ export function PractitionerForm({
                   <Label htmlFor="MaDonVi">Đơn vị y tế *</Label>
                   <Select
                     value={form.watch('MaDonVi')}
-                    onValueChange={(value) => form.setValue('MaDonVi', value)}
+                    onValueChange={(value) => {
+                      form.setValue('MaDonVi', value, { shouldValidate: true, shouldDirty: true });
+                      form.clearErrors('MaDonVi');
+                    }}
                     disabled={isSelfLimited || disableUnitChange}
                   >
                     <SelectTrigger className={form.formState.errors.MaDonVi ? 'border-red-500' : ''}>
@@ -320,10 +359,10 @@ export function PractitionerForm({
       {onCancel && (
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           onClick={onCancel}
           disabled={isLoading}
-          className="rounded-full shadow-lg hover:shadow-xl transition-shadow bg-white"
+          className="rounded-full shadow-lg hover:shadow-xl transition-shadow"
           size="lg"
         >
           <X className="w-5 h-5 mr-2" />

@@ -92,6 +92,8 @@ export const NhanVienSchema = z.object({
 export const CreateNhanVienSchema = NhanVienSchema.omit({ MaNhanVien: true });
 export const UpdateNhanVienSchema = CreateNhanVienSchema.partial().extend({
   MaDonVi: UUIDSchema.optional(),
+  // API receives dates as ISO strings via JSON; coerce to Date
+  NgayCapCCHN: z.coerce.date().nullable().optional(),
 });
 
 // DanhMucHoatDong (Activity Catalog) schema
