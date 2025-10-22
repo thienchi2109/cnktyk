@@ -1,3 +1,22 @@
+<!-- OPENSPEC:START -->
+# OpenSpec Instructions
+
+These instructions are for AI assistants working in this project.
+
+Always open `@/openspec/AGENTS.md` when the request:
+- Mentions planning or proposals (words like proposal, spec, change, plan)
+- Introduces new capabilities, breaking changes, architecture shifts, or big performance/security work
+- Sounds ambiguous and you need the authoritative spec before coding
+
+Use `@/openspec/AGENTS.md` to learn:
+- How to create and apply change proposals
+- Spec format and conventions
+- Project structure and guidelines
+
+Keep this managed block so 'openspec update' can refresh the instructions.
+
+<!-- OPENSPEC:END -->
+
 # Agent Guidelines for cnktyklt-platform
 
 ## Project Overview
@@ -30,3 +49,26 @@
 - **File Structure**: Role-based routes (`/so-y-te/*`, `/don-vi/*`, `/nguoi-hanh-nghe/*`)
 - **Deployment**: Cloudflare Workers + Pages (primary), Vercel (fallback)
 - **Package Manager**: Use `npm` exclusively
+
+## WARP Integration Guidelines (from WARP.md)
+
+### MCP Tool Prioritization
+1. Database exploration → Neon MCP tools (describe_project/branch/table, get_database_tables, run_sql, explain_sql_statement)
+2. Codebase exploration → gkg MCP tools (search_codebase_definitions, get_references, read_definitions, repo_map)
+3. Reasoning/decisions → human MCP tools (brain_analyze_simple, brain_reflect_enhanced, sequentialthinking)
+
+General principle: use the most specialized tool for the task (Neon for DB, gkg for code, human for reasoning).
+
+### Workers Compatibility & Security
+- Use @neondatabase/serverless (not node-postgres); bcryptjs (not native bcrypt)
+- Prefer repository methods; avoid raw SQL in components; parameterize all queries
+- Enforce tenant isolation via WHERE clauses (DonVi limited to own unit; SoYTe global)
+- Validate all inputs with Zod before DB ops; log mutations to NhatKyHeThong
+- R2 file storage via AWS SDK v3 + presigner; allow images from *.r2.dev; use nodejs_compat on Pages
+
+### Common Commands
+- Dev: `npm run dev`, Build: `npm run build`, Start: `npm start`
+- Types: `npm run typecheck`, Lint: `npm run lint`, Check: `npm run check`
+- DB tests: `npx tsx scripts/test-database.ts`, `test-repositories.ts`, `test-core-functionality.ts`, `test-complete-system.ts`
+
+For full details see WARP.md; this section captures the essential rules for assistants.
