@@ -219,10 +219,10 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
                 value={preferences.frequency} 
                 onValueChange={(value: any) => updatePreference('frequency', value)}
               >
-                <SelectTrigger>
+                <SelectTrigger className="relative z-10 data-[state=open]:z-50">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[9999] bg-white" position="popper">
                   <SelectItem value="immediate">Ngay lập tức</SelectItem>
                   <SelectItem value="daily">Tổng hợp hàng ngày</SelectItem>
                   <SelectItem value="weekly">Tổng hợp hàng tuần</SelectItem>
@@ -258,10 +258,10 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
                     value={preferences.quietHours.start} 
                     onValueChange={(value) => updateQuietHours('start', value)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="relative z-10 data-[state=open]:z-50">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[9999] bg-white" position="popper">
                       {Array.from({ length: 24 }, (_, i) => {
                         const hour = i.toString().padStart(2, '0');
                         return (
@@ -282,10 +282,10 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
                     value={preferences.quietHours.end} 
                     onValueChange={(value) => updateQuietHours('end', value)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="relative z-10 data-[state=open]:z-50">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[9999] bg-white" position="popper">
                       {Array.from({ length: 24 }, (_, i) => {
                         const hour = i.toString().padStart(2, '0');
                         return (

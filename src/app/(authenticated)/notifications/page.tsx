@@ -225,7 +225,7 @@ export default function NotificationsPage() {
           )}
 
           {/* Filters and Search */}
-          <GlassCard className="p-4">
+          <GlassCard className="p-4 relative">
             <div className="flex flex-col sm:flex-row gap-4">
               {/* Search */}
               <div className="flex-1">
@@ -241,13 +241,13 @@ export default function NotificationsPage() {
               </div>
 
               {/* Filter */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 relative">
                 <Filter className="h-4 w-4 text-slate-500" />
                 <Select value={state.filter} onValueChange={handleFilterChange}>
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className="w-40 relative z-10 data-[state=open]:z-50">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[9999] bg-white" position="popper">
                     <SelectItem value="all">Tất cả</SelectItem>
                     <SelectItem value="unread">Chưa đọc</SelectItem>
                     <SelectItem value="read">Đã đọc</SelectItem>

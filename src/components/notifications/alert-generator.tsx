@@ -175,10 +175,10 @@ export const AlertGenerator: React.FC<AlertGeneratorProps> = ({
             Mức độ ưu tiên
           </Label>
           <Select value={priority} onValueChange={(value: any) => setPriority(value)}>
-            <SelectTrigger>
+            <SelectTrigger className="relative z-10 data-[state=open]:z-50">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-[9999] bg-white" position="popper">
               {PRIORITY_LEVELS.map((level) => (
                 <SelectItem key={level.value} value={level.value}>
                   <div className="flex items-center gap-2">
