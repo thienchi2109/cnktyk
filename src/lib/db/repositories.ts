@@ -107,6 +107,10 @@ export class TaiKhoanRepository extends BaseRepository<TaiKhoan, CreateTaiKhoan,
     return db.queryOne<TaiKhoan>(`SELECT * FROM "${this.tableName}" WHERE "TenDangNhap" = $1`, [username]);
   }
 
+  async findByUsernameInsensitive(username: string): Promise<TaiKhoan | null> {
+    return db.queryOne<TaiKhoan>(`SELECT * FROM "${this.tableName}" WHERE LOWER("TenDangNhap") = LOWER($1)`, [username]);
+  }
+
   async create(data: CreateTaiKhoan): Promise<TaiKhoan> {
     // Hash password before storing
     const hashedPassword = await bcrypt.hash(data.MatKhau, 10);
@@ -123,7 +127,9 @@ export class TaiKhoanRepository extends BaseRepository<TaiKhoan, CreateTaiKhoan,
   }
 
   async verifyPassword(username: string, password: string): Promise<TaiKhoan | null> {
-    const user = await this.findByUsername(username);
+    // Normalize username lookup to be case-insensitive and trim whitespace
+    const normalized = username.trim();
+    const user = await this.findByUsernameInsensitive(normalized);
     if (!user) return null;
 
     const isValid = await bcrypt.compare(password, user.MatKhauBam);

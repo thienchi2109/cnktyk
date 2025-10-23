@@ -88,7 +88,12 @@ export function UserForm({
     }
 
     try {
-      await onSubmit(formData as UserFormData);
+      // Omit empty password on edit to avoid server-side validation errors
+      const payload: any = { ...formData };
+      if (mode === 'edit' && (!payload.MatKhau || payload.MatKhau.trim() === '')) {
+        delete payload.MatKhau;
+      }
+      await onSubmit(payload as UserFormData);
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'An error occurred');
     }

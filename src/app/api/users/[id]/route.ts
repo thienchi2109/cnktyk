@@ -106,7 +106,20 @@ export async function PUT(
     } else {
       // Admins can update more fields
       const validatedData = UpdateTaiKhoanSchema.parse(body);
-      
+
+      // Extract optional plain password; treat empty string as undefined
+      const rawPassword = (body as any)?.MatKhau;
+      const MatKhau: string | undefined =
+        typeof rawPassword === 'string' && rawPassword.trim().length > 0
+          ? rawPassword
+          : undefined;
+      if (MatKhau && MatKhau.length < 6) {
+        return NextResponse.json(
+          { error: 'Password must be at least 6 characters' },
+          { status: 400 }
+        );
+      }
+
       // Unit admins have restrictions
       if (session.user.role === 'DonVi') {
         // DonVi can only edit NguoiHanhNghe accounts
@@ -156,10 +169,26 @@ export async function PUT(
         }
       }
 
-      // Update user
-      const updatedUser = await taiKhoanRepo.update(userId, validatedData);
+      // Never accept direct MatKhauBam updates from client for security
+      const { MatKhauBam, ...safeUpdate } = validatedData as any;
+
+      // Perform field updates if provided
+      if (Object.keys(safeUpdate).length > 0) {
+        const result = await taiKhoanRepo.update(userId, safeUpdate);
+        if (!result) {
+          return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
+        }
+      }
+
+      // Handle password change if provided
+      if (MatKhau) {
+        await taiKhoanRepo.updatePassword(userId, MatKhau);
+      }
+
+      // Fetch latest user state
+      const updatedUser = await taiKhoanRepo.findById(userId);
       if (!updatedUser) {
-        return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
+        return NextResponse.json({ error: 'User not found after update' }, { status: 404 });
       }
 
       // Return updated user without sensitive data

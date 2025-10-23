@@ -37,7 +37,8 @@ export const TaiKhoanSchema = z.object({
 
 export const CreateTaiKhoanSchema = TaiKhoanSchema.omit({ 
   MaTaiKhoan: true, 
-  TaoLuc: true 
+  TaoLuc: true,
+  MatKhauBam: true,
 }).extend({
   MatKhau: z.string().min(6, 'Password must be at least 6 characters'),
 });
