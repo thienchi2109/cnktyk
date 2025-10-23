@@ -25,11 +25,11 @@ export async function GET(request: NextRequest) {
         COUNT(DISTINCT CASE 
           WHEN kc."TrangThai" = 'DangDienRa' 
           AND (
-            SELECT COALESCE(SUM(g."SoTinChi"), 0)
+            SELECT COALESCE(SUM(g."SoGioTinChiQuyDoi"), 0)
             FROM "GhiNhanHoatDong" g
             WHERE g."MaNhanVien" = nv."MaNhanVien"
             AND g."TrangThaiDuyet" = 'DaDuyet'
-            AND g."NgayHoatDong" BETWEEN kc."NgayBatDau" AND kc."NgayKetThuc"
+            AND g."NgayGhiNhan" BETWEEN kc."NgayBatDau" AND kc."NgayKetThuc"
           ) >= kc."SoTinChiYeuCau"
           THEN nv."MaNhanVien" 
         END) as compliant_practitioners,
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
         END) as pending_approvals,
         COALESCE(SUM(CASE 
           WHEN g."TrangThaiDuyet" = 'DaDuyet' 
-          THEN g."SoTinChi" 
+          THEN g."SoGioTinChiQuyDoi" 
           ELSE 0 
         END), 0) as total_credits
       FROM "DonVi" dv

@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
       `, ['TuChoi']),
       
       // Total credits awarded
-      db.query('SELECT COALESCE(SUM("SoTinChi"), 0) as total FROM "GhiNhanHoatDong" WHERE "TrangThaiDuyet" = $1', ['DaDuyet'])
+      db.query('SELECT COALESCE(SUM("SoGioTinChiQuyDoi"), 0) as total FROM "GhiNhanHoatDong" WHERE "TrangThaiDuyet" = $1', ['DaDuyet'])
     ]);
 
     // Calculate compliance rate
@@ -68,11 +68,11 @@ export async function GET(request: NextRequest) {
       INNER JOIN "KyCNKT" kc ON nv."MaNhanVien" = kc."MaNhanVien"
       WHERE kc."TrangThai" = 'DangDienRa'
       AND (
-        SELECT COALESCE(SUM(g."SoTinChi"), 0)
+        SELECT COALESCE(SUM(g."SoGioTinChiQuyDoi"), 0)
         FROM "GhiNhanHoatDong" g
         WHERE g."MaNhanVien" = nv."MaNhanVien"
         AND g."TrangThaiDuyet" = 'DaDuyet'
-        AND g."NgayHoatDong" BETWEEN kc."NgayBatDau" AND kc."NgayKetThuc"
+        AND g."NgayGhiNhan" BETWEEN kc."NgayBatDau" AND kc."NgayKetThuc"
       ) >= kc."SoTinChiYeuCau"
     `);
 
@@ -88,11 +88,11 @@ export async function GET(request: NextRequest) {
       WHERE kc."TrangThai" = 'DangDienRa'
       AND kc."NgayKetThuc" <= CURRENT_DATE + INTERVAL '6 months'
       AND (
-        SELECT COALESCE(SUM(g."SoTinChi"), 0)
+        SELECT COALESCE(SUM(g."SoGioTinChiQuyDoi"), 0)
         FROM "GhiNhanHoatDong" g
         WHERE g."MaNhanVien" = nv."MaNhanVien"
         AND g."TrangThaiDuyet" = 'DaDuyet'
-        AND g."NgayHoatDong" BETWEEN kc."NgayBatDau" AND kc."NgayKetThuc"
+        AND g."NgayGhiNhan" BETWEEN kc."NgayBatDau" AND kc."NgayKetThuc"
       ) < (kc."SoTinChiYeuCau" * 0.7)
     `);
 
