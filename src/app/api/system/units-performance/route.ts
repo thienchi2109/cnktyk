@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
       LEFT JOIN "NhanVien" nv ON dv."MaDonVi" = nv."MaDonVi"
       LEFT JOIN "KyCNKT" kc ON nv."MaNhanVien" = kc."MaNhanVien"
       LEFT JOIN "GhiNhanHoatDong" g ON nv."MaNhanVien" = g."MaNhanVien"
-      WHERE dv."TrangThai" = true
+      WHERE dv."TrangThai" = 'HoatDong'
         AND dv."CapQuanLy" != 'SoYTe'
       GROUP BY dv."MaDonVi", dv."TenDonVi", dv."CapQuanLy"
       ORDER BY dv."TenDonVi"
