@@ -38,6 +38,12 @@ export default auth((req) => {
     nextUrl.pathname.startsWith(route)
   );
 
+  // Redirect authenticated users away from signin page
+  if (isLoggedIn && nextUrl.pathname === '/auth/signin') {
+    const dashboardUrl = getDashboardUrl(userRole);
+    return NextResponse.redirect(new URL(dashboardUrl, nextUrl.origin));
+  }
+
   // Allow access to public routes
   if (isPublicRoute) {
     return NextResponse.next();

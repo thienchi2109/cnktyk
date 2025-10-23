@@ -56,21 +56,21 @@ function SignInForm() {
 
       if (result?.error) {
         setError("Tên đăng nhập hoặc mật khẩu không đúng");
+        setIsLoading(false);
         return;
       }
 
       // Get the session to determine redirect URL
       const session = await getSession();
       if (session?.user?.role) {
-        const dashboardUrl = getDashboardUrl(session.user.role);
-        router.push(dashboardUrl);
+        const dashboardUrl = getRoleSpecificDashboard(session.user.role);
+        router.replace(dashboardUrl); // use replace to avoid back-navigation to signin
       } else {
-        router.push(callbackUrl);
+        router.replace(callbackUrl);
       }
     } catch (error) {
       console.error("Sign in error:", error);
       setError("Đã xảy ra lỗi khi đăng nhập. Vui lòng thử lại.");
-    } finally {
       setIsLoading(false);
     }
   };
@@ -478,9 +478,19 @@ function SignInForm() {
   );
 }
 
-function getDashboardUrl(role: string): string {
-  // All roles go to /dashboard which will handle role-specific redirects
-  return "/dashboard";
+function getRoleSpecificDashboard(role: string): string {
+  switch (role) {
+    case "SoYTe":
+      return "/dashboard/doh";
+    case "DonVi":
+      return "/dashboard/unit-admin";
+    case "NguoiHanhNghe":
+      return "/dashboard/practitioner";
+    case "Auditor":
+      return "/dashboard";
+    default:
+      return "/dashboard";
+  }
 }
 
 export default function SignInPage() {
