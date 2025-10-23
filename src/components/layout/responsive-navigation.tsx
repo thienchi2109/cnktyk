@@ -361,7 +361,7 @@ const FooterNavigation = ({
   const footerItems = flatItems.slice(0, 5);
 
   return (
-    <nav className="xl:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-lg bg-white/10 border-t border-white/20">
+    <nav className="xl:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-md bg-white/95 border-t border-slate-200 shadow-lg">
       <div className="flex items-center justify-around px-2 py-2">
         {footerItems.map((item) => {
           const isActive = activeItem === item.id;
@@ -373,8 +373,8 @@ const FooterNavigation = ({
               className={cn(
                 "flex flex-col items-center gap-1 px-2 py-2 rounded-lg text-xs font-medium transition-all duration-200 min-w-0 flex-1",
                 isActive
-                  ? "bg-primary/20 text-primary-900"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/10"
+                  ? "bg-medical-blue/100 text-white"
+                  : "text-slate-600 hover:text-medical-blue hover:bg-medical-blue/10"
               )}
             >
               <div className="relative">
