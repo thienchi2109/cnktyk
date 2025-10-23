@@ -14,12 +14,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get performance metrics for all units
+    // Get performance metrics for all units (excluding SoYTe admin units)
     const unitsResult = await db.query(`
       SELECT 
         dv."MaDonVi",
         dv."TenDonVi",
-        dv."LoaiDonVi",
+        dv."CapQuanLy",
         COUNT(DISTINCT nv."MaNhanVien") as total_practitioners,
         COUNT(DISTINCT CASE WHEN nv."TrangThaiLamViec" = 'DangLamViec' THEN nv."MaNhanVien" END) as active_practitioners,
         COUNT(DISTINCT CASE 
@@ -46,8 +46,9 @@ export async function GET(request: NextRequest) {
       LEFT JOIN "NhanVien" nv ON dv."MaDonVi" = nv."MaDonVi"
       LEFT JOIN "KyCNKT" kc ON nv."MaNhanVien" = kc."MaNhanVien"
       LEFT JOIN "GhiNhanHoatDong" g ON nv."MaNhanVien" = g."MaNhanVien"
-      WHERE dv."TrangThai" = 'HoatDong'
-      GROUP BY dv."MaDonVi", dv."TenDonVi", dv."LoaiDonVi"
+      WHERE dv."TrangThai" = true
+        AND dv."CapQuanLy" != 'SoYTe'
+      GROUP BY dv."MaDonVi", dv."TenDonVi", dv."CapQuanLy"
       ORDER BY dv."TenDonVi"
     `);
 
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
       return {
         id: row.MaDonVi,
         name: row.TenDonVi,
-        type: row.LoaiDonVi,
+        type: row.CapQuanLy,
         totalPractitioners: parseInt(row.total_practitioners || '0'),
         activePractitioners: active,
         compliantPractitioners: compliant,
