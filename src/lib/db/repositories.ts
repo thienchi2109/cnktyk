@@ -292,6 +292,7 @@ export class NhanVienRepository extends BaseRepository<NhanVien, CreateNhanVien,
       unitId,
       search,
       status,
+      chucDanh,
       complianceStatus,
       orderBy = 'HoVaTen',
       orderDirection = 'ASC'
@@ -345,14 +346,20 @@ export class NhanVienRepository extends BaseRepository<NhanVien, CreateNhanVien,
     if (status) {
       sql += ` AND n."TrangThaiLamViec" = $${paramIndex++}`;
       params.push(status);
+      paramIndex++;
+    }
+
+    if (chucDanh) {
+      sql += ` AND n."ChucDanh" = $${paramIndex++}`;
+      params.push(chucDanh);
+      paramIndex++;
     }
 
     if (complianceStatus) {
       sql += ` AND c.compliance_status = $${paramIndex++}`;
       params.push(complianceStatus);
+      paramIndex++;
     }
-
-    // Close CTE and add pagination
     sql += `
       )
       SELECT *
