@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { X, Download, ExternalLink, Loader2 } from 'lucide-react';
 import { GlassModal } from './glass-modal';
 import { GlassButton } from './glass-button';
@@ -17,16 +18,7 @@ export function FileViewer({ file, isOpen, onClose }: FileViewerProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (file && isOpen) {
-      loadSignedUrl();
-    } else {
-      setSignedUrl(null);
-      setError(null);
-    }
-  }, [file, isOpen]);
-
-  const loadSignedUrl = async () => {
+  const loadSignedUrl = React.useCallback(async () => {
     if (!file) return;
 
     setLoading(true);
@@ -46,7 +38,16 @@ export function FileViewer({ file, isOpen, onClose }: FileViewerProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [file]);
+
+  useEffect(() => {
+    if (file && isOpen) {
+      loadSignedUrl();
+    } else {
+      setSignedUrl(null);
+      setError(null);
+    }
+  }, [file, isOpen, loadSignedUrl]);
 
   const handleDownload = () => {
     if (!file || !signedUrl) return;
@@ -100,13 +101,15 @@ export function FileViewer({ file, isOpen, onClose }: FileViewerProps) {
     }
 
     // Render based on file type
-    if (file.mimeType.startsWith('image/')) {
+if (file.mimeType.startsWith('image/')) {
       return (
-        <div className="flex items-center justify-center p-4">
-          <img
+        <div className="relative w-full h-[70vh] p-4">
+          <Image
             src={signedUrl}
             alt={file.originalName}
-            className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
+            fill
+            unoptimized
+            className="object-contain rounded-lg shadow-lg"
           />
         </div>
       );

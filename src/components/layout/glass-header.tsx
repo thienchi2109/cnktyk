@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Bell, User, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
@@ -181,8 +182,8 @@ export const GlassHeader = React.forwardRef<HTMLDivElement, GlassHeaderProps>(
             className="p-1 rounded-full hover:bg-white/20 transition-all duration-200 hover:scale-105"
           >
             <div className="h-9 w-9 rounded-full bg-gradient-to-br from-medical-blue to-medical-green flex items-center justify-center shadow-lg ring-2 ring-white/50">
-              {user?.avatar ? (
-                <img src={user.avatar} alt={user.name} className="h-9 w-9 rounded-full" />
+{user?.avatar ? (
+                <Image src={user.avatar} alt={user.name} width={36} height={36} className="h-9 w-9 rounded-full" />
               ) : (
                 <User className="h-5 w-5 text-white" />
               )}
@@ -196,8 +197,8 @@ export const GlassHeader = React.forwardRef<HTMLDivElement, GlassHeaderProps>(
               <div className="pb-3 mb-3 border-b border-gray-200/50">
                 <div className="flex items-center gap-3">
                   <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary/60 to-secondary/60 flex items-center justify-center">
-                    {user?.avatar ? (
-                      <img src={user.avatar} alt={user.name} className="h-12 w-12 rounded-full" />
+{user?.avatar ? (
+                      <Image src={user.avatar} alt={user.name} width={48} height={48} className="h-12 w-12 rounded-full" />
                     ) : (
                       <User className="h-6 w-6 text-white" />
                     )}

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Download, Eye, Trash2, FileText, Image, AlertCircle } from 'lucide-react';
+import { Download, Eye, Trash2, FileText, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import { GlassCard } from './glass-card';
 import { GlassButton } from './glass-button';
 import { formatFileSize } from '@/lib/utils';
@@ -25,8 +25,8 @@ export function FileManager({
   const [deletingFiles, setDeletingFiles] = useState<Set<string>>(new Set());
 
   const getFileIcon = (mimeType: string) => {
-    if (mimeType.startsWith('image/')) {
-      return <Image className="h-5 w-5 text-medical-blue" />;
+if (mimeType.startsWith('image/')) {
+      return <ImageIcon className="h-5 w-5 text-medical-blue" />;
     }
     return <FileText className="h-5 w-5 text-medical-red" />;
   };

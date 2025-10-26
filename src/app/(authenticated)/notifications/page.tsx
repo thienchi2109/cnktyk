@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { NotificationList } from '@/components/notifications/notification-list';
 import { AlertGenerator } from '@/components/notifications/alert-generator';
 import { ThongBao } from '@/lib/db/schemas';
-import { cn } from '@/lib/utils';
 
 interface NotificationsPageState {
   notifications: ThongBao[];
@@ -57,8 +56,8 @@ export default function NotificationsPage() {
     }
   };
 
-  // Filter notifications based on current filter and search
-  const applyFilters = () => {
+// Filter notifications based on current filter and search
+  const applyFilters = React.useCallback(() => {
     let filtered = [...state.notifications];
 
     // Apply status filter
@@ -78,7 +77,7 @@ export default function NotificationsPage() {
     }
 
     setState(prev => ({ ...prev, filteredNotifications: filtered }));
-  };
+  }, [state.notifications, state.filter, state.searchQuery]);
 
   // Mark notification as read
   const handleMarkAsRead = async (notificationId: string) => {
@@ -167,9 +166,9 @@ export default function NotificationsPage() {
     }
   }, [session]);
 
-  useEffect(() => {
+useEffect(() => {
     applyFilters();
-  }, [state.notifications, state.filter, state.searchQuery]);
+  }, [applyFilters]);
 
   if (!session) {
     return (

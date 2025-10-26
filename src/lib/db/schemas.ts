@@ -328,6 +328,26 @@ export const UpdateThongBaoSchema = CreateThongBaoSchema.partial().extend({
   MaNguoiNhan: UUIDSchema.optional(),
 });
 
+// Cohort Preset schema
+export const CohortFiltersSchema = z.object({
+  search: z.string().optional(),
+  trangThai: TrangThaiLamViecSchema.or(z.literal('all')).optional(),
+  chucDanh: z.string().optional(),
+});
+
+export const CohortPresetSchema = z.object({
+  MaPreset: UUIDSchema,
+  MaDonVi: UUIDSchema,
+  TenPreset: z.string().min(1),
+  BoLoc: CohortFiltersSchema,
+  NguoiTao: UUIDSchema,
+  TaoLuc: z.date(),
+  CapNhatLuc: z.date(),
+});
+
+export const CreateCohortPresetSchema = CohortPresetSchema.omit({ MaPreset: true, TaoLuc: true, CapNhatLuc: true });
+export const UpdateCohortPresetSchema = CreateCohortPresetSchema.partial();
+
 // Materialized View schemas
 export const BaoCaoTienDoNhanVienSchema = z.object({
   MaNhanVien: UUIDSchema,
@@ -381,3 +401,9 @@ export type UpdateThongBao = z.infer<typeof UpdateThongBaoSchema>;
 
 export type BaoCaoTienDoNhanVien = z.infer<typeof BaoCaoTienDoNhanVienSchema>;
 export type BaoCaoTongHopDonVi = z.infer<typeof BaoCaoTongHopDonViSchema>;
+
+// Cohort Presets types
+export type CohortFilters = z.infer<typeof CohortFiltersSchema>;
+export type CohortPreset = z.infer<typeof CohortPresetSchema>;
+export type CreateCohortPreset = z.infer<typeof CreateCohortPresetSchema>;
+export type UpdateCohortPreset = z.infer<typeof UpdateCohortPresetSchema>;

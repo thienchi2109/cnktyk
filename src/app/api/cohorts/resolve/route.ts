@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/server';
 import { nhanVienRepo } from '@/lib/db/repositories';
 import { z } from 'zod';
+import { assertRateLimit } from '@/lib/api/rate-limit';
 
 const ResolveSchema = z.object({
   page: z.number().int().min(1).default(1).optional(),
@@ -26,6 +27,12 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { page = 1, limit = 50, search, trangThai = 'DangLamViec', chucDanh } = ResolveSchema.parse(body);
+
+    // Rate limit: resolve ≤ 10 req/min per user
+    const rl = assertRateLimit(`resolve:${user.id}`, 10, 60_000);
+    if (!rl.ok) {
+      return NextResponse.json({ error: 'Too Many Requests', retryAfter: rl.retryAfter }, { status: 429 });
+    }
 
     const unitScope = user.role === 'DonVi' ? user.unitId : (body.unitId as string | undefined);
 

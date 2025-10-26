@@ -18,11 +18,18 @@ type PractitionerLite = {
   TrangThaiLamViec: 'DangLamViec' | 'DaNghi' | 'TamHoan';
 };
 
+export type CohortFilters = {
+  search?: string;
+  trangThai?: 'DangLamViec' | 'DaNghi' | 'TamHoan' | 'all';
+  chucDanh?: string;
+};
+
 export type CohortSelection = {
   mode: 'all' | 'manual';
   selectedIds: string[]; // used in manual mode
   excludedIds: string[]; // used in all mode
   totalFiltered: number;
+  filters: CohortFilters;
 };
 
 interface CohortBuilderProps {
@@ -39,6 +46,10 @@ export function CohortBuilder({ initialStatus = 'DangLamViec', onChange }: Cohor
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Presets state
+  const [presets, setPresets] = useState<Array<{ MaPreset: string; TenPreset: string }>>([]);
+  const [presetName, setPresetName] = useState('');
 
   const [rows, setRows] = useState<PractitionerLite[]>([]);
   const [total, setTotal] = useState(0);
@@ -89,6 +100,20 @@ export function CohortBuilder({ initialStatus = 'DangLamViec', onChange }: Cohor
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, limit]);
 
+  // Load presets (unit-scoped on server)
+  const fetchPresets = async () => {
+    try {
+      const res = await fetch('/api/cohorts/presets');
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || 'Không thể tải preset');
+      const list = (json.presets || []).map((p: any) => ({ MaPreset: p.MaPreset, TenPreset: p.TenPreset }));
+      setPresets(list);
+    } catch (e) {
+      // ignore silently for now
+    }
+  };
+  useEffect(() => { fetchPresets(); }, []);
+
   // Refetch when filters change (reset to page 1)
   useEffect(() => {
     setPage(1);
@@ -131,8 +156,13 @@ export function CohortBuilder({ initialStatus = 'DangLamViec', onChange }: Cohor
       selectedIds: Array.from(selectedIds),
       excludedIds: Array.from(excludedIds),
       totalFiltered: total,
+      filters: {
+        search: searchTerm || undefined,
+        trangThai: (statusFilter as any) || undefined,
+        chucDanh: chucDanh || undefined,
+      },
     });
-  }, [selectAllFiltered, selectedIds, excludedIds, total, onChange]);
+  }, [selectAllFiltered, selectedIds, excludedIds, total, onChange, searchTerm, statusFilter, chucDanh]);
 
   const allPageIds = rows.map((r) => r.MaNhanVien);
   const pageAllSelected = selectAllFiltered
@@ -203,6 +233,51 @@ export function CohortBuilder({ initialStatus = 'DangLamViec', onChange }: Cohor
           <div>
             <Label className="text-sm text-gray-700 flex items-center gap-1"><TagIcon className="w-4 h-4" />Tag</Label>
             <Input disabled placeholder="Chưa hỗ trợ" />
+          </div>
+        </div>
+      </GlassCard>
+
+      {/* Presets */}
+      <GlassCard className="p-4">
+        <div className="flex flex-col md:flex-row gap-3 md:items-end">
+          <div className="flex-1">
+            <Label className="text-sm text-gray-700">Tải preset</Label>
+            <div className="mt-1 flex gap-2 items-center">
+              <Select value="" onChange={async (e: any) => {
+                const id = e.target.value;
+                if (!id) return;
+                const res = await fetch(`/api/cohorts/presets/${id}`);
+                const json = await res.json();
+                if (!res.ok) return;
+                const f = json.preset?.BoLoc || {};
+                setSearchTerm(f.search || '');
+                setStatusFilter(f.trangThai || 'DangLamViec');
+                setChucDanh(f.chucDanh || '');
+                setPage(1);
+                fetchList();
+              }}>
+                <option value="">— Chọn preset —</option>
+                {presets.map((p) => (
+                  <option key={p.MaPreset} value={p.MaPreset}>{p.TenPreset}</option>
+                ))}
+              </Select>
+              <GlassButton size="sm" variant="secondary" onClick={fetchPresets}>Làm mới</GlassButton>
+            </div>
+          </div>
+          <div className="flex-1">
+            <Label className="text-sm text-gray-700">Lưu preset</Label>
+            <div className="mt-1 flex gap-2">
+              <Input placeholder="Tên preset" value={presetName} onChange={(e) => setPresetName(e.target.value)} />
+              <GlassButton size="sm" onClick={async () => {
+                if (!presetName.trim()) return;
+                await fetch('/api/cohorts/presets', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ name: presetName.trim(), filters: { search: searchTerm || undefined, trangThai: (statusFilter as any) || undefined, chucDanh: chucDanh || undefined } })
+                });
+                setPresetName('');
+                fetchPresets();
+              }}>Lưu</GlassButton>
+            </div>
           </div>
         </div>
       </GlassCard>

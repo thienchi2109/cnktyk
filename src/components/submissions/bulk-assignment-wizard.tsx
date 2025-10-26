@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { GlassCard } from '@/components/ui/glass-card';
 import { GlassButton } from '@/components/ui/glass-button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -9,8 +9,81 @@ import { CohortBuilder, CohortSelection } from '@/components/cohorts/cohort-buil
 export function BulkAssignmentWizard() {
   const [step, setStep] = useState<1 | 2>(1);
   const [selection, setSelection] = useState<CohortSelection | null>(null);
+  const [preview, setPreview] = useState<null | { createCount: number; skipCount: number; duplicateCount: number; totalCandidates: number; sampleIds: string[] }>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+
+  const [applyLoading, setApplyLoading] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
+  const [applyResult, setApplyResult] = useState<null | { created: number; skipped: number; total: number }>(null);
 
   const canProceed = !!selection && (selection.mode === 'all' ? selection.totalFiltered - selection.excludedIds.length > 0 : selection.selectedIds.length > 0);
+
+  useEffect(() => {
+    const runPreview = async () => {
+      if (step !== 2 || !selection) return;
+      setLoadingPreview(true);
+      setPreviewError(null);
+      try {
+        const res = await fetch('/api/cohorts/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filters: {
+              search: selection.filters?.search,
+              trangThai: selection.filters?.trangThai,
+              chucDanh: selection.filters?.chucDanh,
+            },
+            selection: {
+              mode: selection.mode,
+              selectedIds: selection.selectedIds,
+              excludedIds: selection.excludedIds,
+              totalFiltered: selection.totalFiltered,
+            },
+            activity: { TenHoatDong: 'Gán hoạt động hàng loạt' },
+          }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error || 'Không thể xem trước');
+        setPreview(json);
+      } catch (e) {
+        setPreviewError(e instanceof Error ? e.message : 'Có lỗi xảy ra');
+      } finally {
+        setLoadingPreview(false);
+      }
+    };
+    runPreview();
+  }, [step, selection]);
+
+  const applyNow = async () => {
+    if (!selection) return;
+    setApplyLoading(true);
+    setApplyError(null);
+    setApplyResult(null);
+    try {
+      const res = await fetch('/api/cohorts/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          selection: {
+            mode: selection.mode,
+            selectedIds: selection.selectedIds,
+            excludedIds: selection.excludedIds,
+            totalFiltered: selection.totalFiltered,
+            filters: selection.filters,
+          },
+          activity: { TenHoatDong: 'Gán hoạt động hàng loạt' },
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || 'Không thể áp dụng');
+      setApplyResult(json);
+    } catch (e) {
+      setApplyError(e instanceof Error ? e.message : 'Có lỗi xảy ra');
+    } finally {
+      setApplyLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -36,18 +109,45 @@ export function BulkAssignmentWizard() {
 
       {step === 2 && (
         <>
-          <GlassCard className="p-6">
-            <h3 className="font-semibold text-gray-900 mb-2">Xem trước (tạm thời)</h3>
-            <p className="text-gray-700 text-sm">
-              Sẽ áp dụng cho {selection?.mode === 'all' ? (selection.totalFiltered - (selection.excludedIds?.length || 0)) : (selection?.selectedIds?.length || 0)} người theo bộ lọc đã chọn.
-            </p>
-            <Alert className="mt-4 border-yellow-200 bg-yellow-50">
-              <AlertDescription className="text-yellow-800">Bước xem trước chi tiết sẽ được triển khai ở hạng mục 1.6 và 2.2.</AlertDescription>
-            </Alert>
+          <GlassCard className="p-6 space-y-3">
+            <h3 className="font-semibold text-gray-900">Xem trước</h3>
+            {!selection ? (
+              <p className="text-gray-700 text-sm">Chưa có lựa chọn.</p>
+            ) : loadingPreview ? (
+              <p className="text-gray-700 text-sm">Đang tính toán xem trước…</p>
+            ) : previewError ? (
+              <Alert className="mt-2 border-red-200 bg-red-50">
+                <AlertDescription className="text-red-700">{previewError}</AlertDescription>
+              </Alert>
+            ) : preview ? (
+              <div className="text-sm text-gray-800 space-y-2">
+                <p>Tổng mục tiêu: <strong>{preview.totalCandidates}</strong></p>
+                <p>Sẽ tạo mới: <strong className="text-green-700">{preview.createCount}</strong></p>
+                <p>Bỏ qua (trùng): <strong className="text-yellow-700">{preview.skipCount}</strong></p>
+                <p>Mẫu ID (tối đa 10): <span className="text-gray-600">{preview.sampleIds.join(', ') || '—'}</span></p>
+              </div>
+            ) : (
+              <p className="text-gray-700 text-sm">Không có dữ liệu xem trước.</p>
+            )}
+
+            {applyError && (
+              <Alert className="border-red-200 bg-red-50">
+                <AlertDescription className="text-red-700">{applyError}</AlertDescription>
+              </Alert>
+            )}
+            {applyResult && (
+              <Alert className="border-green-200 bg-green-50">
+                <AlertDescription className="text-green-800">
+                  Đã tạo: <strong>{applyResult.created}</strong> · Bỏ qua: <strong>{applyResult.skipped}</strong> · Tổng: <strong>{applyResult.total}</strong>
+                </AlertDescription>
+              </Alert>
+            )}
           </GlassCard>
           <div className="flex justify-between">
             <GlassButton variant="secondary" onClick={() => setStep(1)}>← Quay lại</GlassButton>
-            <GlassButton disabled>Tiếp tục (chưa khả dụng)</GlassButton>
+            <GlassButton onClick={applyNow} disabled={!canProceed || applyLoading}>
+              {applyLoading ? 'Đang áp dụng…' : 'Áp dụng ngay'}
+            </GlassButton>
           </div>
         </>
       )}
