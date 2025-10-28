@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { LoadingNotice } from '@/components/ui/loading-notice';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ActivityDetailSheet } from './activity-detail-sheet';
 import { 
   Search, 
   Plus, 
@@ -107,6 +108,8 @@ export function ActivitiesList({ userRole, onCreateActivity, onEditActivity, onD
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  const [showActivityDetail, setShowActivityDetail] = useState(false);
 
   // Fetch activities
   const fetchActivities = async () => {
@@ -278,7 +281,23 @@ export function ActivitiesList({ userRole, onCreateActivity, onEditActivity, onD
                   const TypeIcon = activityTypeIcons[activity.LoaiHoatDong];
                   
                   return (
-                    <TableRow key={activity.MaDanhMuc}>
+                    <TableRow
+                      key={activity.MaDanhMuc}
+                      className="cursor-pointer hover:bg-gray-50/30"
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Xem chi tiết ${activity.TenDanhMuc}`}
+                      onClick={() => {
+                        setSelectedActivity(activity);
+                        setShowActivityDetail(true);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          setSelectedActivity(activity);
+                          setShowActivityDetail(true);
+                        }
+                      }}
+                    >
                       <TableCell>
                         <div className="flex items-center space-x-3">
                           <div className="flex-shrink-0">
@@ -334,7 +353,7 @@ export function ActivitiesList({ userRole, onCreateActivity, onEditActivity, onD
                               <GlassButton
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => onEditActivity(activity)}
+                                onClick={(e) => { e.stopPropagation(); onEditActivity(activity); }}
                                 className="text-gray-600 hover:text-medical-blue"
                               >
                                 <Edit className="h-4 w-4" />
@@ -344,7 +363,7 @@ export function ActivitiesList({ userRole, onCreateActivity, onEditActivity, onD
                               <GlassButton
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => onDeleteActivity(activity.MaDanhMuc)}
+                                onClick={(e) => { e.stopPropagation(); onDeleteActivity(activity.MaDanhMuc); }}
                                 className="text-gray-600 hover:text-red-600"
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -361,6 +380,13 @@ export function ActivitiesList({ userRole, onCreateActivity, onEditActivity, onD
           </div>
         )}
       </GlassCard>
+
+      {/* Activity Detail Sheet */}
+      <ActivityDetailSheet
+        activity={selectedActivity as any}
+        open={showActivityDetail}
+        onOpenChange={setShowActivityDetail}
+      />
     </div>
   );
 }

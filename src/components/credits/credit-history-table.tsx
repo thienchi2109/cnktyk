@@ -9,6 +9,8 @@ import { GlassCard } from '@/components/ui/glass-card';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, XCircle, Clock, FileText } from 'lucide-react';
 import type { CreditHistory } from '@/hooks/use-credit-cycle';
+import { useState } from 'react';
+import { CreditDetailModal } from './credit-detail-modal';
 
 interface CreditHistoryTableProps {
   creditHistory: CreditHistory[];
@@ -34,6 +36,9 @@ const statusConfig = {
 };
 
 export function CreditHistoryTable({ creditHistory, loading }: CreditHistoryTableProps) {
+  const [selectedCredit, setSelectedCredit] = useState<CreditHistory | null>(null);
+  const [openDetail, setOpenDetail] = useState(false);
+
   if (loading) {
     return (
       <GlassCard className="p-6 animate-pulse">
@@ -65,6 +70,7 @@ export function CreditHistoryTable({ creditHistory, loading }: CreditHistoryTabl
   };
 
   return (
+    <>
     <GlassCard className="p-6">
       <h3 className="text-lg font-semibold text-gray-800 mb-6">
         Lịch sử tín chỉ
@@ -99,9 +105,14 @@ export function CreditHistoryTable({ creditHistory, loading }: CreditHistoryTabl
               return (
                 <tr 
                   key={item.MaGhiNhan} 
-                  className={`border-b border-white/20 hover:bg-white/10 transition-colors ${
+                  className={`border-b border-white/20 hover:bg-white/10 transition-colors cursor-pointer ${
                     index % 2 === 0 ? 'bg-white/5' : ''
                   }`}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Xem chi tiết ${item.TenHoatDong}`}
+                  onClick={() => { setSelectedCredit(item); setOpenDetail(true); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { setSelectedCredit(item); setOpenDetail(true); } }}
                 >
                   <td className="py-3 px-4 text-sm text-gray-700">
                     {formatDate(item.NgayGhiNhan)}
@@ -151,5 +162,7 @@ export function CreditHistoryTable({ creditHistory, loading }: CreditHistoryTabl
         </span>
       </div>
     </GlassCard>
+    <CreditDetailModal credit={selectedCredit} open={openDetail} onOpenChange={setOpenDetail} />
+    </>
   );
 }
