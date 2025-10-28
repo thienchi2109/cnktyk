@@ -61,6 +61,7 @@ export const NhanVienSchema = z.object({
   Email: z.string().email().nullable().or(z.literal('')),
   DienThoai: z.string().nullable(),
   ChucDanh: z.string().nullable(),
+  MaNhanVienNoiBo: z.string().nullable(),
 });
 
 export const CreateNhanVienSchema = NhanVienSchema.omit({ MaNhanVien: true });

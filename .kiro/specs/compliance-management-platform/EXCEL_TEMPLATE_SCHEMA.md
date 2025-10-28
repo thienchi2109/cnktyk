@@ -254,7 +254,7 @@
 
 | Field | Type | Required | Validation |
 |-------|------|----------|------------|
-| Mã nhân viên | Text | ○ | Max 50 chars, alphanumeric, unique if provided |
+|| Mã nhân viên | Text | ○ | Maps to DB column `NhanVien.MaNhanVienNoiBo`; Max 50 chars; suggested unique within Đơn vị |
 | Họ và tên | Text | ✓ | Max 255 chars, not empty |
 | Ngày sinh | Date | ○ | Valid date, DD/MM/YYYY, age >= 18 |
 | Giới tính | Enum | ○ | One of: Nam, Nữ, Khác |

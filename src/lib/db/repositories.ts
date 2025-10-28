@@ -379,6 +379,7 @@ export class NhanVienRepository extends BaseRepository<NhanVien, CreateNhanVien,
     // Map results to NhanVienWithCompliance type
     const data = results.map(row => ({
       MaNhanVien: row.MaNhanVien,
+      MaNhanVienNoiBo: row.MaNhanVienNoiBo ?? null,
       HoVaTen: row.HoVaTen,
       SoCCHN: row.SoCCHN,
       NgayCapCCHN: row.NgayCapCCHN,

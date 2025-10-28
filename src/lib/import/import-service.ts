@@ -55,14 +55,15 @@ export class ImportService {
             `
             INSERT INTO "NhanVien" (
               "HoVaTen", "SoCCHN", "NgayCapCCHN", "MaDonVi", 
-              "TrangThaiLamViec", "ChucDanh"
-            ) VALUES ($1, $2, $3, $4, $5, $6)
+              "TrangThaiLamViec", "ChucDanh", "MaNhanVienNoiBo"
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
             ON CONFLICT ("SoCCHN") DO UPDATE SET
               "HoVaTen" = EXCLUDED."HoVaTen",
               "NgayCapCCHN" = EXCLUDED."NgayCapCCHN",
               "ChucDanh" = EXCLUDED."ChucDanh",
               "MaDonVi" = EXCLUDED."MaDonVi",
-              "TrangThaiLamViec" = EXCLUDED."TrangThaiLamViec"
+              "TrangThaiLamViec" = EXCLUDED."TrangThaiLamViec",
+              "MaNhanVienNoiBo" = EXCLUDED."MaNhanVienNoiBo"
             RETURNING "MaNhanVien", 
               (xmax = 0) AS is_new
             `,
@@ -72,7 +73,8 @@ export class ImportService {
               p.ngayCapCCHN,
               unitId,
               p.trangThaiLamViec || 'DangLamViec',
-              chucDanh || null
+              chucDanh || null,
+              (p.maNhanVien && p.maNhanVien.trim() !== '') ? p.maNhanVien.trim() : null
             ]
           );
 
