@@ -64,7 +64,12 @@ export const NhanVienSchema = z.object({
   MaNhanVienNoiBo: z.string().nullable(),
 });
 
-export const CreateNhanVienSchema = NhanVienSchema.omit({ MaNhanVien: true });
+export const CreateNhanVienSchema = NhanVienSchema.omit({ MaNhanVien: true }).extend({
+  // Accept ISO string from JSON and coerce to Date for creation as well
+  NgayCapCCHN: z.coerce.date().nullable(),
+  // Optional internal employee code on creation
+  MaNhanVienNoiBo: z.string().nullable().optional(),
+});
 export const UpdateNhanVienSchema = CreateNhanVienSchema.partial().extend({
   MaDonVi: UUIDSchema.optional(),
   // API receives dates as ISO strings via JSON; coerce to Date

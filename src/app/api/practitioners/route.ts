@@ -88,6 +88,11 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     
+    // For DonVi role, enforce MaDonVi to be the user's unitId to avoid client-side UUID mismatches
+    if (session.user.role === 'DonVi' && session.user.unitId) {
+      body.MaDonVi = session.user.unitId;
+    }
+
     // Validate input
     const validatedData = CreateNhanVienSchema.parse(body);
 

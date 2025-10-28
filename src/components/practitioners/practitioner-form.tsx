@@ -25,6 +25,7 @@ const PractitionerFormSchema = CreateNhanVienSchema
     TrangThaiLamViec: z.enum(['DangLamViec', 'DaNghi', 'TamHoan']).default('DangLamViec'),
     Email: z.string().email('Định dạng email không hợp lệ').optional().or(z.literal('')),
     DienThoai: z.string().regex(/^[0-9+\-\s()]*$/, 'Định dạng số điện thoại không hợp lệ').optional().or(z.literal('')),
+    MaNhanVienNoiBo: z.string().optional().or(z.literal('')),
   })
   .refine(
     (data) => {
@@ -79,6 +80,7 @@ export function PractitionerForm({
       Email: initialData?.Email || '',
       DienThoai: initialData?.DienThoai || '',
       ChucDanh: initialData?.ChucDanh || '',
+      MaNhanVienNoiBo: (initialData as any)?.MaNhanVienNoiBo || '',
     },
   });
 
@@ -98,28 +100,44 @@ export function PractitionerForm({
         Email: (initialData.Email as any) || '',
         DienThoai: (initialData.DienThoai as any) || '',
         ChucDanh: (initialData.ChucDanh as any) || '',
+        MaNhanVienNoiBo: (initialData as any)?.MaNhanVienNoiBo || '',
       } as any);
       form.clearErrors('MaDonVi');
     }
   }, [mode, initialData, unitId, units]);
 
   const isSelfLimited = userRole === 'NguoiHanhNghe' && mode === 'edit';
-  const disableUnitChange = userRole === 'DonVi' && mode === 'edit';
+  const disableUnitChange = userRole === 'DonVi';
 
   const onSubmit = async (data: z.infer<typeof PractitionerFormSchema>) => {
     setIsLoading(true);
     setError(null);
 
     try {
+      // Normalize and validate MaDonVi (ensure UUID string without whitespace)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      let MaDonViValue = (data.MaDonVi || '').trim();
+      // For DonVi role, force unit to current user's unitId
+      if (userRole === 'DonVi' && unitId) {
+        MaDonViValue = unitId;
+      }
+      if (!uuidRegex.test(MaDonViValue)) {
+        setError('Vui lòng chọn đơn vị y tế hợp lệ');
+        setIsLoading(false);
+        return;
+      }
+
       // Convert empty strings to null for optional fields
       const submitData: any = {
         ...data,
+        MaDonVi: MaDonViValue,
         SoCCHN: data.SoCCHN || null,
         // NgayCapCCHN comes as string from date input; convert to Date or null
         NgayCapCCHN: data.NgayCapCCHN ? new Date(data.NgayCapCCHN as any) : null,
         Email: data.Email || null,
         DienThoai: data.DienThoai || null,
         ChucDanh: data.ChucDanh || null,
+        MaNhanVienNoiBo: (data as any).MaNhanVienNoiBo ? (data as any).MaNhanVienNoiBo : null,
       };
 
       // DonVi and NguoiHanhNghe cannot change unit in edit mode; exclude MaDonVi from payload
@@ -139,10 +157,16 @@ export function PractitionerForm({
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('API Error:', errorData);
-        const errorMsg = errorData.error || 'Failed to save practitioner';
-        const errorDetails = errorData.details ? `\n${JSON.stringify(errorData.details, null, 2)}` : '';
+        let errorPayload: any = {};
+        try {
+          errorPayload = await response.json();
+        } catch {
+          const text = await response.text();
+          errorPayload = { error: text };
+        }
+        console.error('API Error:', errorPayload);
+        const errorMsg = errorPayload.error || 'Failed to save practitioner';
+        const errorDetails = errorPayload.details ? `\n${JSON.stringify(errorPayload.details, null, 2)}` : '';
         throw new Error(errorMsg + errorDetails);
       }
 
