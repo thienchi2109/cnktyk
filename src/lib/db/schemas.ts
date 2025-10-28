@@ -10,7 +10,12 @@ export const DonViTinhSchema = z.enum(['gio', 'tiet', 'tin_chi']);
 export const TrangThaiThongBaoSchema = z.enum(['Moi', 'DaDoc']);
 
 // UUID validation schema
-export const UUIDSchema = z.string().uuid();
+// Note: Using relaxed validation to support legacy UUIDs like 00000000-0000-0000-0000-000000000002
+// which don't conform to strict RFC 4122 but are used in the database
+export const UUIDSchema = z.string().regex(
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+  'Invalid UUID format'
+);
 
 // DonVi (Healthcare Unit) schema
 export const DonViSchema = z.object({

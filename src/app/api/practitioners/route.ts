@@ -89,7 +89,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     
     // For DonVi role, enforce MaDonVi to be the user's unitId to avoid client-side UUID mismatches
-    if (session.user.role === 'DonVi' && session.user.unitId) {
+    // This must happen BEFORE schema validation
+    if (session.user.role === 'DonVi') {
+      if (!session.user.unitId) {
+        return NextResponse.json(
+          { error: 'Your account is not associated with a unit. Please contact administrator.' },
+          { status: 403 }
+        );
+      }
+      // Force override the MaDonVi field with session value
       body.MaDonVi = session.user.unitId;
     }
 
