@@ -8,8 +8,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { ExcelProcessor } from '@/lib/import/excel-processor';
 import { ImportValidator } from '@/lib/import/validators';
-import { ImportService } from '@/lib/import/import-service';
+import { ImportService, ProgressEvent } from '@/lib/import/import-service';
 import { db } from '@/lib/db/client';
+
+type SSEEvent = 
+  | { type: 'progress'; data: ProgressEvent }
+  | { type: 'complete'; data: { success: true; result: unknown } }
+  | { type: 'error'; data: { success: false; error: string; validationErrors?: unknown[] } };
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -140,36 +145,87 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Execute import
-    const importService = new ImportService();
-    const result = await importService.executeImport(
-      parsedData.practitioners,
-      parsedData.activities,
-      session.user.unitId,
-      session.user.id
-    );
+    // Create SSE stream for progress tracking
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        const sendEvent = (event: SSEEvent) => {
+          const data = `data: ${JSON.stringify(event)}\n\n`;
+          controller.enqueue(encoder.encode(data));
+        };
 
-    // Check if there were any errors during import
-    if (result.errors.length > 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Có lỗi xảy ra trong quá trình nhập',
-          importErrors: result.errors,
-          partialResult: result
-        },
-        { status: 500 }
-      );
-    }
+        try {
+          // Emit validation progress
+          sendEvent({
+            type: 'progress',
+            data: {
+              phase: 'validation',
+              processed: 1,
+              total: 1,
+              percentage: 100
+            }
+          });
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        message: 'Nhập dữ liệu thành công',
-        practitionersCreated: result.practitionersCreated,
-        practitionersUpdated: result.practitionersUpdated,
-        activitiesCreated: result.activitiesCreated,
-        cyclesCreated: result.cyclesCreated
+          // Execute import with progress tracking
+          const importService = new ImportService();
+          const result = await importService.executeImport(
+            parsedData.practitioners,
+            parsedData.activities,
+            session.user.unitId,
+            session.user.id,
+            {
+              onProgress: (progress) => {
+                sendEvent({ type: 'progress', data: progress });
+              }
+            }
+          );
+
+          // Check if there were any errors during import
+          if (result.errors.length > 0) {
+            sendEvent({
+              type: 'error',
+              data: {
+                success: false,
+                error: 'Có lỗi xảy ra trong quá trình nhập',
+                validationErrors: result.errors
+              }
+            });
+          } else {
+            // Send completion event
+            sendEvent({
+              type: 'complete',
+              data: {
+                success: true,
+                result: {
+                  message: 'Nhập dữ liệu thành công',
+                  practitionersCreated: result.practitionersCreated,
+                  practitionersUpdated: result.practitionersUpdated,
+                  activitiesCreated: result.activitiesCreated,
+                  cyclesCreated: result.cyclesCreated,
+                  metrics: result.metrics
+                }
+              }
+            });
+          }
+        } catch (error) {
+          sendEvent({
+            type: 'error',
+            data: {
+              success: false,
+              error: error instanceof Error ? error.message : 'Lỗi khi nhập dữ liệu'
+            }
+          });
+        } finally {
+          controller.close();
+        }
+      }
+    });
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive'
       }
     });
   } catch (error) {

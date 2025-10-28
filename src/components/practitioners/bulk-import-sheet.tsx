@@ -7,7 +7,7 @@
 
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Download, FileSpreadsheet, AlertCircle, CheckCircle, XCircle, Info, Eye, Upload } from 'lucide-react';
+import { Download, FileSpreadsheet, AlertCircle, CheckCircle, XCircle, Info, Eye, Upload, Loader2 } from 'lucide-react';
 import { ValidationResult } from '@/lib/import/excel-processor';
 import { 
   Sheet, 
@@ -17,12 +17,35 @@ import {
   SheetDescription 
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import type { ProgressPhase } from '@/lib/import/import-service';
 
 interface BulkImportSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onImportSuccess?: () => void;
 }
+
+// Helper functions
+const getPhaseLabel = (phase: ProgressPhase): string => {
+  const labels: Record<ProgressPhase, string> = {
+    validation: 'Đang kiểm tra dữ liệu...',
+    practitioners: 'Đang nhập nhân viên...',
+    activities: 'Đang nhập hoạt động...',
+    audit: 'Đang lưu nhật ký...'
+  };
+  return labels[phase];
+};
+
+const formatDuration = (ms: number): string => {
+  if (ms < 1000) return '< 1 giây';
+  const seconds = Math.ceil(ms / 1000);
+  if (seconds < 60) return `${seconds} giây`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  if (remainingSeconds === 0) return `${minutes} phút`;
+  return `${minutes} phút ${remainingSeconds} giây`;
+};
 
 export function BulkImportSheet({ open, onOpenChange, onImportSuccess }: BulkImportSheetProps) {
   const [file, setFile] = useState<File | null>(null);
@@ -31,6 +54,15 @@ export function BulkImportSheet({ open, onOpenChange, onImportSuccess }: BulkImp
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [importResult, setImportResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [importProgress, setImportProgress] = useState<{
+    phase: ProgressPhase;
+    processed: number;
+    total: number;
+    percentage: number;
+    estimatedTimeRemaining?: number;
+    currentBatch?: number;
+    totalBatches?: number;
+  } | null>(null);
 
   // Reset state when sheet opens
   const handleOpenChange = (newOpen: boolean) => {
@@ -115,12 +147,13 @@ export function BulkImportSheet({ open, onOpenChange, onImportSuccess }: BulkImp
     }
   };
 
-  // Execute import
+  // Execute import with SSE progress tracking
   const handleImport = async () => {
     if (!file || !validationResult?.isValid) return;
 
     setIsImporting(true);
     setError(null);
+    setImportProgress(null);
 
     try {
       const formData = new FormData();
@@ -131,22 +164,70 @@ export function BulkImportSheet({ open, onOpenChange, onImportSuccess }: BulkImp
         body: formData
       });
 
-      const result = await response.json();
-
       if (!response.ok) {
-        throw new Error(result.error || 'Lỗi khi nhập dữ liệu');
+        throw new Error('Lỗi khi nhập dữ liệu');
       }
 
-      setImportResult(result.data);
-      setFile(null);
-      setValidationResult(null);
-      
-      // Call success callback to refresh the list
-      if (onImportSuccess) {
-        onImportSuccess();
+      // Read SSE stream
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('Không thể đọc dữ liệu phản hồi');
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      // Timeout handler
+      const timeoutMs = 180000; // 3 minutes
+      const timeoutId = setTimeout(() => {
+        reader.cancel();
+        setError('Quá thời gian chờ - file có thể quá lớn');
+        setIsImporting(false);
+      }, timeoutMs);
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const event = JSON.parse(line.slice(6));
+
+                if (event.type === 'progress') {
+                  setImportProgress(event.data);
+                } else if (event.type === 'complete') {
+                  clearTimeout(timeoutId);
+                  setImportResult(event.data.result);
+                  setFile(null);
+                  setValidationResult(null);
+                  setImportProgress(null);
+                  
+                  // Call success callback
+                  if (onImportSuccess) {
+                    onImportSuccess();
+                  }
+                } else if (event.type === 'error') {
+                  clearTimeout(timeoutId);
+                  throw new Error(event.data.error || 'Lỗi khi nhập dữ liệu');
+                }
+              } catch (parseError) {
+                console.error('Failed to parse SSE event:', parseError);
+              }
+            }
+          }
+        }
+      } finally {
+        clearTimeout(timeoutId);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Lỗi khi nhập dữ liệu');
+      setImportProgress(null);
     } finally {
       setIsImporting(false);
     }
@@ -360,14 +441,55 @@ export function BulkImportSheet({ open, onOpenChange, onImportSuccess }: BulkImp
                       Dữ liệu đã được xác thực thành công. Nhấn nút bên dưới để lưu vào hệ thống.
                     </p>
                   </div>
+
+                  {/* Progress Indicator */}
+                  {isImporting && importProgress && (
+                    <div className="space-y-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium text-blue-900">
+                          {getPhaseLabel(importProgress.phase)}
+                        </span>
+                        <span className="text-blue-700">
+                          {importProgress.processed} / {importProgress.total}
+                        </span>
+                      </div>
+                      
+                      <Progress value={importProgress.percentage} className="h-2" />
+                      
+                      <div className="flex items-center justify-between text-xs text-blue-700">
+                        <span>{importProgress.percentage}%</span>
+                        {importProgress.estimatedTimeRemaining && (
+                          <span>
+                            Còn khoảng {formatDuration(importProgress.estimatedTimeRemaining)}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {importProgress.totalBatches && (
+                        <div className="text-xs text-blue-600">
+                          Batch {importProgress.currentBatch} / {importProgress.totalBatches}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="flex gap-3">
                     <Button
                       onClick={handleImport}
                       disabled={isImporting}
                       className="flex-1 bg-green-600 hover:bg-green-700"
                     >
-                      <Upload className="w-4 h-4 mr-2" />
-                      {isImporting ? 'Đang nhập dữ liệu...' : 'Xác nhận & Nhập dữ liệu'}
+                      {isImporting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Đang nhập dữ liệu...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4 mr-2" />
+                          Xác nhận & Nhập dữ liệu
+                        </>
+                      )}
                     </Button>
                     <Button
                       onClick={() => {
