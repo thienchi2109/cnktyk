@@ -349,7 +349,15 @@ export function SubmissionsList({
                 </thead>
                 <tbody className="divide-y divide-gray-200/50">
                   {filteredSubmissions.map((submission) => (
-                    <tr key={submission.MaGhiNhan} className="hover:bg-gray-50/30 transition-colors">
+                    <tr
+                      key={submission.MaGhiNhan}
+                      className="hover:bg-gray-50/30 transition-colors cursor-pointer"
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Xem chi tiết hoạt động ${submission.TenHoatDong}`}
+                      onClick={() => handleViewSubmission(submission.MaGhiNhan)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleViewSubmission(submission.MaGhiNhan); }}
+                    >
                       {reviewerRole && (
                         <td className="px-3 py-4">
                           {submission.TrangThaiDuyet === 'ChoDuyet' ? (
@@ -357,6 +365,7 @@ export function SubmissionsList({
                               type="checkbox"
                               checked={selectedIds.includes(submission.MaGhiNhan)}
                               onChange={() => toggleSelect(submission.MaGhiNhan)}
+                              onClick={(e) => e.stopPropagation()}
                               aria-label="Chọn hoạt động"
                             />
                           ) : null}
@@ -442,7 +451,7 @@ export function SubmissionsList({
                           <GlassButton
                             size="sm"
                             variant="secondary"
-                            onClick={() => handleViewSubmission(submission.MaGhiNhan)}
+                            onClick={(e) => { e.stopPropagation(); handleViewSubmission(submission.MaGhiNhan); }}
                           >
                             <Eye className="h-4 w-4" />
                           </GlassButton>
@@ -451,7 +460,7 @@ export function SubmissionsList({
                             <GlassButton
                               size="sm"
                               variant="secondary"
-                              onClick={() => handleDownloadEvidence(submission)}
+                              onClick={(e) => { e.stopPropagation(); handleDownloadEvidence(submission); }}
                             >
                               <Download className="h-4 w-4" />
                             </GlassButton>

@@ -366,7 +366,23 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
                 </thead>
                 <tbody className="divide-y divide-gray-200/50">
                   {filteredPractitioners.map((practitioner) => (
-                    <tr key={practitioner.MaNhanVien} className="hover:bg-gray-50/30 transition-colors">
+                    <tr
+                      key={practitioner.MaNhanVien}
+                      className="hover:bg-gray-50/30 transition-colors cursor-pointer"
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Xem chi tiết ${practitioner.HoVaTen}`}
+                      onClick={() => {
+                        setSelectedPractitionerId(practitioner.MaNhanVien);
+                        setShowDetailSheet(true);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          setSelectedPractitionerId(practitioner.MaNhanVien);
+                          setShowDetailSheet(true);
+                        }
+                      }}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="font-medium text-gray-900">
                           {practitioner.HoVaTen}
@@ -408,7 +424,8 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
                           <GlassButton
                             size="sm"
                             variant="secondary"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setSelectedPractitionerId(practitioner.MaNhanVien);
                               setShowDetailSheet(true);
                             }}

@@ -254,7 +254,17 @@ export function UserList({
                 </thead>
                 <tbody className="divide-y divide-gray-200/50">
                   {users.map((user) => (
-                    <tr key={user.MaTaiKhoan} className="hover:bg-gray-50/30 transition-colors">
+                    <tr
+                      key={user.MaTaiKhoan}
+                      className="hover:bg-gray-50/30 transition-colors cursor-pointer"
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Xem chi tiết tài khoản ${user.TenDangNhap}`}
+                      onClick={() => onViewUser(user)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') onViewUser(user);
+                      }}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="font-medium text-gray-900">
                           {user.TenDangNhap}
@@ -291,7 +301,7 @@ export function UserList({
                           <GlassButton
                             size="sm"
                             variant="secondary"
-                            onClick={() => onViewUser(user)}
+                            onClick={(e) => { e.stopPropagation(); onViewUser(user); }}
                           >
                             <Eye className="h-4 w-4" />
                           </GlassButton>
@@ -300,7 +310,7 @@ export function UserList({
                             <>
                               <GlassButton
                                 size="sm"
-                                onClick={() => onEditUser(user)}
+                                onClick={(e) => { e.stopPropagation(); onEditUser(user); }}
                               >
                                 <Edit className="h-4 w-4" />
                               </GlassButton>
@@ -308,7 +318,7 @@ export function UserList({
                               <GlassButton
                                 size="sm"
                                 variant="danger"
-                                onClick={() => onDeleteUser(user)}
+                                onClick={(e) => { e.stopPropagation(); onDeleteUser(user); }}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </GlassButton>
