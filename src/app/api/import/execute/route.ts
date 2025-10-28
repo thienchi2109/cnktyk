@@ -145,6 +145,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Extract unitId and userId (guaranteed to be defined after checks above)
+    const unitId = session.user.unitId!;
+    const userId = session.user.id;
+
     // Create SSE stream for progress tracking
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
@@ -171,8 +175,8 @@ export async function POST(request: NextRequest) {
           const result = await importService.executeImport(
             parsedData.practitioners,
             parsedData.activities,
-            session.user.unitId,
-            session.user.id,
+            unitId,
+            userId,
             {
               onProgress: (progress) => {
                 sendEvent({ type: 'progress', data: progress });
