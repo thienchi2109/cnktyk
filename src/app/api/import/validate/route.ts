@@ -70,28 +70,49 @@ export async function POST(request: NextRequest) {
     const validator = new ImportValidator();
     const practitionerErrors = validator.validatePractitioners(parsedData.practitioners);
 
-    // Get existing CCHNs from database to check for duplicates
+    // Get existing CCHNs from database to check for duplicates (scoped to current unit)
     const existingCCHNs = new Set<string>();
+    const crossUnitCCHNs = new Set<string>(); // Track cross-unit conflicts
     if (parsedData.practitioners.length > 0) {
       const cchnList = parsedData.practitioners.map(p => p.soCCHN).filter(Boolean);
       if (cchnList.length > 0) {
-        const result = await db.query<{ SoCCHN: string }>(
-          `SELECT "SoCCHN" FROM "NhanVien" WHERE "SoCCHN" = ANY($1)`,
-          [cchnList]
+        // First, check for same-unit duplicates
+        const sameUnitResult = await db.query<{ SoCCHN: string }>(
+          `SELECT "SoCCHN" FROM "NhanVien" WHERE "SoCCHN" = ANY($1) AND "MaDonVi" = $2`,
+          [cchnList, session.user.unitId]
         );
-        result.forEach(row => existingCCHNs.add(row.SoCCHN));
+        sameUnitResult.forEach(row => existingCCHNs.add(row.SoCCHN));
+
+        // Then, check for cross-unit conflicts (to warn without revealing PII)
+        const otherUnitResult = await db.query<{ SoCCHN: string }>(
+          `SELECT "SoCCHN" FROM "NhanVien" WHERE "SoCCHN" = ANY($1) AND "MaDonVi" != $2`,
+          [cchnList, session.user.unitId]
+        );
+        otherUnitResult.forEach(row => crossUnitCCHNs.add(row.SoCCHN));
       }
     }
 
     // Check for CCHN duplicates with database
     parsedData.practitioners.forEach(p => {
-      if (p.soCCHN && existingCCHNs.has(p.soCCHN)) {
+      if (p.soCCHN && crossUnitCCHNs.has(p.soCCHN)) {
+        // Cross-unit conflict: return error without revealing which unit owns it
+        const maskedCCHN = p.soCCHN.slice(-4).padStart(p.soCCHN.length, '*');
         practitionerErrors.push({
           sheet: 'Nhân viên',
           row: p.rowNumber,
           column: 'G',
           field: 'Số CCHN',
-          message: `Số CCHN "${p.soCCHN}" đã tồn tại trong hệ thống (sẽ được cập nhật)`,
+          message: `Số CCHN đã tồn tại trong hệ thống thuộc đơn vị khác. Vui lòng kiểm tra lại.`,
+          severity: 'error'
+        });
+      } else if (p.soCCHN && existingCCHNs.has(p.soCCHN)) {
+        // Same-unit duplicate: allow update
+        practitionerErrors.push({
+          sheet: 'Nhân viên',
+          row: p.rowNumber,
+          column: 'G',
+          field: 'Số CCHN',
+          message: `Số CCHN "${p.soCCHN}" đã tồn tại trong đơn vị (sẽ được cập nhật)`,
           severity: 'warning'
         });
       }

@@ -50,7 +50,40 @@ export class ImportService {
             chucDanh = p.khoaPhong;
           }
 
-          // Upsert practitioner
+          // Check if CCHN exists in another unit first
+          const existingCheck = await db.query<{ MaNhanVien: string; MaDonVi: string }>(
+            `SELECT "MaNhanVien", "MaDonVi" FROM "NhanVien" WHERE "SoCCHN" = $1`,
+            [p.soCCHN]
+          );
+
+          // If exists in another unit, skip with audit log
+          if (existingCheck.length > 0 && existingCheck[0].MaDonVi !== unitId) {
+            const maskedCCHN = p.soCCHN.slice(-4).padStart(p.soCCHN.length, '*');
+            result.errors.push(
+              `Bỏ qua dòng ${p.rowNumber}: Số CCHN thuộc đơn vị khác`
+            );
+            
+            // Audit log for cross-unit conflict
+            await db.query(
+              `INSERT INTO "NhatKyHeThong" (
+                "MaTaiKhoan", "HanhDong", "Bang", "NoiDung"
+              ) VALUES ($1, $2, $3, $4)`,
+              [
+                userId,
+                'IMPORT_SKIPPED_CROSS_UNIT',
+                'NhanVien',
+                JSON.stringify({
+                  maskedSoCCHN: maskedCCHN,
+                  attemptedUnitId: unitId,
+                  rowNumber: p.rowNumber,
+                  timestamp: new Date().toISOString()
+                })
+              ]
+            );
+            continue;
+          }
+
+          // Upsert practitioner (only updates if same unit, with WHERE clause)
           const practitionerResult = await db.query<{ MaNhanVien: string; is_new: boolean }>(
             `
             INSERT INTO "NhanVien" (
@@ -61,9 +94,9 @@ export class ImportService {
               "HoVaTen" = EXCLUDED."HoVaTen",
               "NgayCapCCHN" = EXCLUDED."NgayCapCCHN",
               "ChucDanh" = EXCLUDED."ChucDanh",
-              "MaDonVi" = EXCLUDED."MaDonVi",
               "TrangThaiLamViec" = EXCLUDED."TrangThaiLamViec",
               "MaNhanVienNoiBo" = EXCLUDED."MaNhanVienNoiBo"
+            WHERE "NhanVien"."MaDonVi" = EXCLUDED."MaDonVi"
             RETURNING "MaNhanVien", 
               (xmax = 0) AS is_new
             `,
@@ -125,16 +158,16 @@ export class ImportService {
           // Get practitioner ID
           let maNhanVien = practitionerMap.get(a.soCCHN);
 
-          // If not in imported practitioners, look up in database
+          // If not in imported practitioners, look up in database (scoped to unit)
           if (!maNhanVien) {
             const lookupResult = await db.query<{ MaNhanVien: string }>(
-              `SELECT "MaNhanVien" FROM "NhanVien" WHERE "SoCCHN" = $1`,
-              [a.soCCHN]
+              `SELECT "MaNhanVien" FROM "NhanVien" WHERE "SoCCHN" = $1 AND "MaDonVi" = $2`,
+              [a.soCCHN, unitId]
             );
 
             if (lookupResult.length === 0) {
               result.errors.push(
-                `Lỗi dòng ${a.rowNumber}: Không tìm thấy nhân viên với Số CCHN "${a.soCCHN}"`
+                `Lỗi dòng ${a.rowNumber}: Không tìm thấy nhân viên với Số CCHN "${a.soCCHN}" trong đơn vị`
               );
               continue;
             }

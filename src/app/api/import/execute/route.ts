@@ -79,16 +79,39 @@ export async function POST(request: NextRequest) {
     const validator = new ImportValidator();
     const practitionerErrors = validator.validatePractitioners(parsedData.practitioners);
 
-    // Get existing CCHNs
+    // Get existing CCHNs (scoped to current unit only)
     const existingCCHNs = new Set<string>();
+    const crossUnitCCHNs = new Set<string>();
     if (parsedData.practitioners.length > 0) {
       const cchnList = parsedData.practitioners.map(p => p.soCCHN).filter(Boolean);
       if (cchnList.length > 0) {
-        const result = await db.query<{ SoCCHN: string }>(
-          `SELECT "SoCCHN" FROM "NhanVien" WHERE "SoCCHN" = ANY($1)`,
-          [cchnList]
+        // Check same-unit CCHNs
+        const sameUnitResult = await db.query<{ SoCCHN: string }>(
+          `SELECT "SoCCHN" FROM "NhanVien" WHERE "SoCCHN" = ANY($1) AND "MaDonVi" = $2`,
+          [cchnList, session.user.unitId]
         );
-        result.forEach(row => existingCCHNs.add(row.SoCCHN));
+        sameUnitResult.forEach(row => existingCCHNs.add(row.SoCCHN));
+
+        // Check cross-unit conflicts
+        const otherUnitResult = await db.query<{ SoCCHN: string }>(
+          `SELECT "SoCCHN" FROM "NhanVien" WHERE "SoCCHN" = ANY($1) AND "MaDonVi" != $2`,
+          [cchnList, session.user.unitId]
+        );
+        otherUnitResult.forEach(row => crossUnitCCHNs.add(row.SoCCHN));
+
+        // Add cross-unit conflicts as blocking errors
+        parsedData.practitioners.forEach(p => {
+          if (p.soCCHN && crossUnitCCHNs.has(p.soCCHN)) {
+            practitionerErrors.push({
+              sheet: 'Nhân viên',
+              row: p.rowNumber,
+              column: 'G',
+              field: 'Số CCHN',
+              message: `Số CCHN đã thuộc đơn vị khác, không thể nhập`,
+              severity: 'error'
+            });
+          }
+        });
       }
     }
 
