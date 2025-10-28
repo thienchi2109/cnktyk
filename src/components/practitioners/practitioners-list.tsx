@@ -195,9 +195,10 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
               <GlassButton
                 onClick={() => setShowBulkImportSheet(true)}
                 variant="secondary"
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6"
+                size="lg"
               >
-                <Upload className="h-4 w-4" />
+                <Upload className="h-5 w-5" />
                 Nhập Hàng Loạt
               </GlassButton>
             )}
@@ -205,9 +206,10 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
             {/* Add Single Practitioner */}
             <GlassButton
               onClick={() => setShowCreateDialog(true)}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6"
+              size="lg"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-5 w-5" />
               Thêm Người Hành Nghề
             </GlassButton>
           </div>
