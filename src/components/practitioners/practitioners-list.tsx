@@ -370,9 +370,6 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
                         <div className="font-medium text-gray-900">
                           {practitioner.HoVaTen}
                         </div>
-                        <div className="text-sm text-gray-500">
-                          ID: {practitioner.MaNhanVien.slice(0, 8)}...
-                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {practitioner.ChucDanh || 'Chưa xác định'}

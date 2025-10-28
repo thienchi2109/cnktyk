@@ -12,6 +12,7 @@ export interface PractitionerRow {
   gioiTinh?: 'Nam' | 'Nữ' | 'Khác';
   khoaPhong?: string;
   chucVu?: string;
+  trangThaiLamViec?: 'DangLamViec' | 'TamHoan' | 'DaNghi';
   soCCHN: string;
   ngayCapCCHN: Date;
   noiCap?: string;
@@ -76,6 +77,7 @@ export class ExcelProcessor {
       { key: 'gioiTinh', width: 12 },
       { key: 'khoaPhong', width: 20 },
       { key: 'chucVu', width: 20 },
+      { key: 'tinhTrangCongTac', width: 20 },
       { key: 'soCCHN', width: 18 },
       { key: 'ngayCapCCHN', width: 15 },
       { key: 'noiCap', width: 20 },
@@ -90,6 +92,7 @@ export class ExcelProcessor {
       'Giới tính',
       'Khoa/Phòng',
       'Chức vụ',
+      'Tình trạng công tác',
       'Số CCHN *',
       'Ngày cấp *',
       'Nơi cấp',
@@ -111,6 +114,7 @@ export class ExcelProcessor {
       'Nam/Nữ (Optional)',
       'Text (Optional)',
       'Text (Optional)',
+      'Enum (Optional, mặc định: Đang làm việc)',
       'Text (Required)',
       'DD/MM/YYYY (Required)',
       'Text (Optional)',
@@ -127,6 +131,7 @@ export class ExcelProcessor {
       'Nam',
       'Khoa Nội',
       'Bác sĩ CK II',
+      'Đang làm việc',
       'CCHN-2023-001234',
       new Date(2023, 0, 15),
       'Sở Y Tế Cần Thơ',
@@ -140,14 +145,21 @@ export class ExcelProcessor {
 
     // Format date columns
     practitionersSheet.getColumn(3).numFmt = 'dd/mm/yyyy';
-    practitionersSheet.getColumn(8).numFmt = 'dd/mm/yyyy';
+    practitionersSheet.getColumn(9).numFmt = 'dd/mm/yyyy';
 
     // Add data validation for gender (if supported)
     if ('dataValidations' in practitionersSheet) {
+      // Gender dropdown
       (practitionersSheet as any).dataValidations.add('D4:D10000', {
         type: 'list',
         allowBlank: true,
         formulae: ['"Nam,Nữ,Khác"']
+      });
+      // Employment status dropdown
+      ;(practitionersSheet as any).dataValidations.add('G4:G10000', {
+        type: 'list',
+        allowBlank: true,
+        formulae: ['"Đang làm việc,Tạm hoãn,Đã nghỉ"']
       });
     }
 
@@ -294,6 +306,12 @@ export class ExcelProcessor {
         const values = row.values as any[];
         if (!values[2] && !values[7]) return; // Skip empty rows
 
+        const tinhTrangRaw = values[7]?.toString().trim();
+        const soCCHNVal = (values[8] ?? values[7])?.toString().trim() || '';
+        const ngayCapVal = this.parseDate(values[9] ?? values[8]) || new Date();
+        const noiCapVal = (values[10] ?? values[9])?.toString().trim();
+        const phamViVal = (values[11] ?? values[10])?.toString().trim();
+
         practitioners.push({
           maNhanVien: values[1]?.toString().trim(),
           hoVaTen: values[2]?.toString().trim() || '',
@@ -301,10 +319,11 @@ export class ExcelProcessor {
           gioiTinh: values[4]?.toString().trim() as any,
           khoaPhong: values[5]?.toString().trim(),
           chucVu: values[6]?.toString().trim(),
-          soCCHN: values[7]?.toString().trim() || '',
-          ngayCapCCHN: this.parseDate(values[8]) || new Date(),
-          noiCap: values[9]?.toString().trim(),
-          phamViChuyenMon: values[10]?.toString().trim(),
+          trangThaiLamViec: this.mapEmploymentStatus(tinhTrangRaw),
+          soCCHN: soCCHNVal,
+          ngayCapCCHN: ngayCapVal,
+          noiCap: noiCapVal,
+          phamViChuyenMon: phamViVal,
           rowNumber
         });
       });
@@ -361,5 +380,22 @@ export class ExcelProcessor {
     }
     
     return undefined;
+  }
+
+  /**
+   * Map human label or code to canonical TrangThaiLamViec enum
+   */
+  private mapEmploymentStatus(value?: string): 'DangLamViec' | 'TamHoan' | 'DaNghi' | undefined {
+    if (!value) return undefined;
+    const v = value.trim();
+    const map: Record<string, 'DangLamViec' | 'TamHoan' | 'DaNghi'> = {
+      'Đang làm việc': 'DangLamViec',
+      'DangLamViec': 'DangLamViec',
+      'Tạm hoãn': 'TamHoan',
+      'TamHoan': 'TamHoan',
+      'Đã nghỉ': 'DaNghi',
+      'DaNghi': 'DaNghi',
+    };
+    return map[v] || undefined;
   }
 }

@@ -70,6 +70,18 @@ export class ImportValidator {
         }
       }
 
+      // Optional: Tình trạng công tác validation (defaults to Đang làm việc)
+      if (p.trangThaiLamViec && !['DangLamViec', 'TamHoan', 'DaNghi'].includes(p.trangThaiLamViec)) {
+        errors.push({
+          sheet: 'Nhân viên',
+          row: p.rowNumber,
+          column: 'G',
+          field: 'Tình trạng công tác',
+          message: 'Giá trị không hợp lệ. Hợp lệ: Đang làm việc/Tạm hoãn/Đã nghỉ hoặc DangLamViec/TamHoan/DaNghi',
+          severity: 'error'
+        });
+      }
+
       // Required field: Ngày cấp
       if (!p.ngayCapCCHN) {
         errors.push({

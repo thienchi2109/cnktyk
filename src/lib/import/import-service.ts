@@ -61,7 +61,8 @@ export class ImportService {
               "HoVaTen" = EXCLUDED."HoVaTen",
               "NgayCapCCHN" = EXCLUDED."NgayCapCCHN",
               "ChucDanh" = EXCLUDED."ChucDanh",
-              "MaDonVi" = EXCLUDED."MaDonVi"
+              "MaDonVi" = EXCLUDED."MaDonVi",
+              "TrangThaiLamViec" = EXCLUDED."TrangThaiLamViec"
             RETURNING "MaNhanVien", 
               (xmax = 0) AS is_new
             `,
@@ -70,7 +71,7 @@ export class ImportService {
               p.soCCHN,
               p.ngayCapCCHN,
               unitId,
-              'DangLamViec',
+              p.trangThaiLamViec || 'DangLamViec',
               chucDanh || null
             ]
           );
