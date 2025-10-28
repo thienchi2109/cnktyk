@@ -132,7 +132,7 @@ function SignInForm() {
               <h1 className="text-3xl xl:text-4xl font-bold text-slate-800 leading-tight mb-4">
                 Hệ thống Quản lý Đào tạo<br />
                 <span className="bg-gradient-to-r from-blue-600 via-cyan-600 to-green-600 bg-clip-text text-transparent">
-                  Nhân lực Y tế Cần Thơ
+                  Nhân lực ngành Y tế Cần Thơ
                 </span>
               </h1>
               <p className="text-slate-600 font-medium text-lg xl:text-xl leading-relaxed">

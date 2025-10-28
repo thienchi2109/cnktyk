@@ -33,7 +33,7 @@ import { QueryProvider } from "@/components/providers/query-provider";
 import { auth } from "@/lib/auth";
 
 export const metadata: Metadata = {
-  title: "Hệ thống quản lý đào tạo nhân lực y tế",
+  title: "Hệ thống quản lý đào tạo nhân lực ngành y tế",
   description: "Healthcare practitioner compliance tracking system for the Department of Health",
 };
 
