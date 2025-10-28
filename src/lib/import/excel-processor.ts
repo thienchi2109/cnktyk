@@ -123,7 +123,7 @@ export class ExcelProcessor {
     practitionersHints.font = { italic: true, color: { argb: 'FF808080' }, size: 9 };
     practitionersHints.alignment = { horizontal: 'center' };
 
-    // Example data row
+    // Example data row (users should delete this before importing)
     const practitionersExample = practitionersSheet.addRow([
       'NV001',
       'Nguyễn Văn An',
@@ -140,8 +140,16 @@ export class ExcelProcessor {
     practitionersExample.fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FFD9E1F2' }
+      fgColor: { argb: 'FFFFC7CE' }
     };
+    practitionersExample.font = { italic: true, color: { argb: 'FF9C0006' } };
+    // Add note to first cell
+    const noteCell = practitionersSheet.getCell('A3');
+    if (noteCell.note) {
+      noteCell.note = {
+        texts: [{ text: '⚠️ Đây là dòng mẫu. Vui lòng XÓA dòng này trước khi nhập dữ liệu thật!' }]
+      };
+    }
 
     // Format date columns
     practitionersSheet.getColumn(3).numFmt = 'dd/mm/yyyy';
@@ -215,7 +223,7 @@ export class ExcelProcessor {
     activitiesHints.font = { italic: true, color: { argb: 'FF808080' }, size: 9 };
     activitiesHints.alignment = { horizontal: 'center' };
 
-    // Example data row
+    // Example data row (users should delete this before importing)
     const activitiesExample = activitiesSheet.addRow([
       'CCHN-2023-001234',
       'Hội thảo Y học lâm sàng 2024',
@@ -230,8 +238,16 @@ export class ExcelProcessor {
     activitiesExample.fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FFE2EFDA' }
+      fgColor: { argb: 'FFFFC7CE' }
     };
+    activitiesExample.font = { italic: true, color: { argb: 'FF9C0006' } };
+    // Add note to first cell
+    const activityNoteCell = activitiesSheet.getCell('A3');
+    if (activityNoteCell.note) {
+      activityNoteCell.note = {
+        texts: [{ text: '⚠️ Đây là dòng mẫu. Vui lòng XÓA dòng này trước khi nhập dữ liệu thật!' }]
+      };
+    }
 
     // Format date columns
     activitiesSheet.getColumn(4).numFmt = 'dd/mm/yyyy';
@@ -267,10 +283,11 @@ export class ExcelProcessor {
       { text: '5. Xác nhận nhập dữ liệu' },
       { text: '' },
       { text: '⚠️ LƯU Ý QUAN TRỌNG', style: { bold: true, size: 12, color: { argb: 'FFFF0000' } } },
+      { text: '• XÓA dòng 3 (dòng mẫu màu đỏ nhạt) trước khi nhập dữ liệu thật' },
       { text: '• Không xóa hoặc đổi tên các sheet' },
       { text: '• Không thay đổi tiêu đề cột (dòng 1)' },
       { text: '• Các trường có dấu * là bắt buộc' },
-      { text: '• Số CCHN phải duy nhất trong toàn hệ thống' },
+      { text: '• Số CCHN phải duy nhất trong đơn vị của bạn' },
       { text: '• Ngày hoạt động phải nằm trong kỳ CNKT' },
       { text: '• File tối đa 10MB' }
     ];
@@ -301,7 +318,7 @@ export class ExcelProcessor {
     const practitionersSheet = workbook.getWorksheet('Nhân viên');
     if (practitionersSheet) {
       practitionersSheet.eachRow((row, rowNumber) => {
-        if (rowNumber <= 3) return; // Skip header, hints, and example rows
+        if (rowNumber <= 2) return; // Skip header and hints rows only
 
         const values = row.values as any[];
         if (!values[2] && !values[7]) return; // Skip empty rows
@@ -333,7 +350,7 @@ export class ExcelProcessor {
     const activitiesSheet = workbook.getWorksheet('Hoạt động');
     if (activitiesSheet) {
       activitiesSheet.eachRow((row, rowNumber) => {
-        if (rowNumber <= 3) return; // Skip header, hints, and example rows
+        if (rowNumber <= 2) return; // Skip header and hints rows only
 
         const values = row.values as any[];
         if (!values[1] && !values[2]) return; // Skip empty rows
