@@ -198,6 +198,19 @@ export function PractitionerForm({
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
+                <Label htmlFor="MaNhanVienNoiBo">Mã nhân viên</Label>
+                <Input
+                  id="MaNhanVienNoiBo"
+                  {...form.register('MaNhanVienNoiBo')}
+                  placeholder="Nhập mã nhân viên nội bộ"
+                  disabled={isSelfLimited}
+                />
+                <p className="text-sm text-gray-500">
+                  Mã nhân viên nội bộ của đơn vị (tùy chọn)
+                </p>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="HoVaTen">Họ và tên *</Label>
                 <Input
                   id="HoVaTen"
@@ -212,7 +225,9 @@ export function PractitionerForm({
                   </p>
                 )}
               </div>
+            </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="ChucDanh">Chức danh</Label>
                 <Input
