@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Unit Administrator Dashboard Component
  * Comprehensive dashboard with glassmorphism design for unit administrators
  * Features: Unit overview, practitioner management, approval workflow, analytics
@@ -14,6 +14,13 @@ import { GlassButton } from '@/components/ui/glass-button';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { PractitionerForm } from '@/components/practitioners/practitioner-form';
+import {
+  DashboardCardSkeleton,
+  DashboardKpiSkeleton,
+  DashboardListSkeleton,
+  DashboardErrorCard,
+  DashboardErrorPanel,
+} from '@/components/dashboard/dashboard-skeletons';
 import { 
   Users, 
   Clock, 
@@ -89,7 +96,12 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
   });
   const [practitioners, setPractitioners] = useState<PractitionerSummary[]>([]);
   const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [metricsLoading, setMetricsLoading] = useState(true);
+  const [practitionersLoading, setPractitionersLoading] = useState(true);
+  const [approvalsLoading, setApprovalsLoading] = useState(true);
+  const [metricsError, setMetricsError] = useState<string | null>(null);
+  const [practitionersError, setPractitionersError] = useState<string | null>(null);
+  const [approvalsError, setApprovalsError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 300); // Debounce search for 300ms
   const [filterStatus, setFilterStatus] = useState<'all' | 'at-risk' | 'compliant'>('all');
@@ -108,14 +120,30 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
+        setMetricsLoading(true);
+        setMetricsError(null);
         const response = await fetch(`/api/units/${unitId}/metrics`);
         const result = await response.json();
-        
-        if (result.success) {
-          setMetrics(result.data);
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to load unit metrics');
         }
+
+        setMetrics(result.data);
       } catch (error) {
         console.error('Error fetching metrics:', error);
+        setMetricsError('Không thể tải số liệu tổng quan đơn vị. Vui lòng thử lại.');
+        setMetrics({
+          totalPractitioners: 0,
+          activePractitioners: 0,
+          complianceRate: 0,
+          pendingApprovals: 0,
+          approvedThisMonth: 0,
+          rejectedThisMonth: 0,
+          atRiskPractitioners: 0,
+        });
+      } finally {
+        setMetricsLoading(false);
       }
     };
 
@@ -126,21 +154,19 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
   useEffect(() => {
     const fetchPractitioners = async () => {
       try {
-        setLoading(true);
-        
-        // Build query parameters
+        setPractitionersLoading(true);
+        setPractitionersError(null);
+
         const params = new URLSearchParams({
           unitId,
           page: currentPage.toString(),
           limit: itemsPerPage.toString(),
         });
 
-        // Add search filter if present (using debounced value)
         if (debouncedSearchTerm.trim()) {
           params.append('search', debouncedSearchTerm.trim());
         }
 
-        // Add compliance status filter
         if (filterStatus === 'at-risk') {
           params.append('complianceStatus', 'at_risk');
         } else if (filterStatus === 'compliant') {
@@ -150,29 +176,38 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
         const response = await fetch(`/api/practitioners?${params.toString()}`);
         const result = await response.json();
 
-        if (result.success) {
-          setPractitioners(result.data.map((p: any) => ({
-            id: p.MaNhanVien,
-            name: p.HoVaTen,
-            licenseId: p.SoCCHN || 'N/A',
-            position: p.ChucDanh || 'Không xác định',
-            compliancePercent: p.complianceStatus?.compliancePercent || 0,
-            status: p.TrangThaiLamViec,
-            lastActivityDate: p.lastActivityDate,
-            creditsEarned: p.complianceStatus?.creditsEarned || 0,
-            creditsRequired: p.complianceStatus?.creditsRequired || 120
-          })));
-          
-          // Update pagination state
-          if (result.pagination) {
-            setTotalPages(result.pagination.totalPages || 1);
-            setTotalPractitioners(result.pagination.total || 0);
-          }
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to load practitioners');
+        }
+
+        const list = Array.isArray(result.data) ? result.data : [];
+        setPractitioners(list.map((p: any) => ({
+          id: p.MaNhanVien,
+          name: p.HoVaTen,
+          licenseId: p.SoCCHN || 'N/A',
+          position: p.ChucDanh || 'Không xác định',
+          compliancePercent: p.complianceStatus?.compliancePercent || 0,
+          status: p.TrangThaiLamViec,
+          lastActivityDate: p.lastActivityDate,
+          creditsEarned: p.complianceStatus?.creditsEarned || 0,
+          creditsRequired: p.complianceStatus?.creditsRequired || 120,
+        })));
+
+        if (result.pagination) {
+          setTotalPages(result.pagination.totalPages || 1);
+          setTotalPractitioners(result.pagination.total || 0);
+        } else {
+          setTotalPages(1);
+          setTotalPractitioners(list.length);
         }
       } catch (error) {
         console.error('Error fetching practitioners:', error);
+        setPractitionersError('Không thể tải danh sách người hành nghề. Vui lòng thử lại.');
+        setPractitioners([]);
+        setTotalPages(1);
+        setTotalPractitioners(0);
       } finally {
-        setLoading(false);
+        setPractitionersLoading(false);
       }
     };
 
@@ -183,10 +218,15 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
   useEffect(() => {
     const fetchPendingApprovals = async () => {
       try {
+        setApprovalsLoading(true);
+        setApprovalsError(null);
         const response = await fetch(`/api/submissions?unitId=${unitId}&status=ChoDuyet&limit=20`);
         const result = await response.json();
 
-        // New API returns { data: [...], pagination: {...} }
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to load pending approvals');
+        }
+
         if (result.data && Array.isArray(result.data)) {
           setPendingApprovals(result.data.map((item: any) => {
             const submittedDate = new Date(item.NgayGhiNhan);
@@ -204,9 +244,15 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
               daysWaiting
             };
           }));
+        } else {
+          setPendingApprovals([]);
         }
       } catch (error) {
         console.error('Error fetching pending approvals:', error);
+        setApprovalsError('Không thể tải danh sách hoạt động chờ duyệt. Vui lòng thử lại.');
+        setPendingApprovals([]);
+      } finally {
+        setApprovalsLoading(false);
       }
     };
 
@@ -276,62 +322,78 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
           </div>
 
           {/* Key Metrics Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <GlassCard className="p-4">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-lg bg-blue-100/50">
-                  <Users className="w-5 h-5 text-medical-blue" />
-                </div>
-                <span className="text-sm text-gray-600">Tổng số</span>
-              </div>
-              <p className="text-3xl font-bold text-medical-blue">{metrics.totalPractitioners}</p>
-              <p className="text-xs text-gray-500 mt-1">Người hành nghề</p>
-            </GlassCard>
+          <div
+            className="grid grid-cols-2 md:grid-cols-4 gap-4"
+            aria-busy={metricsLoading || undefined}
+          >
+            {metricsLoading ? (
+              Array.from({ length: 4 }).map((_, index) => (
+                <DashboardKpiSkeleton key={index} />
+              ))
+            ) : metricsError ? (
+              <DashboardErrorCard
+                message={metricsError}
+                className="col-span-full"
+              />
+            ) : (
+              <>
+                <GlassCard className="p-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 rounded-lg bg-blue-100/50">
+                      <Users className="w-5 h-5 text-medical-blue" />
+                    </div>
+                    <span className="text-sm text-gray-600">Tổng số</span>
+                  </div>
+                  <p className="text-3xl font-bold text-medical-blue">{metrics.totalPractitioners}</p>
+                  <p className="text-xs text-gray-500 mt-1">Người hành nghề</p>
+                </GlassCard>
 
-            <GlassCard className="p-4">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-lg bg-green-100/50">
-                  <CheckCircle className="w-5 h-5 text-medical-green" />
-                </div>
-                <span className="text-sm text-gray-600">Tuân thủ</span>
-              </div>
-              <p className="text-3xl font-bold text-medical-green">{metrics.complianceRate}%</p>
-              <p className="text-xs text-gray-500 mt-1">Tỷ lệ hoàn thành</p>
-            </GlassCard>
+                <GlassCard className="p-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 rounded-lg bg-green-100/50">
+                      <CheckCircle className="w-5 h-5 text-medical-green" />
+                    </div>
+                    <span className="text-sm text-gray-600">Tuân thủ</span>
+                  </div>
+                  <p className="text-3xl font-bold text-medical-green">{metrics.complianceRate}%</p>
+                  <p className="text-xs text-gray-500 mt-1">Tỷ lệ hoàn thành</p>
+                </GlassCard>
 
-            <GlassCard className="p-4">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-lg bg-amber-100/50">
-                  <Clock className="w-5 h-5 text-medical-amber" />
-                </div>
-                <span className="text-sm text-gray-600">Chờ duyệt</span>
-              </div>
-              <p className="text-3xl font-bold text-medical-amber">{metrics.pendingApprovals}</p>
-              <p className="text-xs text-gray-500 mt-1">Hoạt động</p>
-            </GlassCard>
+                <GlassCard className="p-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 rounded-lg bg-amber-100/50">
+                      <Clock className="w-5 h-5 text-medical-amber" />
+                    </div>
+                    <span className="text-sm text-gray-600">Chờ duyệt</span>
+                  </div>
+                  <p className="text-3xl font-bold text-medical-amber">{metrics.pendingApprovals}</p>
+                  <p className="text-xs text-gray-500 mt-1">Hoạt động</p>
+                </GlassCard>
 
-            <GlassCard className="p-4">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-lg bg-red-100/50">
-                  <AlertTriangle className="w-5 h-5 text-medical-red" />
-                </div>
-                <span className="text-sm text-gray-600">Rủi ro</span>
-              </div>
-              <p className="text-3xl font-bold text-medical-red">{metrics.atRiskPractitioners}</p>
-              <p className="text-xs text-gray-500 mt-1">Cần theo dõi</p>
-            </GlassCard>
+                <GlassCard className="p-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 rounded-lg bg-red-100/50">
+                      <AlertTriangle className="w-5 h-5 text-medical-red" />
+                    </div>
+                    <span className="text-sm text-gray-600">Rủi ro</span>
+                  </div>
+                  <p className="text-3xl font-bold text-medical-red">{metrics.atRiskPractitioners}</p>
+                  <p className="text-xs text-gray-500 mt-1">Cần theo dõi</p>
+                </GlassCard>
+              </>
+            )}
           </div>
         </div>
 
         {/* Approval Workflow Center */}
-        <GlassCard className="p-6">
+        <GlassCard className="p-6" aria-busy={approvalsLoading || undefined}>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-amber-100/50">
                 <Clock className="w-5 h-5 text-medical-amber" />
               </div>
               <h2 className="text-xl font-bold text-gray-800">Trung tâm phê duyệt</h2>
-              {pendingApprovals.length > 0 && (
+              {!approvalsLoading && !approvalsError && pendingApprovals.length > 0 && (
                 <span className="px-3 py-1 rounded-full bg-medical-amber/20 text-medical-amber text-sm font-semibold">
                   {pendingApprovals.length} chờ xử lý
                 </span>
@@ -351,7 +413,11 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
 
           {(expandedSections.approvals || isDesktop) && (
             <div className="space-y-3">
-              {pendingApprovals.length === 0 ? (
+              {approvalsError ? (
+                <DashboardErrorPanel message={approvalsError} />
+              ) : approvalsLoading ? (
+                <DashboardListSkeleton lines={4} />
+              ) : pendingApprovals.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                   <CheckCircle className="w-16 h-16 mx-auto mb-3 text-medical-green" />
                   <p className="text-lg font-semibold">Không có hoạt động chờ duyệt</p>
@@ -418,7 +484,7 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
         </GlassCard>
 
         {/* Practitioner Management Grid */}
-        <GlassCard className="p-6">
+        <GlassCard className="p-6" aria-busy={practitionersLoading || undefined}>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-blue-100/50">
@@ -500,12 +566,10 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
               </div>
 
               {/* Practitioners Table/Grid */}
-              {loading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3, 4, 5].map(i => (
-                    <div key={i} className="h-20 bg-white/20 rounded-lg animate-pulse" />
-                  ))}
-                </div>
+              {practitionersError ? (
+                <DashboardErrorPanel message={practitionersError} />
+              ) : practitionersLoading ? (
+                <DashboardListSkeleton lines={5} />
               ) : practitioners.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                   <Users className="w-16 h-16 mx-auto mb-3 text-gray-400" />
@@ -612,7 +676,7 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
         </GlassCard>
 
         {/* Unit Analytics */}
-        <GlassCard className="p-6">
+        <GlassCard className="p-6" aria-busy={metricsLoading || undefined}>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-purple-100/50">
@@ -633,33 +697,49 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
           </div>
 
           {(expandedSections.analytics || isDesktop) && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-white/20 backdrop-blur-sm rounded-lg border border-white/20">
-                <div className="flex items-center gap-2 mb-3">
-                  <CheckCircle className="w-5 h-5 text-medical-green" />
-                  <span className="text-sm font-semibold text-gray-700">Đã duyệt tháng này</span>
-                </div>
-                <p className="text-3xl font-bold text-medical-green">{metrics.approvedThisMonth}</p>
-                <p className="text-xs text-gray-500 mt-1">Hoạt động</p>
-              </div>
+            <div
+              className="grid grid-cols-1 md:grid-cols-3 gap-4"
+              aria-busy={metricsLoading || undefined}
+            >
+              {metricsLoading ? (
+                Array.from({ length: 3 }).map((_, index) => (
+                  <DashboardCardSkeleton key={index} lines={2} />
+                ))
+              ) : metricsError ? (
+                <DashboardErrorPanel
+                  message={metricsError}
+                  className="col-span-full"
+                />
+              ) : (
+                <>
+                  <div className="p-4 bg-white/20 backdrop-blur-sm rounded-lg border border-white/20">
+                    <div className="flex items-center gap-2 mb-3">
+                      <CheckCircle className="w-5 h-5 text-medical-green" />
+                      <span className="text-sm font-semibold text-gray-700">Đã duyệt tháng này</span>
+                    </div>
+                    <p className="text-3xl font-bold text-medical-green">{metrics.approvedThisMonth}</p>
+                    <p className="text-xs text-gray-500 mt-1">Hoạt động</p>
+                  </div>
 
-              <div className="p-4 bg-white/20 backdrop-blur-sm rounded-lg border border-white/20">
-                <div className="flex items-center gap-2 mb-3">
-                  <XCircle className="w-5 h-5 text-medical-red" />
-                  <span className="text-sm font-semibold text-gray-700">Từ chối tháng này</span>
-                </div>
-                <p className="text-3xl font-bold text-medical-red">{metrics.rejectedThisMonth}</p>
-                <p className="text-xs text-gray-500 mt-1">Hoạt động</p>
-              </div>
+                  <div className="p-4 bg-white/20 backdrop-blur-sm rounded-lg border border-white/20">
+                    <div className="flex items-center gap-2 mb-3">
+                      <XCircle className="w-5 h-5 text-medical-red" />
+                      <span className="text-sm font-semibold text-gray-700">Từ chối tháng này</span>
+                    </div>
+                    <p className="text-3xl font-bold text-medical-red">{metrics.rejectedThisMonth}</p>
+                    <p className="text-xs text-gray-500 mt-1">Hoạt động</p>
+                  </div>
 
-              <div className="p-4 bg-white/20 backdrop-blur-sm rounded-lg border border-white/20">
-                <div className="flex items-center gap-2 mb-3">
-                  <TrendingUp className="w-5 h-5 text-medical-blue" />
-                  <span className="text-sm font-semibold text-gray-700">Đang hoạt động</span>
-                </div>
-                <p className="text-3xl font-bold text-medical-blue">{metrics.activePractitioners}</p>
-                <p className="text-xs text-gray-500 mt-1">Người hành nghề</p>
-              </div>
+                  <div className="p-4 bg-white/20 backdrop-blur-sm rounded-lg border border-white/20">
+                    <div className="flex items-center gap-2 mb-3">
+                      <TrendingUp className="w-5 h-5 text-medical-blue" />
+                      <span className="text-sm font-semibold text-gray-700">Đang hoạt động</span>
+                    </div>
+                    <p className="text-3xl font-bold text-medical-blue">{metrics.activePractitioners}</p>
+                    <p className="text-xs text-gray-500 mt-1">Người hành nghề</p>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </GlassCard>

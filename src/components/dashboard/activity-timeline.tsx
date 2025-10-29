@@ -8,15 +8,16 @@
 import { useState, useRef } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { GlassCard } from '@/components/ui/glass-card';
-import { 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
+import {
+  CheckCircle,
+  XCircle,
+  Clock,
   AlertTriangle,
   Calendar,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
 } from 'lucide-react';
+import { DashboardListSkeleton } from '@/components/dashboard/dashboard-skeletons';
 
 interface Activity {
   id: string;
@@ -105,10 +106,8 @@ export function ActivityTimeline({ activities, loading }: ActivityTimelineProps)
 
   if (loading) {
     return (
-      <div className="space-y-3">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="h-32 bg-white/20 rounded-lg animate-pulse" />
-        ))}
+      <div aria-busy="true">
+        <DashboardListSkeleton lines={3} />
       </div>
     );
   }

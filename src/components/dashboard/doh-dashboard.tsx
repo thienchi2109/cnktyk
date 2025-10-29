@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { GlassCard } from '@/components/ui/glass-card';
@@ -20,6 +20,12 @@ import {
 } from 'lucide-react';
 import { useIsDesktop } from '@/hooks/use-media-query';
 import { useDebounce } from '@/hooks/use-debounce';
+import {
+  DashboardCardSkeleton,
+  DashboardKpiSkeleton,
+  DashboardErrorCard,
+  DashboardErrorPanel,
+} from '@/components/dashboard/dashboard-skeletons';
 
 interface SystemMetrics {
   totalUnits: number;
@@ -73,7 +79,10 @@ export function DohDashboard({ userId }: DohDashboardProps) {
     atRiskPractitioners: 0
   });
   const [units, setUnits] = useState<UnitPerformance[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [metricsLoading, setMetricsLoading] = useState(true);
+  const [unitsLoading, setUnitsLoading] = useState(true);
+  const [metricsError, setMetricsError] = useState<string | null>(null);
+  const [unitsError, setUnitsError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [sortBy, setSortBy] = useState<'name' | 'compliance' | 'practitioners'>('compliance');
@@ -89,14 +98,33 @@ export function DohDashboard({ userId }: DohDashboardProps) {
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
+        setMetricsLoading(true);
+        setMetricsError(null);
         const response = await fetch('/api/system/metrics');
         const result = await response.json();
-        
-        if (result.success) {
-          setMetrics(result.data);
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to load system metrics');
         }
+
+        setMetrics(result.data);
       } catch (error) {
         console.error('Error fetching system metrics:', error);
+        setMetricsError('Không thể tải số liệu hệ thống. Vui lòng thử lại.');
+        setMetrics({
+          totalUnits: 0,
+          totalPractitioners: 0,
+          activePractitioners: 0,
+          complianceRate: 0,
+          totalSubmissions: 0,
+          pendingApprovals: 0,
+          approvedThisMonth: 0,
+          rejectedThisMonth: 0,
+          totalCreditsAwarded: 0,
+          atRiskPractitioners: 0,
+        });
+      } finally {
+        setMetricsLoading(false);
       }
     };
 
@@ -107,26 +135,30 @@ export function DohDashboard({ userId }: DohDashboardProps) {
   useEffect(() => {
     const fetchUnits = async () => {
       try {
-        setLoading(true);
-        
-        // Build query parameters
+        setUnitsLoading(true);
+        setUnitsError(null);
+
         const params = new URLSearchParams();
         if (debouncedSearchTerm.trim()) {
           params.append('search', debouncedSearchTerm.trim());
         }
         params.append('sortBy', sortBy);
         params.append('sortOrder', sortOrder);
-        
+
         const response = await fetch(`/api/system/units-performance?${params.toString()}`);
         const result = await response.json();
 
-        if (result.success) {
-          setUnits(result.data);
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to load units performance');
         }
+
+        setUnits(Array.isArray(result.data) ? result.data : []);
       } catch (error) {
         console.error('Error fetching units performance:', error);
+        setUnitsError('Không thể tải danh sách đơn vị. Vui lòng thử lại.');
+        setUnits([]);
       } finally {
-        setLoading(false);
+        setUnitsLoading(false);
       }
     };
 
@@ -180,66 +212,82 @@ export function DohDashboard({ userId }: DohDashboardProps) {
           </div>
 
           {/* Executive KPI Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <GlassCard className="p-4">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-lg bg-blue-100/50">
-                  <Building2 className="w-5 h-5 text-medical-blue" />
-                </div>
-                <span className="text-sm text-gray-600">Đơn vị</span>
-              </div>
-              <p className="text-3xl font-bold text-medical-blue">{metrics.totalUnits}</p>
-              <p className="text-xs text-gray-500 mt-1">Đang hoạt động</p>
-            </GlassCard>
+          <div
+            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4"
+            aria-busy={metricsLoading || undefined}
+          >
+            {metricsLoading ? (
+              Array.from({ length: 5 }).map((_, index) => (
+                <DashboardKpiSkeleton key={index} />
+              ))
+            ) : metricsError ? (
+              <DashboardErrorCard
+                message={metricsError}
+                className="col-span-full"
+              />
+            ) : (
+              <>
+                <GlassCard className="p-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 rounded-lg bg-blue-100/50">
+                      <Building2 className="w-5 h-5 text-medical-blue" />
+                    </div>
+                    <span className="text-sm text-gray-600">Đơn vị</span>
+                  </div>
+                  <p className="text-3xl font-bold text-medical-blue">{metrics.totalUnits}</p>
+                  <p className="text-xs text-gray-500 mt-1">Đang hoạt động</p>
+                </GlassCard>
 
-            <GlassCard className="p-4">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-lg bg-blue-100/50">
-                  <Users className="w-5 h-5 text-medical-blue" />
-                </div>
-                <span className="text-sm text-gray-600">Người hành nghề</span>
-              </div>
-              <p className="text-3xl font-bold text-medical-blue">{metrics.activePractitioners}</p>
-              <p className="text-xs text-gray-500 mt-1">Đang làm việc</p>
-            </GlassCard>
+                <GlassCard className="p-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 rounded-lg bg-blue-100/50">
+                      <Users className="w-5 h-5 text-medical-blue" />
+                    </div>
+                    <span className="text-sm text-gray-600">Người hành nghề</span>
+                  </div>
+                  <p className="text-3xl font-bold text-medical-blue">{metrics.activePractitioners}</p>
+                  <p className="text-xs text-gray-500 mt-1">Đang làm việc</p>
+                </GlassCard>
 
-            <GlassCard className="p-4">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-lg bg-green-100/50">
-                  <CheckCircle className="w-5 h-5 text-medical-green" />
-                </div>
-                <span className="text-sm text-gray-600">Tuân thủ</span>
-              </div>
-              <p className="text-3xl font-bold text-medical-green">{metrics.complianceRate}%</p>
-              <p className="text-xs text-gray-500 mt-1">Tỷ lệ hoàn thành</p>
-            </GlassCard>
+                <GlassCard className="p-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 rounded-lg bg-green-100/50">
+                      <CheckCircle className="w-5 h-5 text-medical-green" />
+                    </div>
+                    <span className="text-sm text-gray-600">Tuân thủ</span>
+                  </div>
+                  <p className="text-3xl font-bold text-medical-green">{metrics.complianceRate}%</p>
+                  <p className="text-xs text-gray-500 mt-1">Tỷ lệ hoàn thành</p>
+                </GlassCard>
 
-            <GlassCard className="p-4">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-lg bg-amber-100/50">
-                  <Clock className="w-5 h-5 text-medical-amber" />
-                </div>
-                <span className="text-sm text-gray-600">Chờ duyệt</span>
-              </div>
-              <p className="text-3xl font-bold text-medical-amber">{metrics.pendingApprovals}</p>
-              <p className="text-xs text-gray-500 mt-1">Hoạt động</p>
-            </GlassCard>
+                <GlassCard className="p-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 rounded-lg bg-amber-100/50">
+                      <Clock className="w-5 h-5 text-medical-amber" />
+                    </div>
+                    <span className="text-sm text-gray-600">Chờ duyệt</span>
+                  </div>
+                  <p className="text-3xl font-bold text-medical-amber">{metrics.pendingApprovals}</p>
+                  <p className="text-xs text-gray-500 mt-1">Hoạt động</p>
+                </GlassCard>
 
-            <GlassCard className="p-4">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-lg bg-red-100/50">
-                  <AlertTriangle className="w-5 h-5 text-medical-red" />
-                </div>
-                <span className="text-sm text-gray-600">Rủi ro</span>
-              </div>
-              <p className="text-3xl font-bold text-medical-red">{metrics.atRiskPractitioners}</p>
-              <p className="text-xs text-gray-500 mt-1">Cần theo dõi</p>
-            </GlassCard>
+                <GlassCard className="p-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 rounded-lg bg-red-100/50">
+                      <AlertTriangle className="w-5 h-5 text-medical-red" />
+                    </div>
+                    <span className="text-sm text-gray-600">Rủi ro</span>
+                  </div>
+                  <p className="text-3xl font-bold text-medical-red">{metrics.atRiskPractitioners}</p>
+                  <p className="text-xs text-gray-500 mt-1">Cần theo dõi</p>
+                </GlassCard>
+              </>
+            )}
           </div>
         </div>
 
         {/* System Analytics */}
-        <GlassCard className="p-6">
+        <GlassCard className="p-6" aria-busy={metricsLoading || undefined}>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-blue-100/50">
@@ -260,73 +308,89 @@ export function DohDashboard({ userId }: DohDashboardProps) {
           </div>
 
           {expandedSections.analytics && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-gray-700">Hoạt động tháng này</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-green-50/50">
-                    <span className="text-sm text-gray-600">Đã phê duyệt</span>
-                    <span className="text-lg font-bold text-medical-green">{metrics.approvedThisMonth}</span>
+            <div
+              className="grid grid-cols-1 md:grid-cols-3 gap-6"
+              aria-busy={metricsLoading || undefined}
+            >
+              {metricsLoading ? (
+                Array.from({ length: 3 }).map((_, index) => (
+                  <DashboardCardSkeleton key={index} lines={3} />
+                ))
+              ) : metricsError ? (
+                <DashboardErrorPanel
+                  message={metricsError}
+                  className="col-span-full"
+                />
+              ) : (
+                <>
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-gray-700">Hoạt động tháng này</h3>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-green-50/50">
+                        <span className="text-sm text-gray-600">Đã phê duyệt</span>
+                        <span className="text-lg font-bold text-medical-green">{metrics.approvedThisMonth}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-red-50/50">
+                        <span className="text-sm text-gray-600">Từ chối</span>
+                        <span className="text-lg font-bold text-medical-red">{metrics.rejectedThisMonth}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-blue-50/50">
+                        <span className="text-sm text-gray-600">Tổng ghi nhận</span>
+                        <span className="text-lg font-bold text-medical-blue">{metrics.totalSubmissions}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-red-50/50">
-                    <span className="text-sm text-gray-600">Từ chối</span>
-                    <span className="text-lg font-bold text-medical-red">{metrics.rejectedThisMonth}</span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-blue-50/50">
-                    <span className="text-sm text-gray-600">Tổng ghi nhận</span>
-                    <span className="text-lg font-bold text-medical-blue">{metrics.totalSubmissions}</span>
-                  </div>
-                </div>
-              </div>
 
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-gray-700">Tín chỉ</h3>
-                <div className="p-4 rounded-lg bg-gradient-to-br from-blue-50 to-green-50">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Award className="w-5 h-5 text-medical-blue" />
-                    <span className="text-sm text-gray-600">Tổng tín chỉ cấp</span>
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-gray-700">Tín chỉ</h3>
+                    <div className="p-4 rounded-lg bg-gradient-to-br from-blue-50 to-green-50">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Award className="w-5 h-5 text-medical-blue" />
+                        <span className="text-sm text-gray-600">Tổng tín chỉ cấp</span>
+                      </div>
+                      <p className="text-3xl font-bold text-medical-blue">
+                        {metrics.totalCreditsAwarded.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">Tất cả hoạt động đã duyệt</p>
+                    </div>
                   </div>
-                  <p className="text-3xl font-bold text-medical-blue">
-                    {metrics.totalCreditsAwarded.toLocaleString()}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">Tất cả hoạt động đã duyệt</p>
-                </div>
-              </div>
 
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-gray-700">Hiệu suất</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-blue-50/50">
-                    <span className="text-sm text-gray-600">Tỷ lệ phê duyệt</span>
-                    <span className="text-lg font-bold text-medical-blue">
-                      {metrics.totalSubmissions > 0 
-                        ? Math.round((metrics.approvedThisMonth / metrics.totalSubmissions) * 100)
-                        : 0}%
-                    </span>
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-gray-700">Hiệu suất</h3>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-blue-50/50">
+                        <span className="text-sm text-gray-600">Tỷ lệ phê duyệt</span>
+                        <span className="text-lg font-bold text-medical-blue">
+                          {metrics.totalSubmissions > 0 
+                            ? Math.round((metrics.approvedThisMonth / metrics.totalSubmissions) * 100)
+                            : 0}%
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-green-50/50">
+                        <span className="text-sm text-gray-600">Trung bình/người</span>
+                        <span className="text-lg font-bold text-medical-green">
+                          {metrics.activePractitioners > 0
+                            ? (metrics.totalCreditsAwarded / metrics.activePractitioners).toFixed(1)
+                            : 0}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-green-50/50">
-                    <span className="text-sm text-gray-600">Trung bình/người</span>
-                    <span className="text-lg font-bold text-medical-green">
-                      {metrics.activePractitioners > 0
-                        ? (metrics.totalCreditsAwarded / metrics.activePractitioners).toFixed(1)
-                        : 0}
-                    </span>
-                  </div>
-                </div>
-              </div>
+                </>
+              )}
             </div>
           )}
         </GlassCard>
 
         {/* Multi-Unit Comparison */}
-        <GlassCard className="p-6">
+        <GlassCard className="p-6" aria-busy={unitsLoading || undefined}>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-blue-100/50">
                 <Building2 className="w-5 h-5 text-medical-blue" />
               </div>
               <h2 className="text-xl font-bold text-gray-800">So sánh đơn vị</h2>
-              {units.length > 0 && (
+              {!unitsLoading && !unitsError && units.length > 0 && (
                 <span className="px-3 py-1 rounded-full bg-medical-blue/20 text-medical-blue text-sm font-semibold">
                   {units.length} đơn vị
                 </span>
@@ -389,10 +453,13 @@ export function DohDashboard({ userId }: DohDashboardProps) {
               </div>
 
               {/* Units Grid */}
-              {loading ? (
-                <div className="text-center py-12">
-                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-medical-blue"></div>
-                  <p className="mt-2 text-gray-600">Đang tải dữ liệu...</p>
+              {unitsError ? (
+                <DashboardErrorPanel message={unitsError} />
+              ) : unitsLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <DashboardCardSkeleton key={index} lines={4} />
+                  ))}
                 </div>
               ) : units.length === 0 ? (
                 <div className="text-center py-12">

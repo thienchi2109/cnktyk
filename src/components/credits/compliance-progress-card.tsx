@@ -8,6 +8,7 @@
 import { GlassCard } from '@/components/ui/glass-card';
 import { GlassCircularProgress } from '@/components/ui/glass-circular-progress';
 import { Calendar, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
+import { DashboardCardSkeleton } from '@/components/dashboard/dashboard-skeletons';
 import type { ComplianceCycle } from '@/hooks/use-credit-cycle';
 
 interface ComplianceProgressCardProps {
@@ -18,9 +19,9 @@ interface ComplianceProgressCardProps {
 export function ComplianceProgressCard({ cycle, loading }: ComplianceProgressCardProps) {
   if (loading) {
     return (
-      <GlassCard className="p-6 animate-pulse">
-        <div className="h-48 bg-white/20 rounded-lg"></div>
-      </GlassCard>
+      <div aria-busy="true">
+        <DashboardCardSkeleton />
+      </div>
     );
   }
 
