@@ -22,8 +22,18 @@ export class DatabaseClient {
   ): Promise<T[]> {
     try {
       // Use the .query method for parameterized queries
-      const result = await this.sql.query(text, params);
-      return result as T[];
+      const result = await (this.sql as any).query(text, params) as { rows?: T[] };
+      if (result && Array.isArray(result.rows)) {
+        return result.rows;
+      }
+
+      // Some neon helpers may return the rows array directly; handle that as a fallback.
+      if (Array.isArray(result)) {
+        return result as T[];
+      }
+
+      console.error('Unexpected query result shape:', result);
+      throw new Error('Unexpected database response format');
     } catch (error) {
       console.error('Database query error:', error);
       throw new Error(`Query failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
