@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
     await requireRole(['SoYTe', 'DonVi']);
 
     if (session.user.role === 'DonVi' && !isDonViAccountManagementEnabled()) {
+      // Feature flag: prevent DonVi administrators from listing users when disabled
       return NextResponse.json(
         {
           error: 'DONVI_ACCOUNT_MANAGEMENT_DISABLED',
@@ -95,6 +96,7 @@ export async function POST(request: NextRequest) {
     await requireRole(['SoYTe', 'DonVi']);
 
     if (session.user.role === 'DonVi' && !isDonViAccountManagementEnabled()) {
+      // Feature flag: prevent DonVi administrators from mutating users when disabled
       return NextResponse.json(
         {
           error: 'DONVI_ACCOUNT_MANAGEMENT_DISABLED',

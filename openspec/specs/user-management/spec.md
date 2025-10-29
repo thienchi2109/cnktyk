@@ -1,5 +1,8 @@
-## ADDED Requirements
+# user-management Specification
 
+## Purpose
+Defines behavioral requirements for user management functionality, including role-based access control and the DonVi (Unit Admin) account management feature flag.
+## Requirements
 ### Requirement: Feature Flag Control for DonVi Account Management
 The system SHALL provide a feature flag mechanism to enable or disable account management functionality for DonVi (Unit Admin) role users without requiring code changes.
 
@@ -46,8 +49,6 @@ The system SHALL display clear, user-friendly messages when DonVi users attempt 
 - **WHEN** the disabled feature message is displayed
 - **THEN** the message SHALL direct users to contact Department of Health for assistance
 - **AND** the message SHALL convey that the restriction is temporary
-
-## MODIFIED Requirements
 
 ### Requirement: Role-Based Access Control for User Management
 The system SHALL enforce role-based access control for user management functionality, with SoYTe having full access and DonVi access controlled by feature flag configuration.

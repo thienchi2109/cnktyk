@@ -18,6 +18,7 @@ export async function GET(
     const { id: userId } = await params;
 
     if (session.user.role === 'DonVi' && !isDonViAccountManagementEnabled()) {
+      // Feature flag: block DonVi administrators from reading user details when disabled
       return NextResponse.json(
         {
           error: 'DONVI_ACCOUNT_MANAGEMENT_DISABLED',
@@ -75,6 +76,7 @@ export async function PUT(
     const body = await request.json();
 
     if (session.user.role === 'DonVi' && !isDonViAccountManagementEnabled()) {
+      // Feature flag: block DonVi administrators from updating user accounts when disabled
       return NextResponse.json(
         {
           error: 'DONVI_ACCOUNT_MANAGEMENT_DISABLED',
@@ -255,6 +257,7 @@ export async function DELETE(
     const { id: userId } = await params;
 
     if (session.user.role === 'DonVi' && !isDonViAccountManagementEnabled()) {
+      // Feature flag: block DonVi administrators from deleting user accounts when disabled
       return NextResponse.json(
         {
           error: 'DONVI_ACCOUNT_MANAGEMENT_DISABLED',
