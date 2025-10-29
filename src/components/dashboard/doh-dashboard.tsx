@@ -22,10 +22,10 @@ import { useIsDesktop } from '@/hooks/use-media-query';
 import { useDebounce } from '@/hooks/use-debounce';
 import {
   DashboardCardSkeleton,
-  DashboardKpiSkeleton,
   DashboardErrorCard,
   DashboardErrorPanel,
 } from '@/components/dashboard/dashboard-skeletons';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface SystemMetrics {
   totalUnits: number;
@@ -216,11 +216,7 @@ export function DohDashboard({ userId }: DohDashboardProps) {
             className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4"
             aria-busy={metricsLoading || undefined}
           >
-            {metricsLoading ? (
-              Array.from({ length: 5 }).map((_, index) => (
-                <DashboardKpiSkeleton key={index} />
-              ))
-            ) : metricsError ? (
+            {metricsError ? (
               <DashboardErrorCard
                 message={metricsError}
                 className="col-span-full"
@@ -234,8 +230,16 @@ export function DohDashboard({ userId }: DohDashboardProps) {
                     </div>
                     <span className="text-sm text-gray-600">Đơn vị</span>
                   </div>
-                  <p className="text-3xl font-bold text-medical-blue">{metrics.totalUnits}</p>
-                  <p className="text-xs text-gray-500 mt-1">Đang hoạt động</p>
+                  {metricsLoading ? (
+                    <Skeleton className="h-8 w-20 rounded-lg bg-white/40" aria-hidden />
+                  ) : (
+                    <p className="text-3xl font-bold text-medical-blue">{metrics.totalUnits}</p>
+                  )}
+                  {metricsLoading ? (
+                    <Skeleton className="h-3 w-24 mt-2 bg-white/20" aria-hidden />
+                  ) : (
+                    <p className="text-xs text-gray-500 mt-1">Đang hoạt động</p>
+                  )}
                 </GlassCard>
 
                 <GlassCard className="p-4">
@@ -245,8 +249,16 @@ export function DohDashboard({ userId }: DohDashboardProps) {
                     </div>
                     <span className="text-sm text-gray-600">Người hành nghề</span>
                   </div>
-                  <p className="text-3xl font-bold text-medical-blue">{metrics.activePractitioners}</p>
-                  <p className="text-xs text-gray-500 mt-1">Đang làm việc</p>
+                  {metricsLoading ? (
+                    <Skeleton className="h-8 w-24 rounded-lg bg-white/40" aria-hidden />
+                  ) : (
+                    <p className="text-3xl font-bold text-medical-blue">{metrics.activePractitioners}</p>
+                  )}
+                  {metricsLoading ? (
+                    <Skeleton className="h-3 w-28 mt-2 bg-white/20" aria-hidden />
+                  ) : (
+                    <p className="text-xs text-gray-500 mt-1">Đang làm việc</p>
+                  )}
                 </GlassCard>
 
                 <GlassCard className="p-4">
@@ -256,8 +268,16 @@ export function DohDashboard({ userId }: DohDashboardProps) {
                     </div>
                     <span className="text-sm text-gray-600">Tuân thủ</span>
                   </div>
-                  <p className="text-3xl font-bold text-medical-green">{metrics.complianceRate}%</p>
-                  <p className="text-xs text-gray-500 mt-1">Tỷ lệ hoàn thành</p>
+                  {metricsLoading ? (
+                    <Skeleton className="h-8 w-24 rounded-lg bg-white/40" aria-hidden />
+                  ) : (
+                    <p className="text-3xl font-bold text-medical-green">{metrics.complianceRate}%</p>
+                  )}
+                  {metricsLoading ? (
+                    <Skeleton className="h-3 w-28 mt-2 bg-white/20" aria-hidden />
+                  ) : (
+                    <p className="text-xs text-gray-500 mt-1">Tỷ lệ hoàn thành</p>
+                  )}
                 </GlassCard>
 
                 <GlassCard className="p-4">
@@ -267,8 +287,16 @@ export function DohDashboard({ userId }: DohDashboardProps) {
                     </div>
                     <span className="text-sm text-gray-600">Chờ duyệt</span>
                   </div>
-                  <p className="text-3xl font-bold text-medical-amber">{metrics.pendingApprovals}</p>
-                  <p className="text-xs text-gray-500 mt-1">Hoạt động</p>
+                  {metricsLoading ? (
+                    <Skeleton className="h-8 w-24 rounded-lg bg-white/40" aria-hidden />
+                  ) : (
+                    <p className="text-3xl font-bold text-medical-amber">{metrics.pendingApprovals}</p>
+                  )}
+                  {metricsLoading ? (
+                    <Skeleton className="h-3 w-24 mt-2 bg-white/20" aria-hidden />
+                  ) : (
+                    <p className="text-xs text-gray-500 mt-1">Hoạt động</p>
+                  )}
                 </GlassCard>
 
                 <GlassCard className="p-4">
@@ -278,8 +306,16 @@ export function DohDashboard({ userId }: DohDashboardProps) {
                     </div>
                     <span className="text-sm text-gray-600">Rủi ro</span>
                   </div>
-                  <p className="text-3xl font-bold text-medical-red">{metrics.atRiskPractitioners}</p>
-                  <p className="text-xs text-gray-500 mt-1">Cần theo dõi</p>
+                  {metricsLoading ? (
+                    <Skeleton className="h-8 w-24 rounded-lg bg-white/40" aria-hidden />
+                  ) : (
+                    <p className="text-3xl font-bold text-medical-red">{metrics.atRiskPractitioners}</p>
+                  )}
+                  {metricsLoading ? (
+                    <Skeleton className="h-3 w-24 mt-2 bg-white/20" aria-hidden />
+                  ) : (
+                    <p className="text-xs text-gray-500 mt-1">Cần theo dõi</p>
+                  )}
                 </GlassCard>
               </>
             )}
