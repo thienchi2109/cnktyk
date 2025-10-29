@@ -76,8 +76,39 @@ export function PractitionerDashboard({ userId }: PractitionerDashboardProps) {
             setPractitionerId(practitioner.practitionerId);
           }
           
-          // Set cycle data
-          setCycle(cycleData);
+          // Set cycle data (normalize API -> UI model to avoid NaN/Invalid Date)
+          if (cycleData) {
+            const toNumber = (v: unknown, fb = 0) => {
+              const n = Number(v);
+              return Number.isFinite(n) ? n : fb;
+            };
+            const start = cycleData.startDate ? new Date(cycleData.startDate) : null;
+            const end = cycleData.endDate ? new Date(cycleData.endDate) : null;
+            const required = toNumber(cycleData.requiredCredits, 0);
+            const earned = toNumber(cycleData.earnedCredits, 0);
+            const percentRaw = toNumber(cycleData.compliancePercent, required > 0 ? (earned / required) * 100 : 0);
+            const percent = Number.isFinite(percentRaw) ? Math.min(Math.max(percentRaw, 0), 100) : 0;
+            const daysLeft = end ? Math.max(0, Math.ceil((end.getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0;
+            const statusMap: Record<string, 'DangThucHien' | 'HoanThanh' | 'QuaHan' | 'SapHetHan'> = {
+              DangDienRa: 'DangThucHien',
+              HoanThanh: 'HoanThanh',
+              QuaHan: 'QuaHan',
+              SapHetHan: 'SapHetHan',
+            };
+
+            setCycle({
+              MaNhanVien: practitioner?.practitionerId ?? '',
+              NgayBatDau: start ? start.toISOString() : '',
+              NgayKetThuc: end ? end.toISOString() : '',
+              TongTinChiYeuCau: required,
+              TongTinChiDatDuoc: earned,
+              TyLeHoanThanh: percent,
+              TrangThai: statusMap[cycleData.status as string] ?? 'DangThucHien',
+              SoNgayConLai: daysLeft,
+            });
+          } else {
+            setCycle(null);
+          }
           
           // Set activities
           if (activities && Array.isArray(activities)) {

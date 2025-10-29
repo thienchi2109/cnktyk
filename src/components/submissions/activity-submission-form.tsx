@@ -54,6 +54,8 @@ interface ActivitySubmissionFormProps {
   onCancel?: () => void;
   redirectOnSuccess?: boolean;
   variant?: 'sheet' | 'page';
+  // When user is a practitioner, prefill their practitioner id to satisfy validation
+  initialPractitionerId?: string;
 }
 
 const submissionSchema = z.object({
@@ -87,6 +89,7 @@ export function ActivitySubmissionForm({
   onSubmit, 
   onCancel,
   redirectOnSuccess = true,
+  initialPractitionerId,
 }: ActivitySubmissionFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -113,6 +116,13 @@ export function ActivitySubmissionForm({
   });
 
   const watchedValues = watch();
+
+  // Prefill practitioner id for practitioner role
+  useEffect(() => {
+    if (userRole === 'NguoiHanhNghe' && initialPractitionerId) {
+      setValue('MaNhanVien', initialPractitionerId);
+    }
+  }, [userRole, initialPractitionerId, setValue]);
 
   // Load activity catalog via React Query
   useEffect(() => {
