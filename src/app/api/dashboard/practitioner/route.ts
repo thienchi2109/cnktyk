@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
     const dashboardData: any = await db.query(
       `WITH 
       -- CTE 1: Practitioner basic info
+      -- Link account to practitioner by matching Email with TenDangNhap
       practitioner_info AS (
         SELECT 
           nv."MaNhanVien",
@@ -41,15 +42,11 @@ export async function GET(request: NextRequest) {
           nv."ChucDanh",
           nv."MaDonVi",
           dv."TenDonVi"
-        FROM "NhanVien" nv
+        FROM "TaiKhoan" tk
+        INNER JOIN "NhanVien" nv ON LOWER(nv."Email") = LOWER(tk."TenDangNhap")
         LEFT JOIN "DonVi" dv ON nv."MaDonVi" = dv."MaDonVi"
-        LEFT JOIN "TaiKhoan" tk ON tk."MaTaiKhoan" = $1
-        WHERE nv."MaNhanVien" = (
-          SELECT "MaNhanVien" FROM "NhanVien" 
-          WHERE "MaNhanVien" = $1 
-          OR "Email" = (SELECT "TenDangNhap" FROM "TaiKhoan" WHERE "MaTaiKhoan" = $1)
-          LIMIT 1
-        )
+        WHERE tk."MaTaiKhoan" = $1
+        LIMIT 1
       ),
       -- CTE 2: Active credit cycle
       active_cycle AS (
@@ -162,11 +159,36 @@ export async function GET(request: NextRequest) {
     // Parse the result
     const result = dashboardData[0] || {};
     
+    // Check if practitioner exists (authorization check)
+    if (!result.practitioner || !result.practitioner.practitionerId) {
+      const totalDuration = timer();
+      perfMonitor.log({
+        endpoint: '/api/dashboard/practitioner',
+        method: 'GET',
+        duration: totalDuration,
+        timestamp: new Date(),
+        status: 404,
+        metadata: { 
+          error: 'Practitioner not found or account not linked',
+          accountId: session.user.id
+        }
+      });
+      
+      return NextResponse.json(
+        { 
+          success: false,
+          error: "Practitioner not found",
+          message: "No practitioner record linked to this account. Please ensure your Email in NhanVien matches your account username (TenDangNhap)."
+        },
+        { status: 404 }
+      );
+    }
+    
     // Handle null arrays
     const response = {
       success: true,
       data: {
-        practitioner: result.practitioner || null,
+        practitioner: result.practitioner,
         cycle: result.cycle || null,
         activities: result.activities || [],
         notifications: result.notifications || [],
