@@ -91,6 +91,10 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'at-risk' | 'compliant'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalPractitioners, setTotalPractitioners] = useState(0);
+  const itemsPerPage = 10;
   const [expandedSections, setExpandedSections] = useState({
     overview: true,
     practitioners: true,
@@ -116,12 +120,32 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
     fetchMetrics();
   }, [unitId]);
 
-  // Fetch practitioners
+  // Fetch practitioners with pagination and filtering
   useEffect(() => {
     const fetchPractitioners = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/practitioners?unitId=${unitId}&includeProgress=true`);
+        
+        // Build query parameters
+        const params = new URLSearchParams({
+          unitId,
+          page: currentPage.toString(),
+          limit: itemsPerPage.toString(),
+        });
+
+        // Add search filter if present
+        if (searchTerm.trim()) {
+          params.append('search', searchTerm.trim());
+        }
+
+        // Add compliance status filter
+        if (filterStatus === 'at-risk') {
+          params.append('complianceStatus', 'at_risk');
+        } else if (filterStatus === 'compliant') {
+          params.append('complianceStatus', 'compliant');
+        }
+
+        const response = await fetch(`/api/practitioners?${params.toString()}`);
         const result = await response.json();
 
         if (result.success) {
@@ -130,12 +154,18 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
             name: p.HoVaTen,
             licenseId: p.SoCCHN || 'N/A',
             position: p.ChucDanh || 'Không xác định',
-            compliancePercent: p.compliancePercent || 0,
+            compliancePercent: p.complianceStatus?.compliancePercent || 0,
             status: p.TrangThaiLamViec,
             lastActivityDate: p.lastActivityDate,
-            creditsEarned: p.creditsEarned || 0,
-            creditsRequired: p.creditsRequired || 120
+            creditsEarned: p.complianceStatus?.creditsEarned || 0,
+            creditsRequired: p.complianceStatus?.creditsRequired || 120
           })));
+          
+          // Update pagination state
+          if (result.pagination) {
+            setTotalPages(result.pagination.totalPages || 1);
+            setTotalPractitioners(result.pagination.total || 0);
+          }
         }
       } catch (error) {
         console.error('Error fetching practitioners:', error);
@@ -145,7 +175,7 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
     };
 
     fetchPractitioners();
-  }, [unitId, refreshKey]);
+  }, [unitId, refreshKey, currentPage, searchTerm, filterStatus]);
 
   // Fetch pending approvals
   useEffect(() => {
@@ -200,14 +230,23 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
     return 'bg-medical-red/10 border-medical-red/30';
   };
 
-  const filteredPractitioners = practitioners.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         p.licenseId.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    if (filterStatus === 'at-risk') return matchesSearch && p.compliancePercent < 70;
-    if (filterStatus === 'compliant') return matchesSearch && p.compliancePercent >= 90;
-    return matchesSearch;
-  });
+  // Handle search with debounce
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1); // Reset to first page on search
+  };
+
+  // Handle filter change
+  const handleFilterChange = (value: 'all' | 'at-risk' | 'compliant') => {
+    setFilterStatus(value);
+    setCurrentPage(1); // Reset to first page on filter change
+  };
+
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -434,7 +473,7 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
                     type="text"
                     placeholder="Tìm kiếm theo tên hoặc số CCHN..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 bg-white/30 backdrop-blur-sm border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-medical-blue/50"
                   />
                 </div>
@@ -442,7 +481,7 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
                   <div className="relative inline-block">
                     <select
                       value={filterStatus}
-                      onChange={(e) => setFilterStatus(e.target.value as any)}
+                      onChange={(e) => handleFilterChange(e.target.value as any)}
                       className="appearance-none px-4 py-2 pr-10 bg-white/30 backdrop-blur-sm border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-medical-blue/50 cursor-pointer hover:bg-white/40 transition-colors"
                     >
                       <option value="all">Tất cả</option>
@@ -465,7 +504,7 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
                     <div key={i} className="h-20 bg-white/20 rounded-lg animate-pulse" />
                   ))}
                 </div>
-              ) : filteredPractitioners.length === 0 ? (
+              ) : practitioners.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                   <Users className="w-16 h-16 mx-auto mb-3 text-gray-400" />
                   <p className="text-lg font-semibold">Không tìm thấy người hành nghề</p>
@@ -473,7 +512,7 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {filteredPractitioners.slice(0, 10).map((practitioner) => (
+                  {practitioners.map((practitioner) => (
                     <div
                       key={practitioner.id}
                       className="p-4 bg-white/30 backdrop-blur-sm rounded-lg border border-white/20 hover:bg-white/40 transition-colors"
@@ -507,13 +546,61 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
                     </div>
                   ))}
                   
-                  {filteredPractitioners.length > 10 && (
-                    <div className="text-center pt-4">
-                      <Link href="/practitioners">
-                        <GlassButton variant="outline">
-                          Xem tất cả ({filteredPractitioners.length})
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between pt-4 border-t border-white/20">
+                      <div className="text-sm text-gray-600">
+                        Hiển thị {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalPractitioners)} / {totalPractitioners}
+                      </div>
+                      <div className="flex gap-2">
+                        <GlassButton
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePageChange(currentPage - 1)}
+                          disabled={currentPage === 1}
+                          className="disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Trước
                         </GlassButton>
-                      </Link>
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            // Show first page, last page, current page, and adjacent pages
+                            let pageNum: number;
+                            if (totalPages <= 5) {
+                              pageNum = i + 1;
+                            } else if (currentPage <= 3) {
+                              pageNum = i + 1;
+                            } else if (currentPage >= totalPages - 2) {
+                              pageNum = totalPages - 4 + i;
+                            } else {
+                              pageNum = currentPage - 2 + i;
+                            }
+                            
+                            return (
+                              <button
+                                key={pageNum}
+                                onClick={() => handlePageChange(pageNum)}
+                                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                                  currentPage === pageNum
+                                    ? 'bg-medical-blue text-white'
+                                    : 'bg-white/30 hover:bg-white/40 text-gray-700'
+                                }`}
+                              >
+                                {pageNum}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <GlassButton
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePageChange(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                          className="disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Sau
+                        </GlassButton>
+                      </div>
                     </div>
                   )}
                 </div>

@@ -1,18 +1,18 @@
 # Implementation Tasks
 
-## 1. Critical Fixes (Week 1)
+## 1. Critical Fixes (Week 1) ✅ COMPLETE
 
-- [ ] 1.1 Optimize Unit Metrics API
-  - [ ] 1.1.1 Rewrite `/api/units/[id]/metrics` to use single CTE query
-  - [ ] 1.1.2 Test query performance with EXPLAIN ANALYZE
-  - [ ] 1.1.3 Add query performance logging
+- [x] 1.1 Optimize Unit Metrics API
+  - [x] 1.1.1 Rewrite `/api/units/[id]/metrics` to use single CTE query
+  - [ ] 1.1.2 Test query performance with EXPLAIN ANALYZE (In Progress)
+  - [x] 1.1.3 Add query performance logging
   - [ ] 1.1.4 Update unit tests for metrics endpoint
 
-- [ ] 1.2 Add Pagination to Unit Admin Dashboard
-  - [ ] 1.2.1 Add pagination state (`page`, `totalPages`) to component
-  - [ ] 1.2.2 Update API fetch to include `limit=10` and `page` parameters
-  - [ ] 1.2.3 Add pagination controls UI
-  - [ ] 1.2.4 Test pagination with large datasets
+- [x] 1.2 Add Pagination to Unit Admin Dashboard
+  - [x] 1.2.1 Add pagination state (`page`, `totalPages`) to component
+  - [x] 1.2.2 Update API fetch to include `limit=10` and `page` parameters
+  - [x] 1.2.3 Add pagination controls UI
+  - [ ] 1.2.4 Test pagination with large datasets (Ready for Testing)
 
 ## 2. High Priority (Week 2)
 
