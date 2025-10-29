@@ -1,6 +1,7 @@
 import { NextAuthConfig } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { authenticateUser } from "@/lib/db/utils";
+import { isDonViAccountManagementEnabled } from "@/lib/features/flags";
 import { LoginSchema } from "@/lib/db/schemas";
 
 // Extend the JWT type to include our custom fields
@@ -22,6 +23,9 @@ declare module "next-auth" {
       username: string;
       role: "SoYTe" | "DonVi" | "NguoiHanhNghe" | "Auditor";
       unitId?: string;
+    };
+    featureFlags: {
+      donViAccountManagementEnabled: boolean;
     };
   }
 
@@ -140,6 +144,10 @@ export const authConfig: NextAuthConfig = {
         (session.user as any).role = token.role;
         (session.user as any).unitId = token.unitId;
       }
+
+      session.featureFlags = {
+        donViAccountManagementEnabled: isDonViAccountManagementEnabled(),
+      };
 
       console.log("[AUTH] Session callback - returning valid session");
       return session;

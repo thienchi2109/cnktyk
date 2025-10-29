@@ -21,6 +21,7 @@ import {
 import { GlassHeader } from "./glass-header";
 import { GlassFooter } from "./glass-footer";
 import { GlassButton } from "@/components/ui/glass-button";
+import { DonViAccountDisabledMessage } from "@/components/users/donvi-account-disabled-message";
 import { cn } from "@/lib/utils/cn";
 
 interface NavigationItem {
@@ -45,12 +46,21 @@ interface ResponsiveNavigationProps {
   onNavigate?: (item: NavigationItem) => void;
   className?: string;
   submissionPendingCount?: number; // dynamic submissions badge for DonVi
+  featureFlags?: FeatureFlags;
 }
 
 type NavCounts = { submissionsPending?: number };
 
+type FeatureFlags = {
+  donViAccountManagementEnabled?: boolean;
+};
+
 // Navigation items based on user roles
-const getNavigationItems = (userRole?: string, counts: NavCounts = {}): NavigationItem[] => {
+const getNavigationItems = (
+  userRole?: string,
+  counts: NavCounts = {},
+  flags: FeatureFlags = {},
+): NavigationItem[] => {
   const baseItems: NavigationItem[] = [
     {
       id: 'dashboard',
@@ -94,7 +104,7 @@ const getNavigationItems = (userRole?: string, counts: NavCounts = {}): Navigati
   // Unit Administrator items
   if (userRole === 'DonVi') {
     const pending = counts.submissionsPending || 0;
-    return [
+    const items: NavigationItem[] = [
       ...baseItems,
       {
         id: 'practitioners',
@@ -115,19 +125,25 @@ const getNavigationItems = (userRole?: string, counts: NavCounts = {}): Navigati
         icon: <BarChart3 className="h-4 w-4" />,
         href: '/reports'
       },
-      {
+    ];
+
+    if (flags.donViAccountManagementEnabled !== false) {
+      items.push({
         id: 'user-management',
         label: 'Người dùng',
         icon: <Users className="h-4 w-4" />,
         href: '/users'
-      },
-      {
-        id: 'notifications',
-        label: 'Thông báo',
-        icon: <Bell className="h-4 w-4" />,
-        href: '/notifications'
-      }
-    ];
+      });
+    }
+
+    items.push({
+      id: 'notifications',
+      label: 'Thông báo',
+      icon: <Bell className="h-4 w-4" />,
+      href: '/notifications'
+    });
+
+    return items;
   }
 
   // Department of Health items
@@ -361,8 +377,8 @@ const FooterNavigation = ({
   const footerItems = flatItems.slice(0, 5);
 
   return (
-    <nav className="xl:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-md bg-white/95 border-t border-slate-200 shadow-lg">
-      <div className="flex items-center justify-around px-2 py-2">
+    <nav className="xl:hidden fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md bg-white/95 border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] safe-area-inset-bottom">
+      <div className="flex items-center justify-around px-2 py-2 pb-safe">
         {footerItems.map((item) => {
           const isActive = activeItem === item.id;
           
@@ -395,10 +411,40 @@ const FooterNavigation = ({
 };
 
 export const ResponsiveNavigation = React.forwardRef<HTMLDivElement, ResponsiveNavigationProps>(
-  ({ children, user, notifications = 0, activeItem, onNavigate, className, submissionPendingCount }, ref) => {
+  (
+    {
+      children,
+      user,
+      notifications = 0,
+      activeItem,
+      onNavigate,
+      className,
+      submissionPendingCount,
+      featureFlags,
+    },
+    ref,
+  ) => {
     const router = useRouter();
     const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
-    const navigationItems = getNavigationItems(user?.role, { submissionsPending: submissionPendingCount });
+
+    const donViAccountManagementEnabled =
+      featureFlags?.donViAccountManagementEnabled !== false;
+
+    const navCounts = React.useMemo(
+      () => ({ submissionsPending: submissionPendingCount }),
+      [submissionPendingCount],
+    );
+
+    const navigationItems = React.useMemo(
+      () =>
+        getNavigationItems(user?.role, navCounts, {
+          donViAccountManagementEnabled,
+        }),
+      [user?.role, navCounts, donViAccountManagementEnabled],
+    );
+
+    const showDonViDisabledNotice =
+      user?.role === 'DonVi' && !donViAccountManagementEnabled;
 
     const handleItemClick = (item: NavigationItem) => {
       setMobileMenuOpen(false);
@@ -522,6 +568,11 @@ export const ResponsiveNavigation = React.forwardRef<HTMLDivElement, ResponsiveN
           "xl:pb-4", // Normal padding on desktop
           "pb-20" // Extra padding on mobile/tablet for footer nav
         )}>
+          {showDonViDisabledNotice && (
+            <div className="mb-4">
+              <DonViAccountDisabledMessage />
+            </div>
+          )}
           {children}
         </main>
 

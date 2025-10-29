@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, requireRole } from '@/lib/auth/server';
 import { taiKhoanRepo, donViRepo } from '@/lib/db/repositories';
 import { CreateTaiKhoanSchema } from '@/lib/db/schemas';
+import { 
+  isDonViAccountManagementEnabled,
+  DONVI_ACCOUNT_MANAGEMENT_DISABLED_MESSAGE,
+} from '@/lib/features/flags';
 import { z } from 'zod';
 
 // GET /api/users - List users (admin only)
@@ -9,6 +13,17 @@ export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth();
     await requireRole(['SoYTe', 'DonVi']);
+
+    if (session.user.role === 'DonVi' && !isDonViAccountManagementEnabled()) {
+      // Feature flag: prevent DonVi administrators from listing users when disabled
+      return NextResponse.json(
+        {
+          error: 'DONVI_ACCOUNT_MANAGEMENT_DISABLED',
+          message: DONVI_ACCOUNT_MANAGEMENT_DISABLED_MESSAGE,
+        },
+        { status: 403 },
+      );
+    }
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
@@ -79,6 +94,17 @@ export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth();
     await requireRole(['SoYTe', 'DonVi']);
+
+    if (session.user.role === 'DonVi' && !isDonViAccountManagementEnabled()) {
+      // Feature flag: prevent DonVi administrators from mutating users when disabled
+      return NextResponse.json(
+        {
+          error: 'DONVI_ACCOUNT_MANAGEMENT_DISABLED',
+          message: DONVI_ACCOUNT_MANAGEMENT_DISABLED_MESSAGE,
+        },
+        { status: 403 },
+      );
+    }
 
     const body = await request.json();
     

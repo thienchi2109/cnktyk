@@ -88,6 +88,17 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) to see the application.
 
+### Feature Flags
+
+- `ENABLE_DONVI_ACCOUNT_MANAGEMENT` (default: `false`): Controls whether DonVi (Unit Admin) users can access the account management UI, API, and related navigation. When disabled, DonVi users see a bilingual notice explaining the temporary restriction while SoYTe retains full access.
+- Additional feature flags are documented in `.env.example` and `.env.production.template`.
+
+#### Re-enabling DonVi Account Management
+
+1. Set `ENABLE_DONVI_ACCOUNT_MANAGEMENT=true` in the relevant environment (`.env.local`, deployment dashboard, or secrets manager).
+2. Redeploy or restart the application so the middleware, API routes, and UI layers pick up the new value.
+3. Verify the **Người dùng** navigation link reappears for DonVi users and the disabled feature notice disappears.
+
 ## Design System
 
 The platform uses a custom glassmorphism design system with healthcare-focused colors:
