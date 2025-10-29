@@ -14,6 +14,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Get query parameters for filtering and sorting
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get('search')?.toLowerCase() || '';
+    const sortBy = searchParams.get('sortBy') || 'name'; // name, compliance, practitioners
+    const sortOrder = searchParams.get('sortOrder') || 'asc'; // asc, desc
+
     // Get performance metrics for all units (excluding SoYTe admin units)
     const unitsResult = await db.query(`
       SELECT 
@@ -48,11 +54,13 @@ export async function GET(request: NextRequest) {
       LEFT JOIN "GhiNhanHoatDong" g ON nv."MaNhanVien" = g."MaNhanVien"
       WHERE dv."TrangThai" = 'HoatDong'
         AND dv."CapQuanLy" != 'SoYTe'
+        ${search ? `AND LOWER(dv."TenDonVi") LIKE '%${search}%'` : ''}
       GROUP BY dv."MaDonVi", dv."TenDonVi", dv."CapQuanLy"
-      ORDER BY dv."TenDonVi"
     `);
 
-    const units = unitsResult.map((row: any) => {
+    // Parse and calculate metrics
+    let units = unitsResult.map((row: any) => {
+
       const active = parseInt(row.active_practitioners || '0');
       const compliant = parseInt(row.compliant_practitioners || '0');
       const complianceRate = active > 0 ? Math.round((compliant / active) * 100) : 0;
@@ -68,6 +76,27 @@ export async function GET(request: NextRequest) {
         pendingApprovals: parseInt(row.pending_approvals || '0'),
         totalCredits: parseFloat(row.total_credits || '0')
       };
+    });
+
+    // Apply server-side sorting
+    units.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'name':
+          comparison = a.name.localeCompare(b.name);
+          break;
+        case 'compliance':
+          comparison = a.complianceRate - b.complianceRate;
+          break;
+        case 'practitioners':
+          comparison = a.activePractitioners - b.activePractitioners;
+          break;
+        default:
+          comparison = a.name.localeCompare(b.name);
+      }
+      
+      return sortOrder === 'desc' ? -comparison : comparison;
     });
 
     return NextResponse.json({

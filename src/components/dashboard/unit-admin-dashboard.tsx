@@ -8,6 +8,7 @@
 
 import { useState, useEffect } from 'react';
 import { useIsDesktop } from '@/hooks/use-media-query';
+import { useDebounce } from '@/hooks/use-debounce';
 import { GlassCard } from '@/components/ui/glass-card';
 import { GlassButton } from '@/components/ui/glass-button';
 import { Button } from '@/components/ui/button';
@@ -90,6 +91,7 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
   const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300); // Debounce search for 300ms
   const [filterStatus, setFilterStatus] = useState<'all' | 'at-risk' | 'compliant'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -133,9 +135,9 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
           limit: itemsPerPage.toString(),
         });
 
-        // Add search filter if present
-        if (searchTerm.trim()) {
-          params.append('search', searchTerm.trim());
+        // Add search filter if present (using debounced value)
+        if (debouncedSearchTerm.trim()) {
+          params.append('search', debouncedSearchTerm.trim());
         }
 
         // Add compliance status filter
@@ -175,7 +177,7 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
     };
 
     fetchPractitioners();
-  }, [unitId, refreshKey, currentPage, searchTerm, filterStatus]);
+  }, [unitId, refreshKey, currentPage, debouncedSearchTerm, filterStatus]);
 
   // Fetch pending approvals
   useEffect(() => {

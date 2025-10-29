@@ -19,6 +19,7 @@ import {
   Activity
 } from 'lucide-react';
 import { useIsDesktop } from '@/hooks/use-media-query';
+import { useDebounce } from '@/hooks/use-debounce';
 
 interface SystemMetrics {
   totalUnits: number;
@@ -74,7 +75,9 @@ export function DohDashboard({ userId }: DohDashboardProps) {
   const [units, setUnits] = useState<UnitPerformance[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [sortBy, setSortBy] = useState<'name' | 'compliance' | 'practitioners'>('compliance');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [expandedSections, setExpandedSections] = useState({
     overview: true,
     units: true,
@@ -100,12 +103,21 @@ export function DohDashboard({ userId }: DohDashboardProps) {
     fetchMetrics();
   }, []);
 
-  // Fetch units performance
+  // Fetch units performance with server-side filtering and sorting
   useEffect(() => {
     const fetchUnits = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/system/units-performance');
+        
+        // Build query parameters
+        const params = new URLSearchParams();
+        if (debouncedSearchTerm.trim()) {
+          params.append('search', debouncedSearchTerm.trim());
+        }
+        params.append('sortBy', sortBy);
+        params.append('sortOrder', sortOrder);
+        
+        const response = await fetch(`/api/system/units-performance?${params.toString()}`);
         const result = await response.json();
 
         if (result.success) {
@@ -119,7 +131,7 @@ export function DohDashboard({ userId }: DohDashboardProps) {
     };
 
     fetchUnits();
-  }, []);
+  }, [debouncedSearchTerm, sortBy, sortOrder]);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections(prev => ({
@@ -140,22 +152,7 @@ export function DohDashboard({ userId }: DohDashboardProps) {
     return 'bg-medical-red/10 border-medical-red/30';
   };
 
-  const sortedUnits = [...units].sort((a, b) => {
-    switch (sortBy) {
-      case 'name':
-        return a.name.localeCompare(b.name);
-      case 'compliance':
-        return b.complianceRate - a.complianceRate;
-      case 'practitioners':
-        return b.activePractitioners - a.activePractitioners;
-      default:
-        return 0;
-    }
-  });
-
-  const filteredUnits = sortedUnits.filter(u =>
-    u.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // No need for client-side sorting and filtering - now handled by server
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -380,6 +377,14 @@ export function DohDashboard({ userId }: DohDashboardProps) {
                   >
                     Số lượng
                   </GlassButton>
+                  <GlassButton
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                    title={sortOrder === 'asc' ? 'Tăng dần' : 'Giảm dần'}
+                  >
+                    {sortOrder === 'asc' ? '↑' : '↓'}
+                  </GlassButton>
                 </div>
               </div>
 
@@ -389,14 +394,14 @@ export function DohDashboard({ userId }: DohDashboardProps) {
                   <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-medical-blue"></div>
                   <p className="mt-2 text-gray-600">Đang tải dữ liệu...</p>
                 </div>
-              ) : filteredUnits.length === 0 ? (
+              ) : units.length === 0 ? (
                 <div className="text-center py-12">
                   <Building2 className="w-16 h-16 mx-auto mb-3 text-gray-300" />
                   <p className="text-gray-600">Không tìm thấy đơn vị</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredUnits.map((unit) => (
+                  {units.map((unit) => (
                     <GlassCard key={unit.id} className={`p-4 border-2 ${getComplianceBgColor(unit.complianceRate)}`}>
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">

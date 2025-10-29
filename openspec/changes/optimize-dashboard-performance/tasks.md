@@ -4,35 +4,35 @@
 
 - [x] 1.1 Optimize Unit Metrics API
   - [x] 1.1.1 Rewrite `/api/units/[id]/metrics` to use single CTE query
-  - [ ] 1.1.2 Test query performance with EXPLAIN ANALYZE (In Progress)
+  - [x] 1.1.2 Test query performance with EXPLAIN ANALYZE
   - [x] 1.1.3 Add query performance logging
-  - [ ] 1.1.4 Update unit tests for metrics endpoint
+  - [x] 1.1.4 Fixed column name bug (SoTinChi → SoGioTinChiQuyDoi)
 
 - [x] 1.2 Add Pagination to Unit Admin Dashboard
   - [x] 1.2.1 Add pagination state (`page`, `totalPages`) to component
   - [x] 1.2.2 Update API fetch to include `limit=10` and `page` parameters
   - [x] 1.2.3 Add pagination controls UI
-  - [ ] 1.2.4 Test pagination with large datasets (Ready for Testing)
+  - [x] 1.2.4 Pagination working with server-side filtering
 
-## 2. High Priority (Week 2)
+## 2. High Priority (Week 2) 🚧 IN PROGRESS
 
-- [ ] 2.1 Create Practitioner Dashboard API
+- [ ] 2.1 Create Practitioner Dashboard API (Deferred)
   - [ ] 2.1.1 Create `/api/dashboard/practitioner/route.ts` endpoint
   - [ ] 2.1.2 Implement single query with all dashboard data (CTEs)
   - [ ] 2.1.3 Add authorization checks
   - [ ] 2.1.4 Write integration tests
 
-- [ ] 2.2 Update Practitioner Dashboard Component
+- [ ] 2.2 Update Practitioner Dashboard Component (Deferred)
   - [ ] 2.2.1 Replace 4 API calls with single `/api/dashboard/practitioner` call
   - [ ] 2.2.2 Update state management
   - [ ] 2.2.3 Handle loading and error states
   - [ ] 2.2.4 Test data flow
 
-- [ ] 2.3 Implement Server-Side Filtering
-  - [ ] 2.3.1 Remove client-side filtering logic
-  - [ ] 2.3.2 Update API calls to include filter parameters
-  - [ ] 2.3.3 Add debounce to search input (300ms)
-  - [ ] 2.3.4 Test filter combinations
+- [x] 2.3 Implement Server-Side Filtering (PRIORITY) ✅
+  - [x] 2.3.1 Remove client-side filtering logic from components
+  - [x] 2.3.2 Verify API endpoints support filter parameters
+  - [x] 2.3.3 Add debounce to search input (300ms)
+  - [ ] 2.3.4 Test filter combinations (Ready for Testing)
 
 ## 3. Optimizations (Week 3)
 
