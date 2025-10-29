@@ -48,7 +48,7 @@ approval_counts AS (
 practitioner_credits AS (
   SELECT 
     n."MaNhanVien",
-    COALESCE(SUM(g."SoTinChi"), 0) as total_credits
+    COALESCE(SUM(g."SoGioTinChiQuyDoi"), 0) as total_credits
   FROM "NhanVien" n
   LEFT JOIN "GhiNhanHoatDong" g ON n."MaNhanVien" = g."MaNhanVien" 
     AND g."TrangThaiDuyet" = 'DaDuyet'
@@ -124,7 +124,7 @@ SELECT
 FROM (
   SELECT 
     n."MaNhanVien",
-    COALESCE(SUM(g."SoTinChi"), 0) as total_credits
+    COALESCE(SUM(g."SoGioTinChiQuyDoi"), 0) as total_credits
   FROM "NhanVien" n
   LEFT JOIN "GhiNhanHoatDong" g ON n."MaNhanVien" = g."MaNhanVien" 
     AND g."TrangThaiDuyet" = 'DaDuyet'
@@ -139,14 +139,14 @@ SELECT COUNT(*) as count
 FROM (
   SELECT 
     n."MaNhanVien",
-    COALESCE(SUM(g."SoTinChi"), 0) as total_credits
+    COALESCE(SUM(g."SoGioTinChiQuyDoi"), 0) as total_credits
   FROM "NhanVien" n
   LEFT JOIN "GhiNhanHoatDong" g ON n."MaNhanVien" = g."MaNhanVien" 
     AND g."TrangThaiDuyet" = 'DaDuyet'
   WHERE n."MaDonVi" = '00000000-0000-0000-0000-000000000003' 
     AND n."TrangThaiLamViec" = 'DangLamViec'
   GROUP BY n."MaNhanVien"
-  HAVING COALESCE(SUM(g."SoTinChi"), 0) < 84
+  HAVING COALESCE(SUM(g."SoGioTinChiQuyDoi"), 0) < 84
 ) as at_risk_practitioners;
 
 -- ============================================================

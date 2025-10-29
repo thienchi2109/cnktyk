@@ -61,7 +61,7 @@ export async function GET(
       practitioner_credits AS (
         SELECT 
           n."MaNhanVien",
-          COALESCE(SUM(g."SoTinChi"), 0) as total_credits
+          COALESCE(SUM(g."SoGioTinChiQuyDoi"), 0) as total_credits
         FROM "NhanVien" n
         LEFT JOIN "GhiNhanHoatDong" g ON n."MaNhanVien" = g."MaNhanVien" 
           AND g."TrangThaiDuyet" = 'DaDuyet'
