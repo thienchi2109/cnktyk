@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth/server';
+import { db } from '@/lib/db/client';
 import { nhanVienRepo } from '@/lib/db/repositories';
 import { SubmissionsPageClient } from './submissions-page-client';
 
@@ -9,6 +10,16 @@ export default async function SubmissionsPage() {
   
   if (!user) {
     redirect('/auth/signin');
+  }
+
+  let initialPractitionerId: string | undefined;
+
+  if (user.role === 'NguoiHanhNghe') {
+    const row = await db.queryOne<{ MaNhanVien: string }>(
+      'SELECT "MaNhanVien" FROM "TaiKhoan" WHERE "MaTaiKhoan" = $1 AND "MaNhanVien" IS NOT NULL LIMIT 1',
+      [user.id]
+    );
+    initialPractitionerId = row?.MaNhanVien;
   }
 
   // Get practitioners for unit admins
@@ -27,6 +38,7 @@ export default async function SubmissionsPage() {
           <SubmissionsPageClient 
             userRole={user.role}
             practitioners={practitioners}
+            initialPractitionerId={initialPractitionerId}
           />
         </Suspense>
     </div>

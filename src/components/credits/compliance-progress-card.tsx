@@ -8,6 +8,7 @@
 import { GlassCard } from '@/components/ui/glass-card';
 import { GlassCircularProgress } from '@/components/ui/glass-circular-progress';
 import { Calendar, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
+import { DashboardCardSkeleton } from '@/components/dashboard/dashboard-skeletons';
 import type { ComplianceCycle } from '@/hooks/use-credit-cycle';
 
 interface ComplianceProgressCardProps {
@@ -18,9 +19,9 @@ interface ComplianceProgressCardProps {
 export function ComplianceProgressCard({ cycle, loading }: ComplianceProgressCardProps) {
   if (loading) {
     return (
-      <GlassCard className="p-6 animate-pulse">
-        <div className="h-48 bg-white/20 rounded-lg"></div>
-      </GlassCard>
+      <div aria-busy="true">
+        <DashboardCardSkeleton />
+      </div>
     );
   }
 
@@ -87,29 +88,59 @@ export function ComplianceProgressCard({ cycle, loading }: ComplianceProgressCar
     });
   };
 
+  // Normalize values to prevent NaN/Invalid Date in UI
+  const toNumber = (v: unknown, fb = 0) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : fb;
+  };
+  const required = toNumber(cycle.TongTinChiYeuCau, 0);
+  const earned = toNumber(cycle.TongTinChiDatDuoc, 0);
+  const percentComputed = required > 0 ? (earned / required) * 100 : 0;
+  const percent = Math.min(
+    100,
+    Math.max(0, toNumber(cycle.TyLeHoanThanh, percentComputed))
+  );
+  const startValid = cycle.NgayBatDau && !Number.isNaN(Date.parse(cycle.NgayBatDau));
+  const endValid = cycle.NgayKetThuc && !Number.isNaN(Date.parse(cycle.NgayKetThuc));
+  const daysLeft = toNumber(
+    cycle.SoNgayConLai,
+    endValid ? Math.max(0, Math.ceil((new Date(cycle.NgayKetThuc).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0
+  );
+  const normalizedStatus = ((): ComplianceCycle['TrangThai'] => {
+    const map: Record<string, ComplianceCycle['TrangThai']> = {
+      DangDienRa: 'DangThucHien',
+      DangThucHien: 'DangThucHien',
+      HoanThanh: 'HoanThanh',
+      SapHetHan: 'SapHetHan',
+      QuaHan: 'QuaHan',
+    };
+    const raw = String((cycle as any).TrangThai ?? 'DangThucHien');
+    return map[raw] ?? 'DangThucHien';
+  })();
+
   return (
     <GlassCard className="p-6">
       <div className="flex flex-col items-center space-y-6">
         {/* Circular Progress */}
         <div className="relative">
           <GlassCircularProgress
-            value={cycle.TyLeHoanThanh}
+            value={percent}
             size={180}
             strokeWidth={12}
             className="drop-shadow-lg"
           />
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <div className="text-4xl font-bold text-medical-blue">
-              {Math.round(cycle.TyLeHoanThanh)}%
+              {Math.round(percent)}%
             </div>
             <div className="text-sm text-gray-600 mt-1">Hoàn thành</div>
           </div>
         </div>
 
         {/* Status Badge */}
-        <div className={`flex items-center gap-2 px-4 py-2 rounded-full bg-white/30 backdrop-blur-sm ${getStatusColor(cycle.TrangThai)}`}>
-          {getStatusIcon(cycle.TrangThai)}
-          <span className="font-semibold">{getStatusText(cycle.TrangThai)}</span>
+        <div className={`flex items-center gap-2 px-4 py-2 rounded-full bg-white/30 backdrop-blur-sm ${getStatusColor(normalizedStatus)}`}>
+          {getStatusIcon(normalizedStatus)}
+          <span className="font-semibold">{getStatusText(normalizedStatus)}</span>
         </div>
 
         {/* Credit Information */}
@@ -117,13 +148,13 @@ export function ComplianceProgressCard({ cycle, loading }: ComplianceProgressCar
           <div className="flex justify-between items-center p-3 bg-white/20 rounded-lg">
             <span className="text-gray-700">Tín chỉ đạt được</span>
             <span className="text-xl font-bold text-medical-blue">
-              {cycle.TongTinChiDatDuoc}
+              {earned}
             </span>
           </div>
           <div className="flex justify-between items-center p-3 bg-white/20 rounded-lg">
             <span className="text-gray-700">Tín chỉ yêu cầu</span>
             <span className="text-xl font-bold text-gray-800">
-              {cycle.TongTinChiYeuCau}
+              {required}
             </span>
           </div>
           <div className="flex justify-between items-center p-3 bg-white/20 rounded-lg">
@@ -131,8 +162,8 @@ export function ComplianceProgressCard({ cycle, loading }: ComplianceProgressCar
               <Calendar className="w-4 h-4" />
               Số ngày còn lại
             </span>
-            <span className={`text-xl font-bold ${cycle.SoNgayConLai < 180 ? 'text-medical-red' : 'text-medical-green'}`}>
-              {cycle.SoNgayConLai} ngày
+            <span className={`text-xl font-bold ${daysLeft < 180 ? 'text-medical-red' : 'text-medical-green'}`}>
+              {daysLeft} ngày
             </span>
           </div>
         </div>
@@ -140,8 +171,8 @@ export function ComplianceProgressCard({ cycle, loading }: ComplianceProgressCar
         {/* Cycle Period */}
         <div className="w-full pt-4 border-t border-white/30">
           <div className="text-sm text-gray-600 text-center space-y-1">
-            <div>Chu kỳ: {formatDate(cycle.NgayBatDau)}</div>
-            <div>đến {formatDate(cycle.NgayKetThuc)}</div>
+            <div>Chu kỳ: {startValid ? formatDate(cycle.NgayBatDau) : 'Không xác định'}</div>
+            <div>đến {endValid ? formatDate(cycle.NgayKetThuc) : 'Không xác định'}</div>
           </div>
         </div>
       </div>

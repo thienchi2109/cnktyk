@@ -11,6 +11,7 @@ import { CheckCircle, XCircle, Clock, FileText } from 'lucide-react';
 import type { CreditHistory } from '@/hooks/use-credit-cycle';
 import { useState } from 'react';
 import { CreditDetailModal } from './credit-detail-modal';
+import { DashboardTableSkeleton } from '@/components/dashboard/dashboard-skeletons';
 
 interface CreditHistoryTableProps {
   creditHistory: CreditHistory[];
@@ -41,9 +42,9 @@ export function CreditHistoryTable({ creditHistory, loading }: CreditHistoryTabl
 
   if (loading) {
     return (
-      <GlassCard className="p-6 animate-pulse">
-        <div className="h-96 bg-white/20 rounded-lg"></div>
-      </GlassCard>
+      <div aria-busy="true">
+        <DashboardTableSkeleton lines={5} />
+      </div>
     );
   }
 

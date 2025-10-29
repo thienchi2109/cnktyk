@@ -6,7 +6,7 @@ export default defineConfig({
     environment: 'node',
     globals: true,
     reporters: ['default'],
-    include: ['tests/**/*.{test,spec}.ts']
+    include: ['tests/**/*.{test,spec}.{ts,tsx}']
   },
   resolve: {
     alias: {

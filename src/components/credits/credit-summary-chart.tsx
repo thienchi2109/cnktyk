@@ -8,6 +8,7 @@
 import { GlassCard } from '@/components/ui/glass-card';
 import { GlassProgress } from '@/components/ui/glass-progress';
 import type { CreditSummary } from '@/hooks/use-credit-cycle';
+import { DashboardChartSkeleton } from '@/components/dashboard/dashboard-skeletons';
 
 interface CreditSummaryChartProps {
   creditSummary: CreditSummary[];
@@ -33,9 +34,9 @@ const activityTypeLabels: Record<string, string> = {
 export function CreditSummaryChart({ creditSummary, loading }: CreditSummaryChartProps) {
   if (loading) {
     return (
-      <GlassCard className="p-6 animate-pulse">
-        <div className="h-64 bg-white/20 rounded-lg"></div>
-      </GlassCard>
+      <div aria-busy="true">
+        <DashboardChartSkeleton />
+      </div>
     );
   }
 

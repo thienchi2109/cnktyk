@@ -47,18 +47,27 @@ export async function GET(request: NextRequest) {
     // Apply Role-Based Access Control (RBAC) at database level
     if (user.role === 'NguoiHanhNghe') {
       // Practitioners can only see their own submissions
-      // Find practitioner ID from user's email
-      const practitioners = await nhanVienRepo.findByUnit(user.unitId || '');
-      const userPractitioner = practitioners.find(p => p.Email === user.username);
-      
-      if (!userPractitioner) {
-        return NextResponse.json(
-          { error: 'Practitioner profile not found' },
-          { status: 404 }
-        );
-      }
+      // Prefer direct account -> practitioner mapping
+      const { db } = await import('@/lib/db/client');
+      const link = await db.queryOne<{ MaNhanVien: string }>(
+        'SELECT "MaNhanVien" FROM "TaiKhoan" WHERE "MaTaiKhoan" = $1 AND "MaNhanVien" IS NOT NULL LIMIT 1',
+        [user.id]
+      );
 
-      filters.practitionerId = userPractitioner.MaNhanVien;
+      if (link?.MaNhanVien) {
+        filters.practitionerId = link.MaNhanVien;
+      } else {
+        // Fallback to email-based lookup within unit if mapping not present
+        const practitioners = await nhanVienRepo.findByUnit(user.unitId || '');
+        const userPractitioner = practitioners.find(p => p.Email && p.Email.toLowerCase() === user.username.toLowerCase());
+        if (!userPractitioner) {
+          return NextResponse.json(
+            { error: 'Practitioner profile not found' },
+            { status: 404 }
+          );
+        }
+        filters.practitionerId = userPractitioner.MaNhanVien;
+      }
     } else if (user.role === 'DonVi') {
       // Unit admins can see submissions from their unit only
       filters.unitId = user.unitId || undefined;
@@ -151,18 +160,27 @@ export async function POST(request: NextRequest) {
     let practitionerId = validatedData.MaNhanVien;
     
     if (user.role === 'NguoiHanhNghe') {
-      // For practitioners, find their own profile
-      const practitioners = await nhanVienRepo.findByUnit(user.unitId || '');
-      const userPractitioner = practitioners.find(p => p.Email === user.username);
-      
-      if (!userPractitioner) {
-        return NextResponse.json(
-          { error: 'Practitioner profile not found' },
-          { status: 404 }
-        );
+      // For practitioners, prefer direct FK mapping on the account
+      const { db } = await import('@/lib/db/client');
+      const link = await db.queryOne<{ MaNhanVien: string }>(
+        'SELECT "MaNhanVien" FROM "TaiKhoan" WHERE "MaTaiKhoan" = $1 AND "MaNhanVien" IS NOT NULL LIMIT 1',
+        [user.id]
+      );
+
+      if (link?.MaNhanVien) {
+        practitionerId = link.MaNhanVien;
+      } else {
+        // Fallback to email-based lookup within unit if mapping not present
+        const practitioners = await nhanVienRepo.findByUnit(user.unitId || '');
+        const userPractitioner = practitioners.find(p => p.Email && p.Email.toLowerCase() === user.username.toLowerCase());
+        if (!userPractitioner) {
+          return NextResponse.json(
+            { error: 'Practitioner profile not found' },
+            { status: 404 }
+          );
+        }
+        practitionerId = userPractitioner.MaNhanVien;
       }
-      
-      practitionerId = userPractitioner.MaNhanVien;
     }
 
     // Calculate credits based on activity catalog or manual entry
