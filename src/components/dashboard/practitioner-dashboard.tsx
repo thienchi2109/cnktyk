@@ -13,7 +13,7 @@ import { ComplianceProgressCard } from '@/components/credits/compliance-progress
 import { CreditSummaryChart } from '@/components/credits/credit-summary-chart';
 import { CreditHistoryTable } from '@/components/credits/credit-history-table';
 import { ActivityTimeline } from '@/components/dashboard/activity-timeline';
-import { useCreditCycle } from '@/hooks/use-credit-cycle';
+import { useCreditCycle, type CreditSummary } from '@/hooks/use-credit-cycle';
 import { useNotifications } from '@/hooks/use-notifications';
 import { 
   Plus, 
@@ -51,7 +51,7 @@ export function PractitionerDashboard({ userId }: PractitionerDashboardProps) {
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [cycle, setCycle] = useState<any>(null);
-  const [creditSummary, setCreditSummary] = useState<any[]>([]);
+  const [creditSummary, setCreditSummary] = useState<CreditSummary[]>([]);
   const [creditHistory, setCreditHistory] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [expandedSections, setExpandedSections] = useState({
@@ -115,7 +115,34 @@ export function PractitionerDashboard({ userId }: PractitionerDashboardProps) {
           
           // Set credit summary
           if (summary && Array.isArray(summary)) {
-            setCreditSummary(summary);
+            const toNumber = (value: unknown, fallback = 0) => {
+              const parsed = Number(value);
+              return Number.isFinite(parsed) ? parsed : fallback;
+            };
+
+            const toOptionalNumber = (value: unknown) => {
+              const parsed = Number(value);
+              return Number.isFinite(parsed) ? parsed : undefined;
+            };
+
+            const normalizedSummary: CreditSummary[] = summary.map((item: any) => {
+              const loaiHoatDong = item.LoaiHoatDong ?? item.activity_type ?? 'Khac';
+              const tongTinChi = toNumber(
+                item.TongTinChi ?? item.total_credits ?? item.totalCredits
+              );
+              const soHoatDong = toNumber(item.SoHoatDong ?? item.count);
+              const tranToiDa = toOptionalNumber(item.TranToiDa ?? item.maxCredits);
+              const conLai = toOptionalNumber(item.ConLai ?? item.remainingCredits);
+
+              return {
+                LoaiHoatDong: loaiHoatDong,
+                TongTinChi: tongTinChi,
+                SoHoatDong: soHoatDong,
+                ...(tranToiDa !== undefined ? { TranToiDa: tranToiDa } : {}),
+                ...(conLai !== undefined ? { ConLai: conLai } : {})
+              };
+            });
+            setCreditSummary(normalizedSummary);
           }
         }
       } catch (error) {

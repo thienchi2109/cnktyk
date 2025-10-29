@@ -27,13 +27,181 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const account = await db.queryOne<{
+      MaTaiKhoan: string;
+      TenDangNhap: string;
+      MaDonVi: string | null;
+    }>(
+      `
+        SELECT 
+          tk."MaTaiKhoan",
+          tk."TenDangNhap",
+          tk."MaDonVi"
+        FROM "TaiKhoan" tk
+        WHERE tk."MaTaiKhoan" = $1
+        LIMIT 1
+      `,
+      [session.user.id]
+    );
+
+    if (!account) {
+      const totalDuration = timer();
+      perfMonitor.log({
+        endpoint: '/api/dashboard/practitioner',
+        method: 'GET',
+        duration: totalDuration,
+        timestamp: new Date(),
+        status: 404,
+        metadata: { 
+          error: 'Account not found for session',
+          accountId: session.user.id
+        }
+      });
+
+      return NextResponse.json(
+        { 
+          success: false,
+          error: "Practitioner not found",
+          message: "No practitioner record linked to this account. Please contact the system administrator to verify your practitioner profile."
+        },
+        { status: 404 }
+      );
+    }
+
+    const username = account.TenDangNhap?.trim();
+
+    let practitionerId: string | null = null;
+    let practitionerLookupSource: string | null = null;
+
+    try {
+      const linkedPractitioner = await db.queryOne<{ MaNhanVien: string }>(
+        `
+          SELECT "MaNhanVien"
+          FROM "TaiKhoan"
+          WHERE "MaTaiKhoan" = $1
+            AND "MaNhanVien" IS NOT NULL
+          LIMIT 1
+        `,
+        [session.user.id]
+      );
+
+      if (linkedPractitioner?.MaNhanVien) {
+        practitionerId = linkedPractitioner.MaNhanVien;
+        practitionerLookupSource = 'account_column';
+      }
+    } catch (error) {
+      // Column may not exist in this environment; ignore and continue with fallback strategies
+      console.warn('[dashboard/practitioner] Direct account-practitioner lookup failed:', error);
+    }
+
+    const practitionerLookupStrategies: Array<{
+      name: string;
+      query: string;
+      params: any[];
+      skip?: boolean;
+    }> = [
+      {
+        name: 'direct_id_match',
+        query: `SELECT "MaNhanVien" FROM "NhanVien" WHERE "MaNhanVien" = $1 LIMIT 1`,
+        params: [account.MaTaiKhoan]
+      },
+      {
+        name: 'internal_code_match',
+        query: `
+          SELECT "MaNhanVien" 
+          FROM "NhanVien" 
+          WHERE "MaNhanVienNoiBo" IS NOT NULL 
+            AND LOWER("MaNhanVienNoiBo") = LOWER($1)
+          LIMIT 1
+        `,
+        params: [username],
+        skip: !username
+      },
+      {
+        name: 'email_match',
+        query: `
+          SELECT "MaNhanVien" 
+          FROM "NhanVien" 
+          WHERE "Email" IS NOT NULL 
+            AND LOWER("Email") = LOWER($1)
+          LIMIT 1
+        `,
+        params: [username],
+        skip: !username
+      },
+      {
+        name: 'license_match',
+        query: `
+          SELECT "MaNhanVien"
+          FROM "NhanVien"
+          WHERE "SoCCHN" IS NOT NULL
+            AND LOWER("SoCCHN") = LOWER($1)
+          LIMIT 1
+        `,
+        params: [username],
+        skip: !username
+      },
+      {
+        name: 'recent_submission_match',
+        query: `
+          SELECT g."MaNhanVien"
+          FROM "GhiNhanHoatDong" g
+          JOIN "NhanVien" nv ON nv."MaNhanVien" = g."MaNhanVien"
+          WHERE g."NguoiNhap" = $1
+            ${account.MaDonVi ? 'AND nv."MaDonVi" = $2' : ''}
+          ORDER BY g."NgayGhiNhan" DESC
+          LIMIT 1
+        `,
+        params: account.MaDonVi ? [account.MaTaiKhoan, account.MaDonVi] : [account.MaTaiKhoan]
+      }
+    ];
+
+    if (!practitionerId) {
+      for (const strategy of practitionerLookupStrategies) {
+        if (strategy.skip) {
+          continue;
+        }
+
+        const result = await db.queryOne<{ MaNhanVien: string }>(strategy.query, strategy.params);
+        if (result?.MaNhanVien) {
+          practitionerId = result.MaNhanVien;
+          practitionerLookupSource = strategy.name;
+          break;
+        }
+      }
+    }
+
     const queryStartTime = performance.now();
+
+    if (!practitionerId) {
+      const totalDuration = timer();
+      perfMonitor.log({
+        endpoint: '/api/dashboard/practitioner',
+        method: 'GET',
+        duration: totalDuration,
+        timestamp: new Date(),
+        status: 404,
+        metadata: { 
+          error: 'Practitioner not resolved from account',
+          accountId: session.user.id,
+          lookupStrategies: practitionerLookupStrategies.map((strategy) => strategy.name)
+        }
+      });
+
+      return NextResponse.json(
+        { 
+          success: false,
+          error: "Practitioner not found",
+          message: "No practitioner record linked to this account. Please contact the system administrator to verify your practitioner profile."
+        },
+        { status: 404 }
+      );
+    }
     
     // Single consolidated query using CTEs
     const dashboardData: any = await db.query(
       `WITH 
       -- CTE 1: Practitioner basic info
-      -- Reverted join: use previous lookup to avoid relying on Email = TenDangNhap
       practitioner_info AS (
         SELECT 
           nv."MaNhanVien",
@@ -44,9 +212,7 @@ export async function GET(request: NextRequest) {
           dv."TenDonVi"
         FROM "NhanVien" nv
         LEFT JOIN "DonVi" dv ON nv."MaDonVi" = dv."MaDonVi"
-        LEFT JOIN "TaiKhoan" tk ON tk."MaTaiKhoan" = $1
-        WHERE nv."MaNhanVien" = $1 
-          OR nv."Email" = (SELECT "TenDangNhap" FROM "TaiKhoan" WHERE "MaTaiKhoan" = $1)
+        WHERE nv."MaNhanVien" = $1
         LIMIT 1
       ),
       -- CTE 2: Active credit cycle
@@ -92,9 +258,8 @@ export async function GET(request: NextRequest) {
           tb."LienKet" as link,
           tb."TrangThai" as status,
           tb."TaoLuc" as created_at
-        FROM "TaiKhoan" tk
-        LEFT JOIN "ThongBao" tb ON tk."MaTaiKhoan" = tb."MaNguoiNhan"
-        WHERE tk."MaTaiKhoan" = $1
+        FROM "ThongBao" tb
+        WHERE tb."MaNguoiNhan" = $2
           AND tb."TrangThai" = 'Moi'
           AND tb."Loai" IN ('CanhBao', 'KhanCap')
         ORDER BY tb."TaoLuc" DESC
@@ -125,21 +290,24 @@ export async function GET(request: NextRequest) {
           'unitId', pi."MaDonVi",
           'unitName', pi."TenDonVi"
         ) as practitioner,
-        json_build_object(
-          'cycleId', ac."MaKy",
-          'startDate', ac."NgayBatDau",
-          'endDate', ac."NgayKetThuc",
-          'requiredCredits', ac."SoTinChiYeuCau",
-          'earnedCredits', ac.earned_credits,
-          'status', ac."TrangThai",
-          'pendingCount', ac.pending_count,
-          'approvedCount', ac.approved_count,
-          'compliancePercent', CASE 
-            WHEN ac."SoTinChiYeuCau" > 0 
-            THEN ROUND((ac.earned_credits / ac."SoTinChiYeuCau") * 100)
-            ELSE 0 
-          END
-        ) as cycle,
+        CASE
+          WHEN ac."MaKy" IS NULL THEN NULL
+          ELSE json_build_object(
+            'cycleId', ac."MaKy",
+            'startDate', ac."NgayBatDau",
+            'endDate', ac."NgayKetThuc",
+            'requiredCredits', ac."SoTinChiYeuCau",
+            'earnedCredits', ac.earned_credits,
+            'status', ac."TrangThai",
+            'pendingCount', ac.pending_count,
+            'approvedCount', ac.approved_count,
+            'compliancePercent', CASE 
+              WHEN ac."SoTinChiYeuCau" > 0 
+              THEN ROUND((ac.earned_credits / ac."SoTinChiYeuCau") * 100)
+              ELSE 0 
+            END
+          )
+        END as cycle,
         (
           SELECT json_agg(row_to_json(recent_activities.*)) 
           FROM recent_activities
@@ -153,8 +321,8 @@ export async function GET(request: NextRequest) {
           FROM credit_summary
         ) as credit_summary
       FROM practitioner_info pi
-      CROSS JOIN active_cycle ac`,
-      [session.user.id]
+      LEFT JOIN active_cycle ac ON TRUE`,
+      [practitionerId, session.user.id]
     );
 
     const queryDuration = performance.now() - queryStartTime;
@@ -173,7 +341,9 @@ export async function GET(request: NextRequest) {
         status: 404,
         metadata: { 
           error: 'Practitioner not found or account not linked',
-          accountId: session.user.id
+          accountId: session.user.id,
+          resolvedPractitionerId: practitionerId,
+          lookupSource: practitionerLookupSource
         }
       });
       
@@ -181,7 +351,7 @@ export async function GET(request: NextRequest) {
         { 
           success: false,
           error: "Practitioner not found",
-          message: "No practitioner record linked to this account. Please ensure your Email in NhanVien matches your account username (TenDangNhap)."
+          message: "No practitioner record linked to this account. Please contact the system administrator to verify your practitioner profile."
         },
         { status: 404 }
       );
@@ -206,13 +376,15 @@ export async function GET(request: NextRequest) {
       endpoint: '/api/dashboard/practitioner',
       method: 'GET',
       duration: totalDuration,
-      timestamp: new Date(),
-      status: 200,
-      metadata: { 
-        queryDuration: queryDuration.toFixed(2) + 'ms',
-        userId: session.user.id
-      }
-    });
+        timestamp: new Date(),
+        status: 200,
+        metadata: { 
+          queryDuration: queryDuration.toFixed(2) + 'ms',
+          userId: session.user.id,
+          practitionerId,
+          lookupSource: practitionerLookupSource
+        }
+      });
 
     return NextResponse.json(response);
 
