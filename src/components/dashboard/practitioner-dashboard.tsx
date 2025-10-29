@@ -49,69 +49,84 @@ export function PractitionerDashboard({ userId }: PractitionerDashboardProps) {
   const isDesktop = useIsDesktop();
   const [practitionerId, setPractitionerId] = useState<string | null>(null);
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
-  const [loadingActivities, setLoadingActivities] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [cycle, setCycle] = useState<any>(null);
+  const [creditSummary, setCreditSummary] = useState<any[]>([]);
+  const [creditHistory, setCreditHistory] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [expandedSections, setExpandedSections] = useState({
     activities: true,
     alerts: true,
     analytics: true
   });
 
-  const { cycle, creditSummary, creditHistory, loading: cycleLoading } = useCreditCycle(
-    practitionerId,
-    true
-  );
-  
-  const { notifications, loading: notificationsLoading } = useNotifications();
-
-  // Fetch practitioner ID from user account
+  // Fetch all dashboard data in a single API call
   useEffect(() => {
-    const fetchPractitionerId = async () => {
+    const fetchDashboardData = async () => {
       try {
-        const response = await fetch(`/api/practitioners?userId=${userId}`);
+        setLoading(true);
+        const response = await fetch('/api/dashboard/practitioner');
         const result = await response.json();
         
-        if (result.success && result.data.length > 0) {
-          setPractitionerId(result.data[0].MaNhanVien);
+        if (result.success && result.data) {
+          const { practitioner, cycle: cycleData, activities, notifications: notifs, creditSummary: summary } = result.data;
+          
+          // Set practitioner ID
+          if (practitioner) {
+            setPractitionerId(practitioner.practitionerId);
+          }
+          
+          // Set cycle data
+          setCycle(cycleData);
+          
+          // Set activities
+          if (activities && Array.isArray(activities)) {
+            const mappedActivities = activities.map((item: any) => ({
+              id: item.id,
+              title: item.title,
+              type: item.type || 'Khác',
+              credits: parseFloat(item.credits || 0),
+              status: item.status,
+              date: item.date,
+              reviewerComment: item.reviewer_comment
+            }));
+            setRecentActivities(mappedActivities);
+            // Use activities as credit history too
+            setCreditHistory(mappedActivities.map((a: any) => ({
+              MaGhiNhan: a.id,
+              TenHoatDong: a.title,
+              TrangThaiDuyet: a.status,
+              SoTinChi: a.credits,
+              NgayGhiNhan: a.date
+            })));
+          }
+          
+          // Set notifications
+          if (notifs && Array.isArray(notifs)) {
+            setNotifications(notifs.map((n: any) => ({
+              MaThongBao: n.id,
+              Loai: n.type,
+              ThongDiep: n.message,
+              LienKet: n.link,
+              TrangThai: n.status,
+              TaoLuc: n.created_at
+            })));
+          }
+          
+          // Set credit summary
+          if (summary && Array.isArray(summary)) {
+            setCreditSummary(summary);
+          }
         }
       } catch (error) {
-        console.error('Error fetching practitioner:', error);
-      }
-    };
-
-    fetchPractitionerId();
-  }, [userId]);
-
-  // Fetch recent activities
-  useEffect(() => {
-    const fetchRecentActivities = async () => {
-      if (!practitionerId) return;
-
-      try {
-        setLoadingActivities(true);
-        const response = await fetch(`/api/submissions?practitionerId=${practitionerId}&limit=10`);
-        const result = await response.json();
-
-        // New API returns { data: [...], pagination: {...} }
-        if (result.data && Array.isArray(result.data)) {
-          setRecentActivities(result.data.map((item: any) => ({
-            id: item.MaGhiNhan,
-            title: item.TenHoatDong,
-            type: item.LoaiHoatDong || 'Khác',
-            credits: item.SoTinChi,
-            status: item.TrangThaiDuyet,
-            date: item.NgayGhiNhan,
-            reviewerComment: item.NhanXetNguoiDuyet
-          })));
-        }
-      } catch (error) {
-        console.error('Error fetching activities:', error);
+        console.error('Error fetching dashboard data:', error);
       } finally {
-        setLoadingActivities(false);
+        setLoading(false);
       }
     };
 
-    fetchRecentActivities();
-  }, [practitionerId]);
+    fetchDashboardData();
+  }, []);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections(prev => ({
@@ -149,6 +164,11 @@ export function PractitionerDashboard({ userId }: PractitionerDashboardProps) {
   const priorityNotifications = notifications
     .filter(n => n.TrangThai === 'Moi' && (n.Loai === 'CanhBao' || n.Loai === 'KhanCap'))
     .slice(0, 5);
+  
+  // Use consolidated loading state
+  const cycleLoading = loading;
+  const loadingActivities = loading;
+  const notificationsLoading = loading;
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">

@@ -14,19 +14,19 @@
   - [x] 1.2.3 Add pagination controls UI
   - [x] 1.2.4 Pagination working with server-side filtering
 
-## 2. High Priority (Week 2) 🚧 IN PROGRESS
+## 2. High Priority (Week 2) ✅ COMPLETE
 
-- [ ] 2.1 Create Practitioner Dashboard API (Deferred)
-  - [ ] 2.1.1 Create `/api/dashboard/practitioner/route.ts` endpoint
-  - [ ] 2.1.2 Implement single query with all dashboard data (CTEs)
-  - [ ] 2.1.3 Add authorization checks
-  - [ ] 2.1.4 Write integration tests
+- [x] 2.1 Create Practitioner Dashboard API
+  - [x] 2.1.1 Create `/api/dashboard/practitioner/route.ts` endpoint
+  - [x] 2.1.2 Implement single query with all dashboard data (CTEs)
+  - [x] 2.1.3 Add authorization checks
+  - [ ] 2.1.4 Write integration tests (Deferred)
 
-- [ ] 2.2 Update Practitioner Dashboard Component (Deferred)
-  - [ ] 2.2.1 Replace 4 API calls with single `/api/dashboard/practitioner` call
-  - [ ] 2.2.2 Update state management
-  - [ ] 2.2.3 Handle loading and error states
-  - [ ] 2.2.4 Test data flow
+- [x] 2.2 Update Practitioner Dashboard Component
+  - [x] 2.2.1 Replace 4 API calls with single `/api/dashboard/practitioner` call
+  - [x] 2.2.2 Update state management
+  - [x] 2.2.3 Handle loading and error states
+  - [ ] 2.2.4 Test data flow (Ready for Testing)
 
 - [x] 2.3 Implement Server-Side Filtering (PRIORITY) ✅
   - [x] 2.3.1 Remove client-side filtering logic from components
