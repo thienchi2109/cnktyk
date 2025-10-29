@@ -100,16 +100,18 @@ export async function GET(request: NextRequest) {
         LIMIT 5
       ),
       -- CTE 5: Credit history summary
+      -- Column names aliased to match CreditSummary interface expectations
       credit_summary AS (
         SELECT 
-          g."HinhThucCapNhatKienThucYKhoa" as activity_type,
-          COUNT(*) as count,
-          COALESCE(SUM(g."SoGioTinChiQuyDoi"), 0) as total_credits
+          g."HinhThucCapNhatKienThucYKhoa" as "LoaiHoatDong",
+          COALESCE(SUM(g."SoGioTinChiQuyDoi"), 0) as "TongTinChi",
+          COUNT(*)::integer as "SoHoatDong"
         FROM practitioner_info pi
         LEFT JOIN active_cycle ac ON 1=1
         LEFT JOIN "GhiNhanHoatDong" g ON pi."MaNhanVien" = g."MaNhanVien"
           AND g."TrangThaiDuyet" = 'DaDuyet'
           AND g."NgayGhiNhan" BETWEEN ac."NgayBatDau" AND ac."NgayKetThuc"
+        WHERE g."HinhThucCapNhatKienThucYKhoa" IS NOT NULL
         GROUP BY g."HinhThucCapNhatKienThucYKhoa"
       )
       -- Final SELECT: Combine all CTEs into consolidated response
