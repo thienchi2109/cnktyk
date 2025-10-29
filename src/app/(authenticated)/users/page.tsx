@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { CreateTaiKhoanSchema, UpdateTaiKhoanSchema } from '@/lib/db/schemas';
+import { DonViAccountDisabledMessage } from '@/components/users/donvi-account-disabled-message';
 
 interface User {
   MaTaiKhoan: string;
@@ -31,7 +32,7 @@ interface Unit {
 type UserFormData = z.infer<typeof CreateTaiKhoanSchema>;
 
 export default function UsersPage() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, featureFlags, isLoading: authLoading } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,7 +57,12 @@ export default function UsersPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Check permissions
-  const canManageUsers = user?.role && ['SoYTe', 'DonVi'].includes(user.role);
+  const isDonVi = user?.role === 'DonVi';
+  const donViAccountManagementEnabled =
+    featureFlags?.donViAccountManagementEnabled ?? (isDonVi ? false : true);
+  const isDonViFeatureDisabled = isDonVi && !donViAccountManagementEnabled;
+  const canManageUsers =
+    user?.role === 'SoYTe' || (isDonVi && donViAccountManagementEnabled);
 
   // Fetch users
   const fetchUsers = async () => {
@@ -73,6 +79,19 @@ export default function UsersPage() {
 
       const response = await fetch(`/api/users?${params}`);
       if (!response.ok) {
+        if (response.status === 403) {
+          const errorData = await response.json().catch(() => null);
+          const friendlyMessage =
+            errorData?.message?.vi ||
+            errorData?.message?.en ||
+            'Bạn không có quyền truy cập chức năng này.';
+          setError(friendlyMessage);
+          setUsers([]);
+          setTotalPages(1);
+          setTotalUsers(0);
+          return;
+        }
+
         throw new Error('Failed to fetch users');
       }
 
@@ -80,6 +99,7 @@ export default function UsersPage() {
       setUsers(data.users);
       setTotalPages(data.pagination.totalPages);
       setTotalUsers(data.pagination.total);
+      setError('');
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An error occurred');
     } finally {
@@ -127,8 +147,11 @@ export default function UsersPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create user');
+        const errorData = await response.json().catch(() => null);
+        if (response.status === 403 && errorData?.message?.vi) {
+          throw new Error(errorData.message.vi);
+        }
+        throw new Error(errorData?.error || 'Failed to create user');
       }
 
       setShowCreateSheet(false);
@@ -153,8 +176,11 @@ export default function UsersPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update user');
+        const errorData = await response.json().catch(() => null);
+        if (response.status === 403 && errorData?.message?.vi) {
+          throw new Error(errorData.message.vi);
+        }
+        throw new Error(errorData?.error || 'Failed to update user');
       }
 
       setShowEditSheet(false);
@@ -180,8 +206,12 @@ export default function UsersPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete user');
+        const errorData = await response.json().catch(() => null);
+        const message =
+          response.status === 403 && errorData?.message?.vi
+            ? errorData.message.vi
+            : errorData?.error || 'Failed to delete user';
+        throw new Error(message);
       }
 
       await fetchUsers();
@@ -251,6 +281,16 @@ export default function UsersPage() {
               Bạn cần đăng nhập để truy cập trang này.
             </AlertDescription>
           </Alert>
+        </GlassCard>
+      </div>
+    );
+  }
+
+  if (isDonViFeatureDisabled) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
+        <GlassCard className="p-8 max-w-2xl shadow-xl space-y-4">
+          <DonViAccountDisabledMessage />
         </GlassCard>
       </div>
     );

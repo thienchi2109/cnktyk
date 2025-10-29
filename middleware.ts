@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { isDonViAccountManagementEnabled } from "@/lib/features/flags";
 
 // Define protected routes and their required roles
 const PROTECTED_ROUTES = {
@@ -59,6 +60,16 @@ export default auth((req) => {
   // Check role-based access for protected routes
   for (const [route, allowedRoles] of Object.entries(PROTECTED_ROUTES) as [string, readonly string[]][]) {
     if (nextUrl.pathname.startsWith(route)) {
+      // Multi-layer protection: gate DonVi access to /users when feature flag disabled
+      if (
+        route === "/users" &&
+        userRole === "DonVi" &&
+        !isDonViAccountManagementEnabled()
+      ) {
+        const dashboardUrl = getDashboardUrl(userRole);
+        return NextResponse.redirect(new URL(dashboardUrl, nextUrl.origin));
+      }
+
       if (!userRole || !allowedRoles.includes(userRole as any)) {
         // Redirect to appropriate dashboard based on role
         const dashboardUrl = getDashboardUrl(userRole);

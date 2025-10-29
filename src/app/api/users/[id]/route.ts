@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, requireRole } from '@/lib/auth/server';
 import { taiKhoanRepo, donViRepo } from '@/lib/db/repositories';
 import { UpdateTaiKhoanSchema } from '@/lib/db/schemas';
+import {
+  isDonViAccountManagementEnabled,
+  DONVI_ACCOUNT_MANAGEMENT_DISABLED_MESSAGE,
+} from '@/lib/features/flags';
 import { z } from 'zod';
 
 // GET /api/users/[id] - Get user by ID
@@ -12,6 +16,16 @@ export async function GET(
   try {
     const session = await requireAuth();
     const { id: userId } = await params;
+
+    if (session.user.role === 'DonVi' && !isDonViAccountManagementEnabled()) {
+      return NextResponse.json(
+        {
+          error: 'DONVI_ACCOUNT_MANAGEMENT_DISABLED',
+          message: DONVI_ACCOUNT_MANAGEMENT_DISABLED_MESSAGE,
+        },
+        { status: 403 },
+      );
+    }
 
     // Check permissions
     if (session.user.role === 'NguoiHanhNghe' && session.user.id !== userId) {
@@ -59,6 +73,16 @@ export async function PUT(
     const session = await requireAuth();
     const { id: userId } = await params;
     const body = await request.json();
+
+    if (session.user.role === 'DonVi' && !isDonViAccountManagementEnabled()) {
+      return NextResponse.json(
+        {
+          error: 'DONVI_ACCOUNT_MANAGEMENT_DISABLED',
+          message: DONVI_ACCOUNT_MANAGEMENT_DISABLED_MESSAGE,
+        },
+        { status: 403 },
+      );
+    }
 
     // Check if user exists
     const existingUser = await taiKhoanRepo.findById(userId);
@@ -229,6 +253,16 @@ export async function DELETE(
     await requireRole(['SoYTe', 'DonVi']);
     
     const { id: userId } = await params;
+
+    if (session.user.role === 'DonVi' && !isDonViAccountManagementEnabled()) {
+      return NextResponse.json(
+        {
+          error: 'DONVI_ACCOUNT_MANAGEMENT_DISABLED',
+          message: DONVI_ACCOUNT_MANAGEMENT_DISABLED_MESSAGE,
+        },
+        { status: 403 },
+      );
+    }
 
     // Check if user exists
     const existingUser = await taiKhoanRepo.findById(userId);
