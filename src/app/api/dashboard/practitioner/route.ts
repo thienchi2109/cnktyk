@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     const dashboardData: any = await db.query(
       `WITH 
       -- CTE 1: Practitioner basic info
-      -- Link account to practitioner by matching Email with TenDangNhap
+      -- Reverted join: use previous lookup to avoid relying on Email = TenDangNhap
       practitioner_info AS (
         SELECT 
           nv."MaNhanVien",
@@ -42,10 +42,11 @@ export async function GET(request: NextRequest) {
           nv."ChucDanh",
           nv."MaDonVi",
           dv."TenDonVi"
-        FROM "TaiKhoan" tk
-        INNER JOIN "NhanVien" nv ON LOWER(nv."Email") = LOWER(tk."TenDangNhap")
+        FROM "NhanVien" nv
         LEFT JOIN "DonVi" dv ON nv."MaDonVi" = dv."MaDonVi"
-        WHERE tk."MaTaiKhoan" = $1
+        LEFT JOIN "TaiKhoan" tk ON tk."MaTaiKhoan" = $1
+        WHERE nv."MaNhanVien" = $1 
+          OR nv."Email" = (SELECT "TenDangNhap" FROM "TaiKhoan" WHERE "MaTaiKhoan" = $1)
         LIMIT 1
       ),
       -- CTE 2: Active credit cycle
