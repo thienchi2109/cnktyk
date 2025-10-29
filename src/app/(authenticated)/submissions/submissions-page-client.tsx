@@ -22,9 +22,10 @@ interface Practitioner {
 interface SubmissionsPageClientProps {
   userRole: string;
   practitioners: Practitioner[];
+  initialPractitionerId?: string;
 }
 
-export function SubmissionsPageClient({ userRole, practitioners }: SubmissionsPageClientProps) {
+export function SubmissionsPageClient({ userRole, practitioners, initialPractitionerId }: SubmissionsPageClientProps) {
   const [showCreateSheet, setShowCreateSheet] = useState(false);
   const [showViewSheet, setShowViewSheet] = useState(false);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
@@ -80,6 +81,7 @@ export function SubmissionsPageClient({ userRole, practitioners }: SubmissionsPa
               redirectOnSuccess={false}
               onSubmit={handleCreated}
               onCancel={() => setShowCreateSheet(false)}
+              initialPractitionerId={initialPractitionerId}
             />
           </div>
         </SheetContent>
