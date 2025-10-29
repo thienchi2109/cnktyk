@@ -16,9 +16,18 @@ export async function GET(request: NextRequest) {
 
     // Get query parameters for filtering and sorting
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search')?.toLowerCase() || '';
+    const search = searchParams.get('search') || '';
     const sortBy = searchParams.get('sortBy') || 'name'; // name, compliance, practitioners
     const sortOrder = searchParams.get('sortOrder') || 'asc'; // asc, desc
+
+    // Build parameterized query to prevent SQL injection
+    const queryParams: any[] = [];
+    let whereClause = `WHERE dv."TrangThai" = 'HoatDong' AND dv."CapQuanLy" != 'SoYTe'`;
+    
+    if (search.trim()) {
+      queryParams.push(`%${search.trim().toLowerCase()}%`);
+      whereClause += ` AND LOWER(dv."TenDonVi") LIKE $${queryParams.length}`;
+    }
 
     // Get performance metrics for all units (excluding SoYTe admin units)
     const unitsResult = await db.query(`
@@ -52,11 +61,9 @@ export async function GET(request: NextRequest) {
       LEFT JOIN "NhanVien" nv ON dv."MaDonVi" = nv."MaDonVi"
       LEFT JOIN "KyCNKT" kc ON nv."MaNhanVien" = kc."MaNhanVien"
       LEFT JOIN "GhiNhanHoatDong" g ON nv."MaNhanVien" = g."MaNhanVien"
-      WHERE dv."TrangThai" = 'HoatDong'
-        AND dv."CapQuanLy" != 'SoYTe'
-        ${search ? `AND LOWER(dv."TenDonVi") LIKE '%${search}%'` : ''}
+      ${whereClause}
       GROUP BY dv."MaDonVi", dv."TenDonVi", dv."CapQuanLy"
-    `);
+    `, queryParams);
 
     // Parse and calculate metrics
     let units = unitsResult.map((row: any) => {
