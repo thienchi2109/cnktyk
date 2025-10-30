@@ -1094,7 +1094,7 @@ export async function getDohUnitComparisonPage({
         ELSE 0
       END AS compliance_rate,
       um.pending_approvals,
-      um.total_credits,
+      um.total_credits
     FROM unit_metrics um
   `;
 
