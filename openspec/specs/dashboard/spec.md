@@ -81,8 +81,8 @@ The unit comparison grid SHALL expose interactive controls that let DoH users in
 - **THEN** the grid updates without page reload, announces the filtered result count, and preserves active filters across pagination/virtualization.
 
 #### Scenario: Row-level deep links
-- **WHEN** a user selects a unit row
-- **THEN** actions such as “Xem chi tiết” are available via keyboard and mouse, opening the appropriate unit detail without leaving the grid context unexpectedly.
+- **WHEN** a SoYTe user activates the “Xem chi tiết” action on a valid unit row
+- **THEN** the app navigates to `/dashboard/units/[unitId]` and renders the detail view without a 404 for valid units
 
 ### Requirement: Server-Driven Filtering and Sorting
 The SoYTe comparison grid SHALL delegate search, filtering, and sorting to server-side data sources to maintain performance for large datasets.
@@ -109,4 +109,19 @@ Server access for the comparison grid SHALL avoid N+1 query patterns and remain 
 #### Scenario: Batched metrics fetching
 - **WHEN** the grid requests unit metrics (practitioner counts, compliance rates, pending approvals)
 - **THEN** the server assembles the response using batched/aggregated queries (e.g., joins, CTEs) rather than issuing one query per unit.
+
+### Requirement: DoH Unit Detail View
+The system SHALL provide a unit detail view accessible from the DoH dashboard that renders unit metadata and key performance metrics.
+
+#### Scenario: Route exists and renders for valid unit
+- **WHEN** a SoYTe user navigates to `/dashboard/units/[unitId]` for a unit they are authorized to view
+- **THEN** the page returns 200 and displays the unit’s name and metrics (e.g., practitioners, compliance, pending, credits)
+
+#### Scenario: Unauthorized or non-existent unit
+- **WHEN** a user navigates to `/dashboard/units/[unitId]` for a unit outside their tenant or that does not exist
+- **THEN** the system returns 403 (unauthorized) or 404 (not found) appropriately
+
+#### Scenario: Return to comparison context
+- **WHEN** a user opens a unit detail from the comparison grid and then uses back navigation
+- **THEN** they return to the comparison section with prior filters and sorts preserved
 
