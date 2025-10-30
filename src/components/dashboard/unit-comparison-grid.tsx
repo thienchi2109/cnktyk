@@ -321,7 +321,7 @@ const UnitComparisonGridComponent = ({
                           variant="outline"
                           className="whitespace-nowrap"
                         >
-                          <Link href={`/so-y-te/don-vi/${row.id}`} aria-label={`Xem chi tiết ${row.name}`}>
+                          <Link href={`/dashboard/units/${row.id}`} aria-label={`Xem chi tiết ${row.name}`}>
                             Xem chi tiết
                           </Link>
                         </GlassButton>

@@ -131,6 +131,44 @@ describe('UnitComparisonGrid', () => {
     ]);
   });
 
+  it('renders detail link to canonical route', () => {
+    const rows: UnitComparisonRow[] = [
+      {
+        id: 'unit-1',
+        name: 'Đơn vị 1',
+        type: 'BenhVien',
+        totalPractitioners: 10,
+        activePractitioners: 8,
+        compliantPractitioners: 6,
+        complianceRate: 75,
+        pendingApprovals: 1,
+        totalCredits: 100,
+      },
+    ];
+
+    act(() => {
+      root.render(
+        <UnitComparisonGrid
+          rows={rows}
+          isLoading={false}
+          error={null}
+          page={1}
+          pageSize={20}
+          totalItems={1}
+          totalPages={1}
+          sort={defaultSort}
+          onSortChange={() => {}}
+          onPageChange={() => {}}
+          onPageSizeChange={() => {}}
+          onRetry={() => {}}
+        />,
+      );
+    });
+
+    const link = container.querySelector('a[href="/dashboard/units/unit-1"]');
+    expect(link).toBeTruthy();
+  });
+
   it('triggers pagination handlers', () => {
     const rows = Array.from({ length: 20 }, (_, index) => makeUnit(index));
     const onPageChange = vi.fn();
