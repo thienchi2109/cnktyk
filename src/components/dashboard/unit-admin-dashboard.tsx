@@ -235,10 +235,10 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
             return {
               id: item.MaGhiNhan,
               practitionerId: item.MaNhanVien,
-              practitionerName: item.TenNhanVien || 'N/A',
+              practitionerName: item.practitioner?.HoVaTen || 'N/A',
               activityTitle: item.TenHoatDong,
-              activityType: item.LoaiHoatDong || 'Khác',
-              credits: item.SoTinChi,
+              activityType: item.activityCatalog?.LoaiHoatDong || 'Khác',
+              credits: item.SoGioTinChiQuyDoi || 0,
               submittedDate: item.NgayGhiNhan,
               evidenceUrl: item.FileMinhChungUrl,
               daysWaiting

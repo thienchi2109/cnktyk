@@ -103,6 +103,7 @@ export async function GET(request: NextRequest) {
     const result = await ghiNhanHoatDongRepo.search(filters);
 
     return NextResponse.json({
+      success: true,
       data: result.data,
       pagination: result.pagination,
     });
