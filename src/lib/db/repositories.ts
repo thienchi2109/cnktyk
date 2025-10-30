@@ -999,7 +999,7 @@ export async function getDohUnitComparisonPage({
   const limitPlaceholder = `$${queryParams.length + 1}`;
   const offsetPlaceholder = `$${queryParams.length + 2}`;
 
-  const query = `
+  const baseCte = `
     WITH filtered_units AS (
       SELECT dv."MaDonVi", dv."TenDonVi", dv."CapQuanLy"
       FROM "DonVi" dv
@@ -1076,6 +1076,9 @@ export async function getDohUnitComparisonPage({
         pr.total_practitioners,
         pr.active_practitioners
     )
+  `;
+
+  const selectStatement = `
     SELECT
       um."MaDonVi" AS id,
       um."TenDonVi" AS name,
@@ -1090,8 +1093,12 @@ export async function getDohUnitComparisonPage({
       END AS compliance_rate,
       um.pending_approvals,
       um.total_credits,
-      COUNT(*) OVER() AS total_count
     FROM unit_metrics um
+  `;
+
+  const paginatedQuery = `
+    ${baseCte}
+    ${selectStatement}
     ORDER BY ${finalOrderBy}
     LIMIT ${limitPlaceholder}
     OFFSET ${offsetPlaceholder}
@@ -1107,19 +1114,22 @@ export async function getDohUnitComparisonPage({
     compliance_rate: number | string | null;
     pending_approvals: number | string | null;
     total_credits: number | string | null;
-    total_count: number | string | null;
   };
 
-  const rows = await db.query<RawUnitMetricsRow>(query, [
+  const rows = await db.query<RawUnitMetricsRow>(paginatedQuery, [
     ...queryParams,
     boundedPageSize,
     offset,
   ]);
 
-  const totalItems =
-    rows.length > 0 && rows[0].total_count !== null
-      ? Number(rows[0].total_count)
-      : 0;
+  const countQuery = `
+    ${baseCte}
+    SELECT COUNT(*)::bigint AS total_count
+    FROM unit_metrics
+  `;
+
+  const countRows = await db.query<{ total_count: string | number | null }>(countQuery, queryParams);
+  const totalItems = Number(countRows[0]?.total_count ?? 0);
   const totalPages = totalItems > 0 ? Math.ceil(totalItems / boundedPageSize) : 0;
 
   const items: DohUnitComparisonRow[] = rows.map((row) => ({
