@@ -270,6 +270,7 @@ export interface NhanVienWithCompliance extends Omit<z.infer<typeof NhanVienSche
 // Submission list item with enriched data (for paginated results with JOINs)
 export interface SubmissionListItem {
   MaGhiNhan: string;
+  MaNhanVien: string;
   TenHoatDong: string;
   NgayGhiNhan: string;
   TrangThaiDuyet: string;

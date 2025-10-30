@@ -1,0 +1,118 @@
+## 1. Implementation
+- [ ] 1.1 Create UnitDetailSheet component with React Query
+  - File: `src/components/dashboard/unit-detail-sheet.tsx`
+  - Props: `unitId: string | null, open: boolean, onOpenChange: (open: boolean) => void, initialData?: UnitMetrics`
+  - Use `useQuery` from TanStack Query for data fetching instead of manual useEffect + fetch
+  - Query key: `['unit-metrics', unitId]`
+  - Pass `initialData` prop to useQuery for optimistic rendering
+  - Fetch unit data via `/api/units/${unitId}/metrics` (reuse existing endpoint)
+  - Display: Unit name, type, practitioners, compliance rate, pending approvals, credits
+  - Use Sheet from `@/components/ui/sheet` (Radix UI based)
+  - Implement loading state (Skeleton) and error state with React Query states
+  - Match styling of practitioner-detail-sheet for consistency
+  - Accessibility: ARIA dialog attributes, focus trap, ESC key handler
+- [ ] 1.2 Update DohDashboard to manage sheet state and prefetching
+  - File: `src/components/dashboard/doh-dashboard.tsx`
+  - Add state: `selectedUnitId`, `sheetOpen`, `selectedUnitData` (for initial data)
+  - Pass sheet trigger callback and hover prefetch callback to UnitComparisonGrid
+  - Create hover prefetch handler using `queryClient.prefetchQuery`
+  - When opening sheet, pass corresponding unit data from grid as initialData
+  - Use dynamic import for UnitDetailSheet component: `const UnitDetailSheet = dynamic(() => import('./unit-detail-sheet'))`
+  - Render UnitDetailSheet at dashboard level with initialData prop
+- [ ] 1.3 Update UnitComparisonGrid to trigger sheet with prefetching
+  - File: `src/components/dashboard/unit-comparison-grid.tsx`
+  - Replace `<Link href={...}>` with `<button onClick={...}>` in actions column
+  - Add props: `onUnitDetailClick: (unitId: string, unitData: UnitComparisonRow) => void`, `onUnitDetailHover: (unitId: string) => void`
+  - Update button to call `onUnitDetailClick(row.id, row)` on click
+  - Add `onMouseEnter` handler to call `onUnitDetailHover(row.id)` for prefetching
+  - Maintain aria-label for accessibility
+  - Add debounce to hover handler (150ms) to avoid excessive prefetch calls
+- [ ] 1.4 Deprecate or remove separate page route
+  - Decision: Keep route for potential deep linking needs, but make it render the sheet overlay
+  - Alternative: Remove `src/app/(authenticated)/dashboard/units/[id]/page.tsx` and related files
+  - Update any direct links to use sheet trigger instead
+- [ ] 1.5 Add shared type definition for unit metrics
+  - File: `src/types/dashboard.ts` (create if not exists)
+  - Define `UnitMetrics` interface matching API response
+  - Export type for use in components and API route
+  - Ensures type safety between grid data and sheet initialData
+
+## 2. Performance Validation
+- [ ] 2.1 Verify React Query caching
+  - Open unit detail sheet, close it, reopen same unit
+  - Confirm no API call on second open (cached for 30s per project defaults)
+  - Check React Query Devtools shows cached data
+- [ ] 2.2 Verify prefetching works
+  - Hover over "Xem chi tiết" button
+  - Confirm network request initiated (DevTools Network tab)
+  - Click button and confirm instant render from cache
+- [ ] 2.3 Verify request deduplication
+  - Rapidly click multiple "Xem chi tiết" buttons
+  - Confirm only necessary API calls made (no duplicate in-flight requests)
+- [ ] 2.4 Verify initial data optimization
+  - Open unit detail sheet
+  - Confirm metrics render immediately from grid data (no loading skeleton)
+  - Background refetch happens silently if data is stale
+- [ ] 2.5 Measure bundle size impact
+  - Build dashboard page before/after changes
+  - Confirm sheet component is code-split (separate chunk)
+  - Verify initial bundle reduction of ~5-10KB
+
+## 3. Testing
+- [ ] 3.1 Update component tests
+  - File: `tests/components/unit-comparison-grid.test.tsx`
+  - Test: "Xem chi tiết" button calls onUnitDetailClick callback
+  - Test: Correct unit ID and data passed to callback
+  - Test: Hover handler calls prefetch callback
+- [ ] 3.2 Add sheet component tests with React Query
+  - New: `tests/components/unit-detail-sheet.test.tsx`
+  - Test: Opens/closes via open prop
+  - Test: Uses React Query for data fetching
+  - Test: Renders initialData immediately when provided
+  - Test: Displays loading and error states from useQuery
+  - Test: ESC key closes sheet
+  - Test: Focus trap and ARIA attributes
+  - Test: Query key format matches expected pattern
+- [ ] 3.3 Manual QA
+  - Test: Click "Xem chi tiết" opens sheet overlay
+  - Test: Dashboard table visible (dimmed) in background
+  - Test: Close button, ESC key, and click-outside all close sheet
+  - Test: Tab navigation stays within sheet
+  - Test: Screen reader announces sheet opening/closing
+  - Test: Mobile viewport shows appropriate sheet width
+  - Test: Rapid clicks don't cause multiple sheets
+
+## 4. Accessibility & Polish
+- [ ] 3.1 Verify ARIA attributes
+  - Sheet has role="dialog", aria-modal="true", aria-labelledby pointing to title
+  - Close button has aria-label="Đóng chi tiết đơn vị"
+- [ ] 4.2 Verify keyboard navigation
+  - ESC key closes sheet
+  - Tab/Shift+Tab cycles through interactive elements in sheet
+  - Focus returns to trigger button on close
+- [ ] 4.3 Verify reduced motion
+  - Sheet animation respects prefers-reduced-motion preference
+- [ ] 4.4 Mobile optimization
+  - Sheet width appropriate for mobile viewport (full or near-full width)
+
+## 5. Documentation
+- [ ] 5.1 Update developer docs
+  - Document sheet pattern for unit details
+  - Note pattern consistency with practitioner and activity details
+  - Document performance optimizations (React Query, prefetching, initial data)
+- [ ] 5.2 Code comments
+  - Document focus management in sheet component
+  - Document state management in doh-dashboard
+  - Document hover prefetch implementation and debounce strategy
+
+## 6. Rollout
+- [ ] 5.1 Verify in preview deployment
+  - Test all scenarios from task 2.3
+  - Verify no console errors or warnings
+  - Check React Query Devtools for proper cache behavior
+  - Verify bundle size in build output
+- [ ] 6.2 Monitor post-deploy
+  - Check for client-side errors related to sheet
+  - Verify accessibility with real screen readers if possible
+  - Monitor API call frequency to `/api/units/[id]/metrics` (should decrease with caching)
+  - Check React Query cache hit rate in production (if monitoring available)

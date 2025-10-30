@@ -235,10 +235,10 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
             return {
               id: item.MaGhiNhan,
               practitionerId: item.MaNhanVien,
-              practitionerName: item.TenNhanVien || 'N/A',
+              practitionerName: item.practitioner?.HoVaTen || 'N/A',
               activityTitle: item.TenHoatDong,
-              activityType: item.LoaiHoatDong || 'Khác',
-              credits: item.SoTinChi,
+              activityType: item.activityCatalog?.LoaiHoatDong || 'Khác',
+              credits: item.SoGioTinChiQuyDoi || 0,
               submittedDate: item.NgayGhiNhan,
               evidenceUrl: item.FileMinhChungUrl,
               daysWaiting
@@ -492,9 +492,9 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
               </div>
               <h2 className="text-xl font-bold text-gray-800">Quản lý người hành nghề</h2>
             </div>
-            <div className="flex items-center gap-2" suppressHydrationWarning>
+            <div className="flex items-center gap-2">
               <Sheet open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-                <SheetTrigger asChild>
+                <SheetTrigger asChild suppressHydrationWarning>
                   <Button className="hidden md:flex items-center gap-2 rounded-full shadow-sm hover:shadow-md transition-shadow">
                     <Plus className="w-4 h-4" />
                     Thêm mới

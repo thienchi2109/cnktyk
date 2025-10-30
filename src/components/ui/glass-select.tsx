@@ -32,7 +32,7 @@ export interface SelectProps
 const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
   ({ className, variant, size, children, ...props }, ref) => {
     return (
-      <div className="relative">
+      <div className="relative z-10">
         <select
           className={cn(
             selectVariants({ variant, size }),

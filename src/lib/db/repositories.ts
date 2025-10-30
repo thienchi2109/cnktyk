@@ -605,6 +605,7 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
     const dataQuery = `
       SELECT 
         g."MaGhiNhan",
+        g."MaNhanVien",
         g."TenHoatDong",
         g."NgayGhiNhan",
         g."TrangThaiDuyet",
@@ -659,6 +660,7 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
     // Map database rows to SubmissionListItem format
     const data: import('./schemas').SubmissionListItem[] = rows.map(row => ({
       MaGhiNhan: row.MaGhiNhan,
+      MaNhanVien: row.MaNhanVien,
       TenHoatDong: row.TenHoatDong,
       NgayGhiNhan: row.NgayGhiNhan?.toISOString() || '',
       TrangThaiDuyet: row.TrangThaiDuyet,
@@ -1092,7 +1094,7 @@ export async function getDohUnitComparisonPage({
         ELSE 0
       END AS compliance_rate,
       um.pending_approvals,
-      um.total_credits,
+      um.total_credits
     FROM unit_metrics um
   `;
 
