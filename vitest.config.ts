@@ -3,7 +3,7 @@ import path from 'node:path';
 
 export default defineConfig({
   test: {
-    environment: 'node',
+    environment: 'jsdom',
     globals: true,
     reporters: ['default'],
     include: ['tests/**/*.{test,spec}.{ts,tsx}']

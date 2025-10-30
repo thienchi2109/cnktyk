@@ -1,6 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth, requireRole } from '@/lib/auth/server';
-import { db } from '@/lib/db/client';
+import { requireAuth } from '@/lib/auth/server';
+import { getDohUnitComparisonPage } from '@/lib/db/repositories';
+
+type SortField = 'name' | 'compliance' | 'practitioners' | 'pending' | 'totalCredits';
+
+const SORTABLE_FIELDS = new Set<SortField>([
+  'name',
+  'compliance',
+  'practitioners',
+  'pending',
+  'totalCredits',
+]);
+
+function parseSortParams(
+  searchParams: URLSearchParams,
+): Array<{ field: SortField; direction: 'asc' | 'desc' }> {
+  const sortValues = searchParams.getAll('sort');
+  const entries: Array<{ field: SortField; direction: 'asc' | 'desc' }> = [];
+
+  const segments = sortValues.length > 0
+    ? sortValues.flatMap((value) => value.split(','))
+    : [];
+
+  for (const segment of segments) {
+    const trimmed = segment.trim();
+    if (!trimmed) continue;
+
+    const [fieldRaw, dirRaw] = trimmed.split(':');
+    const field = fieldRaw?.trim();
+    const direction = (dirRaw?.trim()?.toLowerCase() || 'asc') as 'asc' | 'desc';
+
+    if (
+      field &&
+      SORTABLE_FIELDS.has(field as SortField) &&
+      (direction === 'asc' || direction === 'desc')
+    ) {
+      entries.push({ field: field as SortField, direction });
+    }
+  }
+
+  // Backwards compatibility with legacy sortBy/sortOrder params
+  if (entries.length === 0) {
+    const sortBy = searchParams.get('sortBy');
+    const sortOrder = (searchParams.get('sortOrder') || 'asc').toLowerCase();
+
+    if (sortBy && SORTABLE_FIELDS.has(sortBy as SortField)) {
+      entries.push({
+        field: sortBy as SortField,
+        direction: sortOrder === 'desc' ? 'desc' : 'asc',
+      });
+    }
+  }
+
+  return entries;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,101 +67,38 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get query parameters for filtering and sorting
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
-    const sortBy = searchParams.get('sortBy') || 'name'; // name, compliance, practitioners
-    const sortOrder = searchParams.get('sortOrder') || 'asc'; // asc, desc
+    const requestedSorts = parseSortParams(searchParams);
+    const effectiveSorts =
+      requestedSorts.length > 0
+        ? requestedSorts
+        : [
+            { field: 'compliance' as const, direction: 'desc' as const },
+            { field: 'name' as const, direction: 'asc' as const },
+          ];
+    const pageParam = searchParams.get('page');
+    const pageSizeParam = searchParams.get('pageSize');
 
-    // Build parameterized query to prevent SQL injection
-    const queryParams: any[] = [];
-    let whereClause = `WHERE dv."TrangThai" = 'HoatDong' AND dv."CapQuanLy" != 'SoYTe'`;
-    
-    if (search.trim()) {
-      queryParams.push(`%${search.trim().toLowerCase()}%`);
-      whereClause += ` AND LOWER(dv."TenDonVi") LIKE $${queryParams.length}`;
-    }
+    const parsedPage = pageParam ? Number(pageParam) : undefined;
+    const parsedPageSize = pageSizeParam ? Number(pageSizeParam) : undefined;
 
-    // Get performance metrics for all units (excluding SoYTe admin units)
-    const unitsResult = await db.query(`
-      SELECT 
-        dv."MaDonVi",
-        dv."TenDonVi",
-        dv."CapQuanLy",
-        COUNT(DISTINCT nv."MaNhanVien") as total_practitioners,
-        COUNT(DISTINCT CASE WHEN nv."TrangThaiLamViec" = 'DangLamViec' THEN nv."MaNhanVien" END) as active_practitioners,
-        COUNT(DISTINCT CASE 
-          WHEN kc."TrangThai" = 'DangDienRa' 
-          AND (
-            SELECT COALESCE(SUM(g."SoGioTinChiQuyDoi"), 0)
-            FROM "GhiNhanHoatDong" g
-            WHERE g."MaNhanVien" = nv."MaNhanVien"
-            AND g."TrangThaiDuyet" = 'DaDuyet'
-            AND g."NgayGhiNhan" BETWEEN kc."NgayBatDau" AND kc."NgayKetThuc"
-          ) >= kc."SoTinChiYeuCau"
-          THEN nv."MaNhanVien" 
-        END) as compliant_practitioners,
-        COUNT(DISTINCT CASE 
-          WHEN g."TrangThaiDuyet" = 'ChoDuyet' 
-          THEN g."MaGhiNhan" 
-        END) as pending_approvals,
-        COALESCE(SUM(CASE 
-          WHEN g."TrangThaiDuyet" = 'DaDuyet' 
-          THEN g."SoGioTinChiQuyDoi" 
-          ELSE 0 
-        END), 0) as total_credits
-      FROM "DonVi" dv
-      LEFT JOIN "NhanVien" nv ON dv."MaDonVi" = nv."MaDonVi"
-      LEFT JOIN "KyCNKT" kc ON nv."MaNhanVien" = kc."MaNhanVien"
-      LEFT JOIN "GhiNhanHoatDong" g ON nv."MaNhanVien" = g."MaNhanVien"
-      ${whereClause}
-      GROUP BY dv."MaDonVi", dv."TenDonVi", dv."CapQuanLy"
-    `, queryParams);
-
-    // Parse and calculate metrics
-    let units = unitsResult.map((row: any) => {
-
-      const active = parseInt(row.active_practitioners || '0');
-      const compliant = parseInt(row.compliant_practitioners || '0');
-      const complianceRate = active > 0 ? Math.round((compliant / active) * 100) : 0;
-
-      return {
-        id: row.MaDonVi,
-        name: row.TenDonVi,
-        type: row.CapQuanLy,
-        totalPractitioners: parseInt(row.total_practitioners || '0'),
-        activePractitioners: active,
-        compliantPractitioners: compliant,
-        complianceRate,
-        pendingApprovals: parseInt(row.pending_approvals || '0'),
-        totalCredits: parseFloat(row.total_credits || '0')
-      };
-    });
-
-    // Apply server-side sorting
-    units.sort((a, b) => {
-      let comparison = 0;
-      
-      switch (sortBy) {
-        case 'name':
-          comparison = a.name.localeCompare(b.name);
-          break;
-        case 'compliance':
-          comparison = a.complianceRate - b.complianceRate;
-          break;
-        case 'practitioners':
-          comparison = a.activePractitioners - b.activePractitioners;
-          break;
-        default:
-          comparison = a.name.localeCompare(b.name);
-      }
-      
-      return sortOrder === 'desc' ? -comparison : comparison;
+    const result = await getDohUnitComparisonPage({
+      search: search.trim() || undefined,
+      page: parsedPage,
+      pageSize: parsedPageSize,
+      sort: effectiveSorts,
     });
 
     return NextResponse.json({
       success: true,
-      data: units
+      data: {
+        ...result,
+        filters: {
+          search: search.trim(),
+        },
+        sort: effectiveSorts,
+      },
     });
 
   } catch (error) {

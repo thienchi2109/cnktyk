@@ -26,6 +26,7 @@ import {
   DashboardErrorPanel,
 } from '@/components/dashboard/dashboard-skeletons';
 import { Skeleton } from '@/components/ui/skeleton';
+import { UnitComparisonGrid } from '@/components/dashboard/unit-comparison-grid';
 
 interface SystemMetrics {
   totalUnits: number;
@@ -40,7 +41,7 @@ interface SystemMetrics {
   atRiskPractitioners: number;
 }
 
-interface UnitPerformance {
+export interface UnitPerformance {
   id: string;
   name: string;
   type: string;
@@ -51,6 +52,16 @@ interface UnitPerformance {
   pendingApprovals: number;
   totalCredits: number;
 }
+
+type UnitSortField = 'name' | 'compliance' | 'practitioners' | 'pending' | 'totalCredits';
+interface UnitSortState {
+  field: UnitSortField;
+  direction: 'asc' | 'desc';
+}
+const DEFAULT_UNIT_SORTS: ReadonlyArray<UnitSortState> = [
+  { field: 'compliance', direction: 'desc' },
+  { field: 'name', direction: 'asc' },
+] as const;
 
 interface RecentActivity {
   id: string;
@@ -78,15 +89,21 @@ export function DohDashboard({ userId }: DohDashboardProps) {
     totalCreditsAwarded: 0,
     atRiskPractitioners: 0
   });
-  const [units, setUnits] = useState<UnitPerformance[]>([]);
   const [metricsLoading, setMetricsLoading] = useState(true);
   const [unitsLoading, setUnitsLoading] = useState(true);
   const [metricsError, setMetricsError] = useState<string | null>(null);
   const [unitsError, setUnitsError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
-  const [sortBy, setSortBy] = useState<'name' | 'compliance' | 'practitioners'>('compliance');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [units, setUnits] = useState<UnitPerformance[]>([]);
+  const [unitPage, setUnitPage] = useState(1);
+  const [unitPageSize, setUnitPageSize] = useState(20);
+  const [unitTotalItems, setUnitTotalItems] = useState(0);
+  const [unitTotalPages, setUnitTotalPages] = useState(0);
+  const [unitSorts, setUnitSorts] = useState<UnitSortState[]>(() =>
+    DEFAULT_UNIT_SORTS.map((entry) => ({ ...entry }))
+  );
+  const [unitsRefreshKey, setUnitsRefreshKey] = useState(0);
   const [expandedSections, setExpandedSections] = useState({
     overview: true,
     units: true,
@@ -131,57 +148,116 @@ export function DohDashboard({ userId }: DohDashboardProps) {
     fetchMetrics();
   }, []);
 
-  // Fetch units performance with server-side filtering and sorting
   useEffect(() => {
+    setUnitPage(1);
+  }, [debouncedSearchTerm]);
+
+  // Fetch units performance with server-side filtering, sorting, and pagination
+  useEffect(() => {
+    const controller = new AbortController();
+
     const fetchUnits = async () => {
       try {
         setUnitsLoading(true);
         setUnitsError(null);
 
         const params = new URLSearchParams();
-        if (debouncedSearchTerm.trim()) {
-          params.append('search', debouncedSearchTerm.trim());
-        }
-        params.append('sortBy', sortBy);
-        params.append('sortOrder', sortOrder);
+        params.set('page', unitPage.toString());
+        params.set('pageSize', unitPageSize.toString());
 
-        const response = await fetch(`/api/system/units-performance?${params.toString()}`);
+        if (debouncedSearchTerm.trim()) {
+          params.set('search', debouncedSearchTerm.trim());
+        }
+
+        if (unitSorts.length > 0) {
+          params.set(
+            'sort',
+            unitSorts.map((entry) => `${entry.field}:${entry.direction}`).join(','),
+          );
+        }
+
+        const response = await fetch(`/api/system/units-performance?${params.toString()}`, {
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}`);
+        }
+
         const result = await response.json();
 
-        if (!result.success) {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        if (!result.success || !result.data) {
           throw new Error(result.error || 'Failed to load units performance');
         }
 
-        setUnits(Array.isArray(result.data) ? result.data : []);
+        const data = result.data;
+        const items: UnitPerformance[] = Array.isArray(data.items)
+          ? data.items.map((item: any) => ({
+              id: String(item.id),
+              name: String(item.name),
+              type: String(item.type ?? 'Không xác định'),
+              totalPractitioners: Number(item.totalPractitioners ?? 0),
+              activePractitioners: Number(item.activePractitioners ?? 0),
+              compliantPractitioners: Number(item.compliantPractitioners ?? 0),
+              complianceRate: Number(item.complianceRate ?? 0),
+              pendingApprovals: Number(item.pendingApprovals ?? 0),
+              totalCredits: Number(item.totalCredits ?? 0),
+            }))
+          : [];
+
+        setUnits(items);
+
+        const nextTotalItems = Number.isFinite(Number(data.totalItems)) ? Number(data.totalItems) : items.length;
+        const nextTotalPages = Number.isFinite(Number(data.totalPages)) ? Number(data.totalPages) : (items.length > 0 ? 1 : 0);
+
+        setUnitTotalItems(nextTotalItems);
+        setUnitTotalPages(nextTotalPages);
+
+        const serverPage = Number.isFinite(Number(data.page)) ? Number(data.page) : unitPage;
+        const serverPageSize = Number.isFinite(Number(data.pageSize))
+          ? Number(data.pageSize)
+          : unitPageSize;
+
+        if (serverPageSize !== unitPageSize) {
+          setUnitPageSize(serverPageSize);
+        }
+
+        const normalizedPage =
+          nextTotalPages > 0 ? Math.min(Math.max(1, serverPage), nextTotalPages) : 1;
+
+        if (normalizedPage !== unitPage) {
+          setUnitPage(normalizedPage);
+        }
       } catch (error) {
+        if (controller.signal.aborted) {
+          return;
+        }
         console.error('Error fetching units performance:', error);
         setUnitsError('Không thể tải danh sách đơn vị. Vui lòng thử lại.');
         setUnits([]);
+        setUnitTotalItems(0);
+        setUnitTotalPages(0);
       } finally {
-        setUnitsLoading(false);
+        if (!controller.signal.aborted) {
+          setUnitsLoading(false);
+        }
       }
     };
 
     fetchUnits();
-  }, [debouncedSearchTerm, sortBy, sortOrder]);
+
+    return () => controller.abort();
+  }, [debouncedSearchTerm, unitSorts, unitPage, unitPageSize, unitsRefreshKey]);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections(prev => ({
       ...prev,
       [section]: !prev[section]
     }));
-  };
-
-  const getComplianceColor = (percent: number) => {
-    if (percent >= 90) return 'text-medical-green';
-    if (percent >= 70) return 'text-medical-amber';
-    return 'text-medical-red';
-  };
-
-  const getComplianceBgColor = (percent: number) => {
-    if (percent >= 90) return 'bg-medical-green/10 border-medical-green/30';
-    if (percent >= 70) return 'bg-medical-amber/10 border-medical-amber/30';
-    return 'bg-medical-red/10 border-medical-red/30';
   };
 
   // No need for client-side sorting and filtering - now handled by server
@@ -426,9 +502,9 @@ export function DohDashboard({ userId }: DohDashboardProps) {
                 <Building2 className="w-5 h-5 text-medical-blue" />
               </div>
               <h2 className="text-xl font-bold text-gray-800">So sánh đơn vị</h2>
-              {!unitsLoading && !unitsError && units.length > 0 && (
+              {!unitsLoading && !unitsError && unitTotalItems > 0 && (
                 <span className="px-3 py-1 rounded-full bg-medical-blue/20 text-medical-blue text-sm font-semibold">
-                  {units.length} đơn vị
+                  {unitTotalItems.toLocaleString('vi-VN')} đơn vị
                 </span>
               )}
             </div>
@@ -448,102 +524,64 @@ export function DohDashboard({ userId }: DohDashboardProps) {
             <div className="space-y-4">
               {/* Search and Sort Controls */}
               <div className="flex flex-col md:flex-row gap-3">
-                <input
-                  type="text"
-                  placeholder="Tìm kiếm đơn vị..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="flex-1 px-4 py-2 rounded-lg border border-gray-200 bg-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-medical-blue/50"
-                />
-                <div className="flex gap-2">
-                  <GlassButton
-                    variant={sortBy === 'name' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setSortBy('name')}
-                  >
-                    Tên
-                  </GlassButton>
-                  <GlassButton
-                    variant={sortBy === 'compliance' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setSortBy('compliance')}
-                  >
-                    Tuân thủ
-                  </GlassButton>
-                  <GlassButton
-                    variant={sortBy === 'practitioners' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setSortBy('practitioners')}
-                  >
-                    Số lượng
-                  </GlassButton>
-                  <GlassButton
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-                    title={sortOrder === 'asc' ? 'Tăng dần' : 'Giảm dần'}
-                  >
-                    {sortOrder === 'asc' ? '↑' : '↓'}
-                  </GlassButton>
+                <div className="flex flex-1 gap-3">
+                  <label htmlFor="unit-search" className="sr-only">
+                    Tìm kiếm đơn vị
+                  </label>
+                  <input
+                    id="unit-search"
+                    type="search"
+                    placeholder="Tìm kiếm đơn vị..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="flex-1 px-4 py-2 rounded-lg border border-gray-200 bg-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-medical-blue/50"
+                  />
+                  {searchTerm ? (
+                    <GlassButton
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSearchTerm('')}
+                      aria-label="Xóa từ khóa tìm kiếm"
+                    >
+                      Xóa
+                    </GlassButton>
+                  ) : null}
                 </div>
+                <GlassButton
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setUnitSorts(DEFAULT_UNIT_SORTS.map((entry) => ({ ...entry })));
+                    setUnitPageSize(20);
+                    setUnitPage(1);
+                  }}
+                >
+                  Đặt lại
+                </GlassButton>
               </div>
 
-              {/* Units Grid */}
-              {unitsError ? (
-                <DashboardErrorPanel message={unitsError} />
-              ) : unitsLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {Array.from({ length: 6 }).map((_, index) => (
-                    <DashboardCardSkeleton key={index} lines={4} />
-                  ))}
-                </div>
-              ) : units.length === 0 ? (
-                <div className="text-center py-12">
-                  <Building2 className="w-16 h-16 mx-auto mb-3 text-gray-300" />
-                  <p className="text-gray-600">Không tìm thấy đơn vị</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {units.map((unit) => (
-                    <GlassCard key={unit.id} className={`p-4 border-2 ${getComplianceBgColor(unit.complianceRate)}`}>
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-800 mb-1">{unit.name}</h3>
-                          <p className="text-xs text-gray-500">{unit.type}</p>
-                        </div>
-                        <div className={`text-2xl font-bold ${getComplianceColor(unit.complianceRate)}`}>
-                          {unit.complianceRate}%
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Người hành nghề</span>
-                          <span className="font-semibold text-gray-800">{unit.activePractitioners}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Hoàn thành</span>
-                          <span className="font-semibold text-medical-green">{unit.compliantPractitioners}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Chờ duyệt</span>
-                          <span className="font-semibold text-medical-amber">{unit.pendingApprovals}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Tổng tín chỉ</span>
-                          <span className="font-semibold text-medical-blue">{unit.totalCredits.toFixed(0)}</span>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 pt-3 border-t border-gray-200/50">
-                        <GlassButton variant="outline" size="sm" className="w-full">
-                          Xem chi tiết
-                        </GlassButton>
-                      </div>
-                    </GlassCard>
-                  ))}
-                </div>
-              )}
+              <UnitComparisonGrid
+                rows={units}
+                isLoading={unitsLoading}
+                error={unitsError}
+                page={unitPage}
+                pageSize={unitPageSize}
+                totalItems={unitTotalItems}
+                totalPages={unitTotalPages}
+                sort={unitSorts}
+                onSortChange={(next) => {
+                  const nextState = next.length > 0 ? next : DEFAULT_UNIT_SORTS.map((entry) => ({ ...entry }));
+                  setUnitSorts(nextState);
+                  setUnitPage(1);
+                }}
+                onPageChange={(next) => setUnitPage(next)}
+                onPageSizeChange={(size) => {
+                  setUnitPageSize(size);
+                  setUnitPage(1);
+                }}
+                onRetry={() => setUnitsRefreshKey((prev) => prev + 1)}
+              />
             </div>
           )}
         </GlassCard>

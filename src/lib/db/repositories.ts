@@ -913,3 +913,242 @@ export const thongBaoRepo = new ThongBaoRepository();
 // Export the notification repository instance
 export const notificationRepo = thongBaoRepo;
 export const nhatKyHeThongRepo = new NhatKyHeThongRepository();
+
+export interface DohUnitComparisonRow {
+  id: string;
+  name: string;
+  type: string;
+  totalPractitioners: number;
+  activePractitioners: number;
+  compliantPractitioners: number;
+  complianceRate: number;
+  pendingApprovals: number;
+  totalCredits: number;
+}
+
+export interface DohUnitComparisonPage {
+  items: DohUnitComparisonRow[];
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+}
+
+export interface DohUnitComparisonQuery {
+  search?: string;
+  page?: number;
+  pageSize?: number;
+  sort?: Array<{ field: 'name' | 'compliance' | 'practitioners' | 'pending' | 'totalCredits'; direction: 'asc' | 'desc' }>;
+}
+
+const DEFAULT_UNITS_PAGE_SIZE = 20;
+const MAX_UNITS_PAGE_SIZE = 100;
+
+export async function getDohUnitComparisonPage({
+  search,
+  page = 1,
+  pageSize = DEFAULT_UNITS_PAGE_SIZE,
+  sort = [
+    { field: 'compliance', direction: 'desc' },
+    { field: 'name', direction: 'asc' },
+  ],
+}: DohUnitComparisonQuery): Promise<DohUnitComparisonPage> {
+  const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
+  const boundedPageSize = Math.min(
+    Math.max(1, Number.isFinite(pageSize) ? Math.floor(pageSize) : DEFAULT_UNITS_PAGE_SIZE),
+    MAX_UNITS_PAGE_SIZE
+  );
+  const offset = (safePage - 1) * boundedPageSize;
+
+  const queryParams: any[] = [];
+  const whereParts = [`dv."TrangThai" = 'HoatDong'`, `dv."CapQuanLy" != 'SoYTe'`];
+
+  if (search && search.trim()) {
+    queryParams.push(`%${search.trim().toLowerCase()}%`);
+    whereParts.push(`LOWER(dv."TenDonVi") LIKE $${queryParams.length}`);
+  }
+
+  const sortColumnMap: Record<string, string> = {
+    name: `"name"`,
+    compliance: `"compliance_rate"`,
+    practitioners: `"active_practitioners"`,
+    pending: `"pending_approvals"`,
+    totalCredits: `"total_credits"`,
+  };
+
+  const validSorts =
+    sort && Array.isArray(sort) && sort.length > 0
+      ? sort.filter(
+          (entry) =>
+            entry &&
+            sortColumnMap[entry.field] &&
+            (entry.direction === 'asc' || entry.direction === 'desc')
+        )
+      : [];
+
+  const orderByClause =
+    validSorts.length > 0
+      ? validSorts
+          .map((entry) => `${sortColumnMap[entry.field]} ${entry.direction.toUpperCase()}`)
+          .join(', ')
+      : `"compliance_rate" DESC, "name" ASC`;
+
+  // tie-breaker to ensure deterministic ordering
+  const finalOrderBy = `${orderByClause}, "name" ASC`;
+
+  const limitPlaceholder = `$${queryParams.length + 1}`;
+  const offsetPlaceholder = `$${queryParams.length + 2}`;
+
+  const baseCte = `
+    WITH filtered_units AS (
+      SELECT dv."MaDonVi", dv."TenDonVi", dv."CapQuanLy"
+      FROM "DonVi" dv
+      WHERE ${whereParts.join(' AND ')}
+    ),
+    practitioners AS (
+      SELECT
+        nv."MaDonVi",
+        COUNT(*) AS total_practitioners,
+        COUNT(*) FILTER (WHERE nv."TrangThaiLamViec" = 'DangLamViec') AS active_practitioners
+      FROM "NhanVien" nv
+      WHERE nv."MaDonVi" IN (SELECT "MaDonVi" FROM filtered_units)
+      GROUP BY nv."MaDonVi"
+    ),
+    active_cycles AS (
+      SELECT
+        kc."MaNhanVien",
+        kc."SoTinChiYeuCau",
+        kc."NgayBatDau",
+        kc."NgayKetThuc"
+      FROM "KyCNKT" kc
+      WHERE kc."TrangThai" = 'DangDienRa'
+    ),
+    activity_totals AS (
+      SELECT
+        nv."MaDonVi",
+        nv."MaNhanVien",
+        SUM(CASE WHEN g."TrangThaiDuyet" = 'DaDuyet' THEN g."SoGioTinChiQuyDoi" ELSE 0 END) AS approved_credits,
+        SUM(CASE WHEN g."TrangThaiDuyet" = 'ChoDuyet' THEN 1 ELSE 0 END) AS pending_approvals,
+        SUM(
+          CASE
+            WHEN g."TrangThaiDuyet" = 'DaDuyet'
+              AND ac."MaNhanVien" IS NOT NULL
+              AND g."NgayGhiNhan" BETWEEN ac."NgayBatDau" AND ac."NgayKetThuc"
+            THEN g."SoGioTinChiQuyDoi"
+            ELSE 0
+          END
+        ) AS cycle_credits,
+        MAX(ac."SoTinChiYeuCau") AS required_credits
+      FROM "NhanVien" nv
+      LEFT JOIN "GhiNhanHoatDong" g ON g."MaNhanVien" = nv."MaNhanVien"
+      LEFT JOIN active_cycles ac ON ac."MaNhanVien" = nv."MaNhanVien"
+      WHERE nv."MaDonVi" IN (SELECT "MaDonVi" FROM filtered_units)
+      GROUP BY nv."MaDonVi", nv."MaNhanVien"
+    ),
+    unit_metrics AS (
+      SELECT
+        fu."MaDonVi",
+        fu."TenDonVi",
+        fu."CapQuanLy",
+        COALESCE(pr.total_practitioners, 0) AS total_practitioners,
+        COALESCE(pr.active_practitioners, 0) AS active_practitioners,
+        COALESCE(
+          SUM(
+            CASE
+              WHEN at.required_credits IS NOT NULL
+                AND at.required_credits > 0
+                AND at.cycle_credits >= at.required_credits
+              THEN 1
+              ELSE 0
+            END
+          ),
+          0
+        ) AS compliant_practitioners,
+        COALESCE(SUM(at.pending_approvals), 0) AS pending_approvals,
+        COALESCE(SUM(at.approved_credits), 0) AS total_credits
+      FROM filtered_units fu
+      LEFT JOIN practitioners pr ON pr."MaDonVi" = fu."MaDonVi"
+      LEFT JOIN activity_totals at ON at."MaDonVi" = fu."MaDonVi"
+      GROUP BY
+        fu."MaDonVi",
+        fu."TenDonVi",
+        fu."CapQuanLy",
+        pr.total_practitioners,
+        pr.active_practitioners
+    )
+  `;
+
+  const selectStatement = `
+    SELECT
+      um."MaDonVi" AS id,
+      um."TenDonVi" AS name,
+      um."CapQuanLy" AS type,
+      um.total_practitioners,
+      um.active_practitioners,
+      um.compliant_practitioners,
+      CASE
+        WHEN um.active_practitioners > 0
+        THEN ROUND((um.compliant_practitioners::numeric / um.active_practitioners::numeric) * 100)
+        ELSE 0
+      END AS compliance_rate,
+      um.pending_approvals,
+      um.total_credits,
+    FROM unit_metrics um
+  `;
+
+  const paginatedQuery = `
+    ${baseCte}
+    ${selectStatement}
+    ORDER BY ${finalOrderBy}
+    LIMIT ${limitPlaceholder}
+    OFFSET ${offsetPlaceholder}
+  `;
+
+  type RawUnitMetricsRow = {
+    id: string;
+    name: string;
+    type: string;
+    total_practitioners: number | string | null;
+    active_practitioners: number | string | null;
+    compliant_practitioners: number | string | null;
+    compliance_rate: number | string | null;
+    pending_approvals: number | string | null;
+    total_credits: number | string | null;
+  };
+
+  const rows = await db.query<RawUnitMetricsRow>(paginatedQuery, [
+    ...queryParams,
+    boundedPageSize,
+    offset,
+  ]);
+
+  const countQuery = `
+    ${baseCte}
+    SELECT COUNT(*)::bigint AS total_count
+    FROM unit_metrics
+  `;
+
+  const countRows = await db.query<{ total_count: string | number | null }>(countQuery, queryParams);
+  const totalItems = Number(countRows[0]?.total_count ?? 0);
+  const totalPages = totalItems > 0 ? Math.ceil(totalItems / boundedPageSize) : 0;
+
+  const items: DohUnitComparisonRow[] = rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    type: row.type,
+    totalPractitioners: Number(row.total_practitioners ?? 0),
+    activePractitioners: Number(row.active_practitioners ?? 0),
+    compliantPractitioners: Number(row.compliant_practitioners ?? 0),
+    complianceRate: Number(row.compliance_rate ?? 0),
+    pendingApprovals: Number(row.pending_approvals ?? 0),
+    totalCredits: Number(row.total_credits ?? 0),
+  }));
+
+  return {
+    items,
+    page: safePage,
+    pageSize: boundedPageSize,
+    totalItems,
+    totalPages,
+  };
+}
