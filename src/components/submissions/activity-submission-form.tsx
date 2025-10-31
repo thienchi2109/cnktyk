@@ -244,7 +244,10 @@ export function ActivitySubmissionForm({
         </Alert>
       )}
 
-      <form onSubmit={handleSubmit(onSubmitForm)} className="space-y-6">
+      <form
+        onSubmit={handleSubmit(onSubmitForm)}
+        className={variant === 'sheet' ? 'space-y-6 pb-36' : 'space-y-6'}
+      >
         {/* Practitioner Selection (for unit admins) */}
         {userRole === 'DonVi' && practitioners.length > 0 && (
           <GlassCard className="p-6">
