@@ -29,6 +29,8 @@ import { FileUpload, UploadedFile } from '@/components/ui/file-upload';
 import { SheetFooter } from '@/components/ui/sheet';
 import { LoadingNotice } from '@/components/ui/loading-notice';
 import { useActivities } from '@/hooks/use-activities';
+import { PractitionerSelector } from '@/components/ui/practitioner-selector';
+import { useUnitPractitioners } from '@/hooks/use-unit-practitioners';
 
 interface ActivityCatalog {
   MaDanhMuc: string;
@@ -100,6 +102,12 @@ export function ActivitySubmissionForm({
   const { data: activitiesData, isLoading: isActivitiesLoading } = useActivities();
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [calculatedCredits, setCalculatedCredits] = useState<number>(0);
+
+  // Use TanStack Query for practitioner caching (with server data as initialData)
+  const { data: cachedPractitioners, isLoading: isPractitionersLoading } = useUnitPractitioners({
+    initialData: practitioners,
+    enabled: userRole === 'DonVi',
+  });
 
   const {
     register,
@@ -257,26 +265,14 @@ export function ActivitySubmissionForm({
             <div className="space-y-4">
               <div>
                 <Label htmlFor="MaNhanVien">Chọn nhân viên *</Label>
-                <Select onValueChange={(value) => setValue('MaNhanVien', value)}>
-                  <SelectTrigger className="relative z-10 data-[state=open]:z-50">
-                    <SelectValue placeholder="Chọn nhân viên..." />
-                  </SelectTrigger>
-                  <SelectContent className="z-[9999] bg-white">
-                    {practitioners.map((practitioner) => (
-                      <SelectItem key={practitioner.MaNhanVien} value={practitioner.MaNhanVien}>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{practitioner.HoVaTen}</span>
-                          {practitioner.ChucDanh && (
-                            <span className="text-sm text-gray-500">{practitioner.ChucDanh}</span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.MaNhanVien && (
-                  <p className="text-sm text-red-600 mt-1">{errors.MaNhanVien.message}</p>
-                )}
+                <PractitionerSelector
+                  practitioners={cachedPractitioners || []}
+                  value={watchedValues.MaNhanVien}
+                  onValueChange={(value) => setValue('MaNhanVien', value)}
+                  placeholder="Chọn nhân viên..."
+                  error={errors.MaNhanVien?.message}
+                  isLoading={isPractitionersLoading}
+                />
               </div>
             </div>
           </GlassCard>

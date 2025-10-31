@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { NextRequest } from 'next/server';
 
 const mocks = vi.hoisted(() => ({
   query: vi.fn(),
@@ -42,7 +43,7 @@ describe('GET /api/system/metrics', () => {
       .mockResolvedValueOnce([{ count: '18' }]);
 
     const response = (await GET(
-      new Request('http://localhost/api/system/metrics'),
+      new NextRequest('http://localhost/api/system/metrics'),
     )) as Response;
 
     expect(response.status).toBe(200);
