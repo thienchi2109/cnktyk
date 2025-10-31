@@ -1,13 +1,13 @@
 'use client';
 
-import React, { memo, useMemo } from 'react';
-import Link from 'next/link';
+import React, { memo, useEffect, useMemo, useRef } from 'react';
 import { GlassButton } from '@/components/ui/glass-button';
 import {
   DashboardTableSkeleton,
   DashboardErrorPanel,
 } from '@/components/dashboard/dashboard-skeletons';
 import { cn } from '@/lib/utils';
+import type { UnitComparisonSummary } from '@/types/dashboard';
 
 export type UnitSortField = 'name' | 'compliance' | 'practitioners' | 'pending' | 'totalCredits';
 
@@ -16,17 +16,7 @@ export interface UnitSortState {
   direction: 'asc' | 'desc';
 }
 
-export interface UnitComparisonRow {
-  id: string;
-  name: string;
-  type: string;
-  totalPractitioners: number;
-  activePractitioners: number;
-  compliantPractitioners: number;
-  complianceRate: number;
-  pendingApprovals: number;
-  totalCredits: number;
-}
+export type UnitComparisonRow = UnitComparisonSummary;
 
 interface UnitComparisonGridProps {
   rows: UnitComparisonRow[];
@@ -41,6 +31,12 @@ interface UnitComparisonGridProps {
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
   onRetry: () => void;
+  onUnitDetailClick: (
+    unitId: string,
+    unitData: UnitComparisonRow,
+    trigger: HTMLButtonElement,
+  ) => void;
+  onUnitDetailHover: (unitId: string) => void;
 }
 
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 50] as const;
@@ -125,6 +121,8 @@ const UnitComparisonGridComponent = ({
   onPageChange,
   onPageSizeChange,
   onRetry,
+  onUnitDetailClick,
+  onUnitDetailHover,
 }: UnitComparisonGridProps) => {
   const numberFormatter = useMemo(() => new Intl.NumberFormat('vi-VN'), []);
   const percentFormatter = useMemo(
@@ -149,6 +147,42 @@ const UnitComparisonGridComponent = ({
           endRow,
           numberFormatter,
         )} trên tổng ${formatNumber(totalItems, numberFormatter)} đơn vị.`;
+
+  const hoverTimeoutsRef = useRef<Record<string, number>>({});
+
+  useEffect(() => {
+    return () => {
+      Object.values(hoverTimeoutsRef.current).forEach((timeoutId) => {
+        window.clearTimeout(timeoutId);
+      });
+      hoverTimeoutsRef.current = {};
+    };
+  }, []);
+  const handleDetailHover = (unitId: string) => {
+    const timeouts = hoverTimeoutsRef.current;
+    if (timeouts[unitId]) {
+      window.clearTimeout(timeouts[unitId]);
+    }
+    timeouts[unitId] = window.setTimeout(() => {
+      onUnitDetailHover(unitId);
+    }, 150);
+  };
+
+  const cancelDetailHover = (unitId: string) => {
+    const timeoutId = hoverTimeoutsRef.current[unitId];
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+      delete hoverTimeoutsRef.current[unitId];
+    }
+  };
+
+  const handleDetailClick = (
+    row: UnitComparisonRow,
+    event: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    cancelDetailHover(row.id);
+    onUnitDetailClick(row.id, row, event.currentTarget);
+  };
 
   const handleSort = (field: UnitSortField, multi: boolean) => {
     onSortChange(toggleSortState(sort, field, multi));
@@ -315,15 +349,17 @@ const UnitComparisonGridComponent = ({
                         {formatNumber(Math.round(row.totalCredits), numberFormatter)}
                       </td>
                       <td className="px-4 py-4 text-right">
-                        <GlassButton
-                          asChild
-                          size="sm"
-                          variant="outline"
-                          className="whitespace-nowrap"
-                        >
-                          <Link href={`/dashboard/units/${row.id}`} aria-label={`Xem chi tiết ${row.name}`}>
+                        <GlassButton asChild size="sm" variant="outline" className="whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={(event) => handleDetailClick(row, event)}
+                            onMouseEnter={() => handleDetailHover(row.id)}
+                            onMouseLeave={() => cancelDetailHover(row.id)}
+                            onFocus={() => handleDetailHover(row.id)}
+                            aria-label={`Xem chi tiết ${row.name}`}
+                          >
                             Xem chi tiết
-                          </Link>
+                          </button>
                         </GlassButton>
                       </td>
                     </tr>

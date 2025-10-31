@@ -25,8 +25,11 @@ export async function GET(request: NextRequest) {
       rejectedThisMonthResult,
       totalCreditsResult
     ] = await Promise.all([
-      // Total units
-      db.query('SELECT COUNT(*) as count FROM "DonVi" WHERE "TrangThai" = $1', ['HoatDong']),
+      // Total units (exclude supervising SoYTe department units from KPI count)
+      db.query(
+        'SELECT COUNT(*) as count FROM "DonVi" WHERE "TrangThai" = $1 AND "CapQuanLy" != $2',
+        ['HoatDong', 'SoYTe'],
+      ),
       
       // Total practitioners
       db.query('SELECT COUNT(*) as count FROM "NhanVien"'),

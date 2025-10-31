@@ -946,6 +946,32 @@ export interface DohUnitComparisonQuery {
 const DEFAULT_UNITS_PAGE_SIZE = 20;
 const MAX_UNITS_PAGE_SIZE = 100;
 
+function mapRawUnitMetricsRow(row: RawUnitMetricsRow): DohUnitComparisonRow {
+  return {
+    id: row.id,
+    name: row.name,
+    type: row.type,
+    totalPractitioners: Number(row.total_practitioners ?? 0),
+    activePractitioners: Number(row.active_practitioners ?? 0),
+    compliantPractitioners: Number(row.compliant_practitioners ?? 0),
+    complianceRate: Number(row.compliance_rate ?? 0),
+    pendingApprovals: Number(row.pending_approvals ?? 0),
+    totalCredits: Number(row.total_credits ?? 0),
+  };
+}
+
+type RawUnitMetricsRow = {
+  id: string;
+  name: string;
+  type: string;
+  total_practitioners: number | string | null;
+  active_practitioners: number | string | null;
+  compliant_practitioners: number | string | null;
+  compliance_rate: number | string | null;
+  pending_approvals: number | string | null;
+  total_credits: number | string | null;
+};
+
 export async function getDohUnitComparisonPage({
   search,
   page = 1,
@@ -1134,17 +1160,7 @@ export async function getDohUnitComparisonPage({
   const totalItems = Number(countRows[0]?.total_count ?? 0);
   const totalPages = totalItems > 0 ? Math.ceil(totalItems / boundedPageSize) : 0;
 
-  const items: DohUnitComparisonRow[] = rows.map((row) => ({
-    id: row.id,
-    name: row.name,
-    type: row.type,
-    totalPractitioners: Number(row.total_practitioners ?? 0),
-    activePractitioners: Number(row.active_practitioners ?? 0),
-    compliantPractitioners: Number(row.compliant_practitioners ?? 0),
-    complianceRate: Number(row.compliance_rate ?? 0),
-    pendingApprovals: Number(row.pending_approvals ?? 0),
-    totalCredits: Number(row.total_credits ?? 0),
-  }));
+  const items: DohUnitComparisonRow[] = rows.map(mapRawUnitMetricsRow);
 
   return {
     items,
@@ -1153,4 +1169,112 @@ export async function getDohUnitComparisonPage({
     totalItems,
     totalPages,
   };
+}
+
+export async function getDohUnitComparisonSummary(unitId: string): Promise<DohUnitComparisonRow | null> {
+  if (!unitId) {
+    return null;
+  }
+
+  const summaryQuery = `
+    WITH filtered_units AS (
+      SELECT dv."MaDonVi", dv."TenDonVi", dv."CapQuanLy"
+      FROM "DonVi" dv
+      WHERE dv."TrangThai" = 'HoatDong' AND dv."CapQuanLy" != 'SoYTe' AND dv."MaDonVi" = $1
+    ),
+    practitioners AS (
+      SELECT
+        nv."MaDonVi",
+        COUNT(*) AS total_practitioners,
+        COUNT(*) FILTER (WHERE nv."TrangThaiLamViec" = 'DangLamViec') AS active_practitioners
+      FROM "NhanVien" nv
+      WHERE nv."MaDonVi" IN (SELECT "MaDonVi" FROM filtered_units)
+      GROUP BY nv."MaDonVi"
+    ),
+    active_cycles AS (
+      SELECT
+        kc."MaNhanVien",
+        kc."SoTinChiYeuCau",
+        kc."NgayBatDau",
+        kc."NgayKetThuc"
+      FROM "KyCNKT" kc
+      WHERE kc."TrangThai" = 'DangDienRa'
+    ),
+    activity_totals AS (
+      SELECT
+        nv."MaDonVi",
+        nv."MaNhanVien",
+        SUM(CASE WHEN g."TrangThaiDuyet" = 'DaDuyet' THEN g."SoGioTinChiQuyDoi" ELSE 0 END) AS approved_credits,
+        SUM(CASE WHEN g."TrangThaiDuyet" = 'ChoDuyet' THEN 1 ELSE 0 END) AS pending_approvals,
+        SUM(
+          CASE
+            WHEN g."TrangThaiDuyet" = 'DaDuyet'
+              AND ac."MaNhanVien" IS NOT NULL
+              AND g."NgayGhiNhan" BETWEEN ac."NgayBatDau" AND ac."NgayKetThuc"
+            THEN g."SoGioTinChiQuyDoi"
+            ELSE 0
+          END
+        ) AS cycle_credits,
+        MAX(ac."SoTinChiYeuCau") AS required_credits
+      FROM "NhanVien" nv
+      LEFT JOIN "GhiNhanHoatDong" g ON g."MaNhanVien" = nv."MaNhanVien"
+      LEFT JOIN active_cycles ac ON ac."MaNhanVien" = nv."MaNhanVien"
+      WHERE nv."MaDonVi" IN (SELECT "MaDonVi" FROM filtered_units)
+      GROUP BY nv."MaDonVi", nv."MaNhanVien"
+    ),
+    unit_metrics AS (
+      SELECT
+        fu."MaDonVi",
+        fu."TenDonVi",
+        fu."CapQuanLy",
+        COALESCE(pr.total_practitioners, 0) AS total_practitioners,
+        COALESCE(pr.active_practitioners, 0) AS active_practitioners,
+        COALESCE(
+          SUM(
+            CASE
+              WHEN at.required_credits IS NOT NULL
+                AND at.required_credits > 0
+                AND at.cycle_credits >= at.required_credits
+              THEN 1
+              ELSE 0
+            END
+          ),
+          0
+        ) AS compliant_practitioners,
+        COALESCE(SUM(at.pending_approvals), 0) AS pending_approvals,
+        COALESCE(SUM(at.approved_credits), 0) AS total_credits
+      FROM filtered_units fu
+      LEFT JOIN practitioners pr ON pr."MaDonVi" = fu."MaDonVi"
+      LEFT JOIN activity_totals at ON at."MaDonVi" = fu."MaDonVi"
+      GROUP BY
+        fu."MaDonVi",
+        fu."TenDonVi",
+        fu."CapQuanLy",
+        pr.total_practitioners,
+        pr.active_practitioners
+    )
+    SELECT
+      um."MaDonVi" AS id,
+      um."TenDonVi" AS name,
+      um."CapQuanLy" AS type,
+      um.total_practitioners,
+      um.active_practitioners,
+      um.compliant_practitioners,
+      CASE
+        WHEN um.active_practitioners > 0
+        THEN ROUND((um.compliant_practitioners::numeric / um.active_practitioners::numeric) * 100)
+        ELSE 0
+      END AS compliance_rate,
+      um.pending_approvals,
+      um.total_credits
+    FROM unit_metrics um
+  `;
+
+  const rows = await db.query<RawUnitMetricsRow>(summaryQuery, [unitId]);
+  const row = rows[0];
+  if (!row) {
+    return null;
+  }
+
+  return mapRawUnitMetricsRow(row);
 }

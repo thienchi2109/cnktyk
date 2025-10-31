@@ -44,6 +44,7 @@ describe('UnitComparisonGrid', () => {
       root.unmount();
     });
     container.remove();
+    vi.useRealTimers();
   });
 
   it('renders the first page summary for a high-volume dataset', () => {
@@ -65,6 +66,8 @@ describe('UnitComparisonGrid', () => {
           onPageChange={() => {}}
           onPageSizeChange={() => {}}
           onRetry={() => {}}
+          onUnitDetailClick={() => {}}
+          onUnitDetailHover={() => {}}
         />,
       );
     });
@@ -99,6 +102,8 @@ describe('UnitComparisonGrid', () => {
             onPageChange={() => {}}
             onPageSizeChange={() => {}}
             onRetry={() => {}}
+            onUnitDetailClick={() => {}}
+            onUnitDetailHover={() => {}}
           />,
         );
       });
@@ -131,20 +136,11 @@ describe('UnitComparisonGrid', () => {
     ]);
   });
 
-  it('renders detail link to canonical route', () => {
-    const rows: UnitComparisonRow[] = [
-      {
-        id: 'unit-1',
-        name: 'Đơn vị 1',
-        type: 'BenhVien',
-        totalPractitioners: 10,
-        activePractitioners: 8,
-        compliantPractitioners: 6,
-        complianceRate: 75,
-        pendingApprovals: 1,
-        totalCredits: 100,
-      },
-    ];
+  it('invokes detail callbacks for hover prefetch and click', () => {
+    vi.useFakeTimers();
+    const rows: UnitComparisonRow[] = [makeUnit(0)];
+    const clickSpy = vi.fn();
+    const hoverSpy = vi.fn();
 
     act(() => {
       root.render(
@@ -161,12 +157,35 @@ describe('UnitComparisonGrid', () => {
           onPageChange={() => {}}
           onPageSizeChange={() => {}}
           onRetry={() => {}}
+          onUnitDetailClick={clickSpy}
+          onUnitDetailHover={hoverSpy}
         />,
       );
     });
 
-    const link = container.querySelector('a[href="/dashboard/units/unit-1"]');
-    expect(link).toBeTruthy();
+    const detailButton = container.querySelector('button[aria-label="Xem chi tiết Đơn vị 1"]');
+    expect(detailButton).toBeTruthy();
+
+    act(() => {
+      detailButton?.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(160);
+      vi.runOnlyPendingTimers();
+    });
+
+    expect(hoverSpy).toHaveBeenCalledWith(rows[0].id);
+
+    act(() => {
+      detailButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    const [unitId, payload, trigger] = clickSpy.mock.calls[0];
+    expect(unitId).toBe(rows[0].id);
+    expect(payload).toEqual(rows[0]);
+    expect(trigger).toBeInstanceOf(HTMLButtonElement);
   });
 
   it('triggers pagination handlers', () => {
@@ -189,6 +208,8 @@ describe('UnitComparisonGrid', () => {
           onPageChange={onPageChange}
           onPageSizeChange={onPageSizeChange}
           onRetry={() => {}}
+          onUnitDetailClick={() => {}}
+          onUnitDetailHover={() => {}}
         />,
       );
     });
@@ -235,6 +256,8 @@ describe('UnitComparisonGrid', () => {
           onPageChange={() => {}}
           onPageSizeChange={() => {}}
           onRetry={onRetry}
+          onUnitDetailClick={() => {}}
+          onUnitDetailHover={() => {}}
         />,
       );
     });
