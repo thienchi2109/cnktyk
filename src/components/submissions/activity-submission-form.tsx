@@ -229,15 +229,6 @@ export function ActivitySubmissionForm({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Ghi nhận hoạt động</h1>
-          <p className="text-gray-600 mt-1">Gửi hoạt động đào tạo liên tục để được phê duyệt</p>
-        </div>
-        
-      </div>
-
       {/* Alerts */}
       {error && (
         <Alert className="border-red-200 bg-red-50">
