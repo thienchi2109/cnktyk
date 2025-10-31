@@ -26,7 +26,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { FileUpload, UploadedFile } from '@/components/ui/file-upload';
-import { SheetFooter } from '@/components/ui/sheet';
 import { LoadingNotice } from '@/components/ui/loading-notice';
 import { useActivities } from '@/hooks/use-activities';
 import { PractitionerSelector } from '@/components/ui/practitioner-selector';
@@ -85,12 +84,13 @@ const activityTypeLabels = {
   BaoCao: 'Báo cáo',
 };
 
-export function ActivitySubmissionForm({ 
-  userRole, 
-  practitioners = [], 
-  onSubmit, 
+export function ActivitySubmissionForm({
+  userRole,
+  practitioners = [],
+  onSubmit,
   onCancel,
   redirectOnSuccess = true,
+  variant = 'sheet',
   initialPractitionerId,
 }: ActivitySubmissionFormProps) {
   const router = useRouter();
@@ -229,15 +229,6 @@ export function ActivitySubmissionForm({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Ghi nhận hoạt động</h1>
-          <p className="text-gray-600 mt-1">Gửi hoạt động đào tạo liên tục để được phê duyệt</p>
-        </div>
-        
-      </div>
-
       {/* Alerts */}
       {error && (
         <Alert className="border-red-200 bg-red-50">
@@ -253,7 +244,10 @@ export function ActivitySubmissionForm({
         </Alert>
       )}
 
-      <form onSubmit={handleSubmit(onSubmitForm)} className="space-y-6">
+      <form
+        onSubmit={handleSubmit(onSubmitForm)}
+        className={variant === 'sheet' ? 'space-y-6 pb-36' : 'space-y-6'}
+      >
         {/* Practitioner Selection (for unit admins) */}
         {userRole === 'DonVi' && practitioners.length > 0 && (
           <GlassCard className="p-6">
@@ -471,36 +465,64 @@ export function ActivitySubmissionForm({
           />
         </GlassCard>
 
-        {/* Submit Buttons (sheet footer) */}
-<SheetFooter className="-mx-6 px-6 py-4 mt-6 border-t bg-white">
-          {onCancel && (
+        {/* Form Actions */}
+        {variant === 'page' ? (
+          /* Card variant - for standalone pages */
+          <div className="flex justify-end space-x-4 pt-6 border-t">
+            {onCancel && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                disabled={isLoading}
+              >
+                <X className="w-4 h-4 mr-2" />
+                Hủy
+              </Button>
+            )}
             <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
+              type="submit"
               disabled={isLoading}
             >
-              <X className="h-4 w-4 mr-2" />
-              Hủy
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              Gửi hoạt động
             </Button>
-          )}
-          <Button
-            type="submit"
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Đang gửi...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Gửi hoạt động
-              </>
+          </div>
+        ) : (
+          /* Sheet variant - for modal */
+          <div className="fixed bottom-6 right-6 flex gap-3 z-50">
+            {onCancel && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={onCancel}
+                disabled={isLoading}
+                className="rounded-full shadow-lg hover:shadow-xl transition-shadow"
+                size="lg"
+              >
+                <X className="w-5 h-5 mr-2" />
+                Hủy
+              </Button>
             )}
-          </Button>
-        </SheetFooter>
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="rounded-full shadow-lg hover:shadow-xl transition-shadow"
+              size="lg"
+            >
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-5 h-5 mr-2" />
+              )}
+              Gửi hoạt động
+            </Button>
+          </div>
+        )}
       </form>
     </div>
   );

@@ -352,7 +352,7 @@ describe('Import Tenant Isolation - ImportService', () => {
       {
         soCCHN: 'CCHN-001',
         tenHoatDong: 'Training',
-        ngayHoatDong: new Date(),
+        ngayBatDau: new Date(),
         soTinChi: 5,
         trangThaiDuyet: 'ChoDuyet' as const,
         rowNumber: 3

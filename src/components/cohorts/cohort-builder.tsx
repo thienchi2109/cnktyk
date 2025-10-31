@@ -22,6 +22,7 @@ export type CohortFilters = {
   search?: string;
   trangThai?: 'DangLamViec' | 'DaNghi' | 'TamHoan' | 'all';
   chucDanh?: string;
+  khoaPhong?: string;
 };
 
 export type CohortSelection = {
@@ -41,6 +42,7 @@ export function CohortBuilder({ initialStatus = 'DangLamViec', onChange }: Cohor
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
   const [chucDanh, setChucDanh] = useState<string>('');
+  const [khoaPhong, setKhoaPhong] = useState<string>('');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
 
@@ -69,6 +71,7 @@ export function CohortBuilder({ initialStatus = 'DangLamViec', onChange }: Cohor
       if (searchTerm) qs.set('search', searchTerm);
       if (statusFilter && statusFilter !== 'all') qs.set('status', statusFilter);
       if (chucDanh) qs.set('chucDanh', chucDanh);
+      if (khoaPhong) qs.set('khoaPhong', khoaPhong);
 
       const res = await fetch(`/api/practitioners?${qs.toString()}`);
       const json = await res.json();
@@ -119,7 +122,7 @@ export function CohortBuilder({ initialStatus = 'DangLamViec', onChange }: Cohor
     setPage(1);
     fetchList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, statusFilter, chucDanh]);
+  }, [searchTerm, statusFilter, chucDanh, khoaPhong]);
 
   const toggleRow = (id: string) => {
     if (selectAllFiltered) {
@@ -160,9 +163,10 @@ export function CohortBuilder({ initialStatus = 'DangLamViec', onChange }: Cohor
         search: searchTerm || undefined,
         trangThai: (statusFilter as any) || undefined,
         chucDanh: chucDanh || undefined,
+        khoaPhong: khoaPhong || undefined,
       },
     });
-  }, [selectAllFiltered, selectedIds, excludedIds, total, onChange, searchTerm, statusFilter, chucDanh]);
+  }, [selectAllFiltered, selectedIds, excludedIds, total, onChange, searchTerm, statusFilter, chucDanh, khoaPhong]);
 
   const allPageIds = rows.map((r) => r.MaNhanVien);
   const pageAllSelected = selectAllFiltered
@@ -203,9 +207,9 @@ export function CohortBuilder({ initialStatus = 'DangLamViec', onChange }: Cohor
       <GlassCard className="p-6">
         <div className="flex items-center gap-2 mb-4">
           <Filter className="h-5 w-5 text-medical-blue" />
-          <h3 className="font-semibold text-gray-900">Cohort Builder</h3>
+          <h3 className="font-semibold text-gray-900">Bộ lọc nhóm</h3>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Search */}
           <div>
             <Label htmlFor="search" className="text-sm text-gray-700">Tìm kiếm</Label>
@@ -224,6 +228,13 @@ export function CohortBuilder({ initialStatus = 'DangLamViec', onChange }: Cohor
               <option value="all">Tất cả</option>
             </Select>
           </div>
+          {/* Khoa/Phòng */}
+          <div>
+            <Label htmlFor="khoaphong" className="text-sm text-gray-700">Khoa/Phòng</Label>
+            <Input id="khoaphong" value={khoaPhong} onChange={(e) => setKhoaPhong(e.target.value)} className="mt-1" placeholder="VD: Khoa Nội, Khoa Ngoại..." />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
           {/* Chức danh */}
           <div>
             <Label htmlFor="chucdanh" className="text-sm text-gray-700 flex items-center gap-1"><UserCog className="w-4 h-4" />Chức danh</Label>
@@ -253,6 +264,7 @@ export function CohortBuilder({ initialStatus = 'DangLamViec', onChange }: Cohor
                 setSearchTerm(f.search || '');
                 setStatusFilter(f.trangThai || 'DangLamViec');
                 setChucDanh(f.chucDanh || '');
+                setKhoaPhong(f.khoaPhong || '');
                 setPage(1);
                 fetchList();
               }}>
@@ -272,7 +284,7 @@ export function CohortBuilder({ initialStatus = 'DangLamViec', onChange }: Cohor
                 if (!presetName.trim()) return;
                 await fetch('/api/cohorts/presets', {
                   method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ name: presetName.trim(), filters: { search: searchTerm || undefined, trangThai: (statusFilter as any) || undefined, chucDanh: chucDanh || undefined } })
+                  body: JSON.stringify({ name: presetName.trim(), filters: { search: searchTerm || undefined, trangThai: (statusFilter as any) || undefined, chucDanh: chucDanh || undefined, khoaPhong: khoaPhong || undefined } })
                 });
                 setPresetName('');
                 fetchPresets();

@@ -241,38 +241,38 @@ export class ImportValidator {
         });
       }
 
-      // Required field: Ngày hoạt động
-      if (!a.ngayHoatDong) {
+      // Required field: Ngày bắt đầu
+      if (!a.ngayBatDau) {
         errors.push({
           sheet: 'Hoạt động',
           row: a.rowNumber,
-          column: 'D',
-          field: 'Ngày hoạt động',
-          message: 'Ngày hoạt động là bắt buộc',
+          column: 'F',
+          field: 'Ngày bắt đầu',
+          message: 'Ngày bắt đầu là bắt buộc',
           severity: 'error'
         });
       } else {
         // Check if date is too far in the past
-        const yearsDiff = (new Date().getTime() - a.ngayHoatDong.getTime()) / (1000 * 60 * 60 * 24 * 365);
+        const yearsDiff = (new Date().getTime() - a.ngayBatDau.getTime()) / (1000 * 60 * 60 * 24 * 365);
         if (yearsDiff > 10) {
           errors.push({
             sheet: 'Hoạt động',
             row: a.rowNumber,
-            column: 'D',
-            field: 'Ngày hoạt động',
-            message: 'Ngày hoạt động quá xa trong quá khứ (>10 năm)',
+            column: 'F',
+            field: 'Ngày bắt đầu',
+            message: 'Ngày bắt đầu quá xa trong quá khứ (>10 năm)',
             severity: 'warning'
           });
         }
 
         // Check if date is in the future
-        if (a.ngayHoatDong > new Date()) {
+        if (a.ngayBatDau > new Date()) {
           errors.push({
             sheet: 'Hoạt động',
             row: a.rowNumber,
-            column: 'D',
-            field: 'Ngày hoạt động',
-            message: 'Ngày hoạt động không được là ngày trong tương lai',
+            column: 'F',
+            field: 'Ngày bắt đầu',
+            message: 'Ngày bắt đầu không được là ngày trong tương lai',
             severity: 'warning'
           });
         }
@@ -283,7 +283,7 @@ export class ImportValidator {
         errors.push({
           sheet: 'Hoạt động',
           row: a.rowNumber,
-          column: 'E',
+          column: 'I',
           field: 'Số tín chỉ',
           message: 'Số tín chỉ là bắt buộc',
           severity: 'error'
@@ -293,7 +293,7 @@ export class ImportValidator {
           errors.push({
             sheet: 'Hoạt động',
             row: a.rowNumber,
-            column: 'E',
+            column: 'I',
             field: 'Số tín chỉ',
             message: 'Số tín chỉ không được âm',
             severity: 'error'
@@ -303,7 +303,7 @@ export class ImportValidator {
           errors.push({
             sheet: 'Hoạt động',
             row: a.rowNumber,
-            column: 'E',
+            column: 'I',
             field: 'Số tín chỉ',
             message: 'Số tín chỉ không được vượt quá 999.99',
             severity: 'error'
@@ -313,7 +313,7 @@ export class ImportValidator {
           errors.push({
             sheet: 'Hoạt động',
             row: a.rowNumber,
-            column: 'E',
+            column: 'I',
             field: 'Số tín chỉ',
             message: 'Số tín chỉ cao bất thường (>50), vui lòng kiểm tra lại',
             severity: 'warning'
@@ -326,7 +326,7 @@ export class ImportValidator {
         errors.push({
           sheet: 'Hoạt động',
           row: a.rowNumber,
-          column: 'F',
+          column: 'K',
           field: 'Trạng thái',
           message: 'Trạng thái là bắt buộc',
           severity: 'error'
@@ -335,7 +335,7 @@ export class ImportValidator {
         errors.push({
           sheet: 'Hoạt động',
           row: a.rowNumber,
-          column: 'F',
+          column: 'K',
           field: 'Trạng thái',
           message: 'Trạng thái phải là "ChoDuyet", "DaDuyet" hoặc "TuChoi"',
           severity: 'error'
@@ -348,31 +348,31 @@ export class ImportValidator {
           errors.push({
             sheet: 'Hoạt động',
             row: a.rowNumber,
-            column: 'G',
+            column: 'L',
             field: 'Ngày duyệt',
             message: 'Ngày duyệt là bắt buộc khi trạng thái là "DaDuyet" hoặc "TuChoi"',
             severity: 'error'
           });
-        } else if (a.ngayDuyet < a.ngayHoatDong) {
+        } else if (a.ngayDuyet < a.ngayBatDau) {
           errors.push({
             sheet: 'Hoạt động',
             row: a.rowNumber,
-            column: 'G',
+            column: 'L',
             field: 'Ngày duyệt',
-            message: 'Ngày duyệt không được trước ngày hoạt động',
+            message: 'Ngày duyệt không được trước ngày bắt đầu',
             severity: 'error'
           });
         }
       }
 
       // Optional field validations
-      if (a.vaiTro && a.vaiTro.length > 100) {
+      if (a.chiTietVaiTro && a.chiTietVaiTro.length > 100) {
         errors.push({
           sheet: 'Hoạt động',
           row: a.rowNumber,
-          column: 'C',
-          field: 'Vai trò',
-          message: 'Vai trò không được vượt quá 100 ký tự',
+          column: 'D',
+          field: 'Chi tiết vai trò',
+          message: 'Chi tiết vai trò không được vượt quá 100 ký tự',
           severity: 'error'
         });
       }
@@ -381,7 +381,7 @@ export class ImportValidator {
         errors.push({
           sheet: 'Hoạt động',
           row: a.rowNumber,
-          column: 'H',
+          column: 'M',
           field: 'Ghi chú duyệt',
           message: 'Ghi chú duyệt không được vượt quá 1000 ký tự',
           severity: 'error'
@@ -395,7 +395,7 @@ export class ImportValidator {
           errors.push({
             sheet: 'Hoạt động',
             row: a.rowNumber,
-            column: 'I',
+            column: 'N',
             field: 'URL minh chứng',
             message: 'URL minh chứng không hợp lệ',
             severity: 'error'

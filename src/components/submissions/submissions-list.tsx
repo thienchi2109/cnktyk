@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { 
   Clock, 
   CheckCircle, 
@@ -16,7 +17,8 @@ import {
   AlertTriangle,
   Download,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Users
 } from 'lucide-react';
 
 import { GlassCard } from '@/components/ui/glass-card';
@@ -228,26 +230,56 @@ export function SubmissionsList({
           </p>
         </div>
         
-        <div className="flex gap-2">
+        {reviewerRole || canCreateSubmission() ? (
+        <div className="flex gap-3">
           {reviewerRole && (
-            <GlassButton
-              onClick={handleBulkApprove}
-              disabled={selectedIds.length === 0 || bulkApprove.isPending}
-              className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
-            >
-              {bulkApprove.isPending ? 'Đang xử lý...' : `Phê duyệt hàng loạt${selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}`}
-            </GlassButton>
+            <>
+              <Link href="/submissions/bulk">
+                <GlassButton
+                  variant="secondary"
+                  className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6"
+                  size="lg"
+                >
+                  <Users className="h-5 w-5" />
+                  Gán hoạt động cho nhóm
+                </GlassButton>
+              </Link>
+              {/* Bulk approve button - only visible when items are selected */}
+              {selectedIds.length > 0 && (
+                <GlassButton
+                  onClick={handleBulkApprove}
+                  disabled={bulkApprove.isPending}
+                  variant="success"
+                  className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6"
+                  size="lg"
+                >
+                  {bulkApprove.isPending ? (
+                    <>
+                      <div className="h-5 w-5 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-5 w-5" />
+                      Phê duyệt hàng loạt ({selectedIds.length})
+                    </>
+                  )}
+                </GlassButton>
+              )}
+            </>
           )}
           {canCreateSubmission() && onCreateSubmission && (
             <GlassButton
               onClick={onCreateSubmission}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6"
+              size="lg"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-5 w-5" />
               Ghi nhận hoạt động
             </GlassButton>
           )}
         </div>
+      ) : null}
       </div>
 
       {feedback && (

@@ -12,6 +12,7 @@ const PresetCreateUpdateSchema = z.object({
     search: z.string().optional(),
     trangThai: z.enum(['DangLamViec', 'DaNghi', 'TamHoan', 'all']).optional(),
     chucDanh: z.string().optional(),
+    khoaPhong: z.string().optional(),
   }),
   unitId: z.string().uuid().optional(), // SoYTe only
 });

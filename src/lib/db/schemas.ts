@@ -242,6 +242,7 @@ export interface PaginatedQuery {
   search?: string;
   status?: string;
   chucDanh?: string; // optional role/title filter for cohort builder
+  khoaPhong?: string; // optional department filter for cohort builder
   complianceStatus?: ComplianceStatusType;
   orderBy?: string;
   orderDirection?: 'ASC' | 'DESC';

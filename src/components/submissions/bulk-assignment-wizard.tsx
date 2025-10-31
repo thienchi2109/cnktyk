@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
 import { GlassButton } from '@/components/ui/glass-button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CohortBuilder, CohortSelection } from '@/components/cohorts/cohort-builder';
 
 export function BulkAssignmentWizard() {
+  const router = useRouter();
   const [step, setStep] = useState<1 | 2>(1);
   const [selection, setSelection] = useState<CohortSelection | null>(null);
   const [preview, setPreview] = useState<null | { createCount: number; skipCount: number; duplicateCount: number; totalCandidates: number; sampleIds: string[] }>(null);
@@ -33,6 +36,7 @@ export function BulkAssignmentWizard() {
               search: selection.filters?.search,
               trangThai: selection.filters?.trangThai,
               chucDanh: selection.filters?.chucDanh,
+              khoaPhong: selection.filters?.khoaPhong,
             },
             selection: {
               mode: selection.mode,
@@ -88,9 +92,20 @@ export function BulkAssignmentWizard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Gán hoạt động cho nhóm</h1>
+        <div className="flex items-center gap-3">
+          <GlassButton
+            variant="outline"
+            size="sm"
+            onClick={() => router.push('/submissions')}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Quay lại
+          </GlassButton>
+          <h1 className="text-2xl font-bold text-gray-900">Gán hoạt động cho nhóm</h1>
+        </div>
         <div className="flex items-center gap-2 text-sm text-gray-600">
-          <span className={step === 1 ? 'font-semibold text-medical-blue' : ''}>1. Chọn Cohort</span>
+          <span className={step === 1 ? 'font-semibold text-medical-blue' : ''}>1. Chọn nhóm</span>
           <span>›</span>
           <span className={step === 2 ? 'font-semibold text-medical-blue' : ''}>2. Xem trước</span>
         </div>
