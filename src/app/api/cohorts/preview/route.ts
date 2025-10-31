@@ -10,6 +10,7 @@ const PreviewSchema = z.object({
       search: z.string().optional(),
       trangThai: z.enum(['DangLamViec', 'DaNghi', 'TamHoan', 'all']).optional(),
       chucDanh: z.string().optional(),
+      khoaPhong: z.string().optional(),
       unitId: z.string().uuid().optional(),
     })
     .optional(),
@@ -70,6 +71,11 @@ export async function POST(request: NextRequest) {
       if (chucDanh) {
         sql += ` AND "ChucDanh" = $${params.length + 1}`;
         params.push(chucDanh);
+      }
+      const khoaPhong = parsed.filters?.khoaPhong;
+      if (khoaPhong) {
+        sql += ` AND "KhoaPhong" = $${params.length + 1}`;
+        params.push(khoaPhong);
       }
       const search = parsed.filters?.search;
       if (search) {

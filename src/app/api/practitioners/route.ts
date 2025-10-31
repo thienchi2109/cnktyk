@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
     const status = searchParams.get('status');
     const chucDanh = searchParams.get('chucDanh') || undefined;
+    const khoaPhong = searchParams.get('khoaPhong') || undefined;
     const complianceStatus = searchParams.get('complianceStatus') as 'compliant' | 'at_risk' | 'non_compliant' | null;
 
     // Build query parameters based on role
@@ -61,6 +62,7 @@ export async function GET(request: NextRequest) {
       search: search || undefined,
       status: status || undefined,
       chucDanh,
+      khoaPhong,
       complianceStatus: complianceStatus || undefined,
       orderBy: 'HoVaTen',
       orderDirection: 'ASC'

@@ -13,6 +13,7 @@ const ApplySchema = z.object({
       search: z.string().optional(),
       trangThai: z.enum(['DangLamViec', 'DaNghi', 'TamHoan', 'all']).optional(),
       chucDanh: z.string().optional(),
+      khoaPhong: z.string().optional(),
       unitId: z.string().uuid().optional(),
     }).optional(),
   }),
@@ -50,6 +51,8 @@ export async function POST(request: NextRequest) {
       if (trangThai && trangThai !== 'all') { sql += ` AND "TrangThaiLamViec" = $${params.length + 1}`; params.push(trangThai); }
       const chucDanh = parsed.selection.filters?.chucDanh;
       if (chucDanh) { sql += ` AND "ChucDanh" = $${params.length + 1}`; params.push(chucDanh); }
+      const khoaPhong = parsed.selection.filters?.khoaPhong;
+      if (khoaPhong) { sql += ` AND "KhoaPhong" = $${params.length + 1}`; params.push(khoaPhong); }
       const search = parsed.selection.filters?.search;
       if (search) { sql += ` AND LOWER("HoVaTen") LIKE LOWER($${params.length + 1})`; params.push(`%${search}%`); }
       const rows = await db.query<{ MaNhanVien: string }>(sql, params);

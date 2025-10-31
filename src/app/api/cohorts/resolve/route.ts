@@ -10,6 +10,7 @@ const ResolveSchema = z.object({
   search: z.string().optional(),
   trangThai: z.string().default('DangLamViec').optional(),
   chucDanh: z.string().optional(),
+  khoaPhong: z.string().optional(),
   tags: z.array(z.string()).optional(), // reserved for future use
 });
 
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { page = 1, limit = 50, search, trangThai = 'DangLamViec', chucDanh } = ResolveSchema.parse(body);
+    const { page = 1, limit = 50, search, trangThai = 'DangLamViec', chucDanh, khoaPhong } = ResolveSchema.parse(body);
 
     // Rate limit: resolve ≤ 10 req/min per user
     const rl = assertRateLimit(`resolve:${user.id}`, 10, 60_000);
@@ -43,6 +44,7 @@ export async function POST(request: NextRequest) {
       search,
       status: trangThai,
       chucDanh,
+      khoaPhong,
       orderBy: 'HoVaTen',
       orderDirection: 'ASC',
     });

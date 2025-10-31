@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { 
   Clock, 
   CheckCircle, 
@@ -16,7 +17,8 @@ import {
   AlertTriangle,
   Download,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Users
 } from 'lucide-react';
 
 import { GlassCard } from '@/components/ui/glass-card';
@@ -230,13 +232,24 @@ export function SubmissionsList({
         
         <div className="flex gap-2">
           {reviewerRole && (
-            <GlassButton
-              onClick={handleBulkApprove}
-              disabled={selectedIds.length === 0 || bulkApprove.isPending}
-              className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
-            >
-              {bulkApprove.isPending ? 'Đang xử lý...' : `Phê duyệt hàng loạt${selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}`}
-            </GlassButton>
+            <>
+              <Link href="/submissions/bulk">
+                <GlassButton
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <Users className="h-4 w-4" />
+                  Gán hoạt động cho nhóm
+                </GlassButton>
+              </Link>
+              <GlassButton
+                onClick={handleBulkApprove}
+                disabled={selectedIds.length === 0 || bulkApprove.isPending}
+                className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+              >
+                {bulkApprove.isPending ? 'Đang xử lý...' : `Phê duyệt hàng loạt${selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}`}
+              </GlassButton>
+            </>
           )}
           {canCreateSubmission() && onCreateSubmission && (
             <GlassButton
