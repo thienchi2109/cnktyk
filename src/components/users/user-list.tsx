@@ -177,15 +177,17 @@ export function UserList({
           {currentUserRole === 'SoYTe' && (
             <div>
               <Label htmlFor="role-filter" className="text-sm font-medium text-gray-700">Quyền hạn</Label>
-              <Select
-                value={selectedRole}
-                onChange={(e) => handleRoleFilter(e.target.value)}
-              >
-                <option value="">Tất cả quyền hạn</option>
-                {Object.entries(roleLabels).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </Select>
+              <div className="mt-1">
+                <Select
+                  value={selectedRole}
+                  onChange={(e) => handleRoleFilter(e.target.value)}
+                >
+                  <option value="">Tất cả quyền hạn</option>
+                  {Object.entries(roleLabels).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </Select>
+              </div>
             </div>
           )}
 
@@ -193,20 +195,22 @@ export function UserList({
           {currentUserRole === 'SoYTe' && (
             <div>
               <Label htmlFor="unit-filter" className="text-sm font-medium text-gray-700">Đơn vị</Label>
-              <Select
-                value={selectedUnit}
-                onChange={(e) => handleUnitFilter(e.target.value)}
-                disabled={isLoadingUnits}
-              >
-                <option value="">
-                  {isLoadingUnits ? 'Đang tải...' : 'Tất cả đơn vị'}
-                </option>
-                {units.map((unit) => (
-                  <option key={unit.MaDonVi} value={unit.MaDonVi}>
-                    {unit.TenDonVi} ({unit.CapQuanLy})
+              <div className="mt-1">
+                <Select
+                  value={selectedUnit}
+                  onChange={(e) => handleUnitFilter(e.target.value)}
+                  disabled={isLoadingUnits}
+                >
+                  <option value="">
+                    {isLoadingUnits ? 'Đang tải...' : 'Tất cả đơn vị'}
                   </option>
-                ))}
-              </Select>
+                  {units.map((unit) => (
+                    <option key={unit.MaDonVi} value={unit.MaDonVi}>
+                      {unit.TenDonVi} ({unit.CapQuanLy})
+                    </option>
+                  ))}
+                </Select>
+              </div>
             </div>
           )}
         </div>
