@@ -102,6 +102,7 @@ export function DohDashboard({ userId, initialUnitId = null }: DohDashboardProps
     initialUnitId ?? null,
   );
   const detailTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const initialUnitLookupRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!sheetOpen && detailTriggerRef.current) {
@@ -126,6 +127,7 @@ export function DohDashboard({ userId, initialUnitId = null }: DohDashboardProps
 
   useEffect(() => {
     if (!pendingInitialUnitId) {
+      initialUnitLookupRef.current = null;
       return;
     }
     prefetchMetrics(pendingInitialUnitId);
@@ -137,13 +139,62 @@ export function DohDashboard({ userId, initialUnitId = null }: DohDashboardProps
     }
     const match = units.find((row) => row.id === pendingInitialUnitId);
     if (!match) {
-      return;
+      if (initialUnitLookupRef.current === pendingInitialUnitId) {
+        return;
+      }
+
+      initialUnitLookupRef.current = pendingInitialUnitId;
+      let cancelled = false;
+
+      const resolveInitialUnit = async () => {
+        try {
+          const response = await fetch(`/api/system/unit-summary/${pendingInitialUnitId}`);
+          if (!response.ok) {
+            throw new Error(`Failed to load unit summary: ${response.status}`);
+          }
+
+          const payload = await response.json();
+          if (!payload?.success || !payload?.data) {
+            throw new Error(payload?.error || 'Unit summary payload invalid');
+          }
+
+          const summary = payload.data as UnitComparisonRow;
+          if (cancelled) {
+            return;
+          }
+
+          setSelectedUnitId(summary.id);
+          setSelectedUnit(summary);
+          prefetchMetrics(summary.id);
+          setSheetOpen(true);
+          setPendingInitialUnitId(null);
+        } catch (error) {
+          if (cancelled) {
+            return;
+          }
+          console.error('Error resolving initial unit summary:', error);
+          setSelectedUnitId(pendingInitialUnitId);
+          setSelectedUnit(null);
+          prefetchMetrics(pendingInitialUnitId);
+          setSheetOpen(true);
+          setPendingInitialUnitId(null);
+        } finally {
+          initialUnitLookupRef.current = null;
+        }
+      };
+
+      void resolveInitialUnit();
+
+      return () => {
+        cancelled = true;
+      };
     }
     setSelectedUnitId(match.id);
     setSelectedUnit(match);
     prefetchMetrics(match.id);
     setSheetOpen(true);
     setPendingInitialUnitId(null);
+    initialUnitLookupRef.current = null;
   }, [pendingInitialUnitId, prefetchMetrics, units]);
 
   const handleUnitDetailClick = (
