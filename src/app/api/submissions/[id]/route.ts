@@ -333,7 +333,8 @@ export async function PATCH(
       const statusCode = 
         result.error?.includes('not found') ? 404 :
         result.error?.includes('Access denied') ? 403 :
-        result.error?.includes('pending') ? 400 : 500;
+        result.error?.includes('pending') ? 400 :
+        result.error?.includes('No valid fields to update') ? 400 : 500;
 
       return NextResponse.json(
         { error: result.error },
