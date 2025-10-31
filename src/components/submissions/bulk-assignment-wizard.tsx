@@ -36,6 +36,7 @@ export function BulkAssignmentWizard() {
               search: selection.filters?.search,
               trangThai: selection.filters?.trangThai,
               chucDanh: selection.filters?.chucDanh,
+              khoaPhong: selection.filters?.khoaPhong,
             },
             selection: {
               mode: selection.mode,
