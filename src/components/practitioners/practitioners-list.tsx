@@ -266,45 +266,51 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
 
           <div>
             <Label htmlFor="status-filter" className="text-sm font-medium text-gray-700">Trạng thái làm việc</Label>
-            <Select
-              value={statusFilter}
-              onChange={(e) => handleStatusFilter(e.target.value)}
-            >
-              <option value="all">Tất cả trạng thái</option>
-              <option value="DangLamViec">Đang làm việc</option>
-              <option value="TamHoan">Tạm hoãn</option>
-              <option value="DaNghi">Đã nghỉ</option>
-            </Select>
+            <div className="mt-1">
+              <Select
+                value={statusFilter}
+                onChange={(e) => handleStatusFilter(e.target.value)}
+              >
+                <option value="all">Tất cả trạng thái</option>
+                <option value="DangLamViec">Đang làm việc</option>
+                <option value="TamHoan">Tạm hoãn</option>
+                <option value="DaNghi">Đã nghỉ</option>
+              </Select>
+            </div>
           </div>
 
           {userRole === 'SoYTe' && units.length > 0 && (
             <div>
               <Label htmlFor="unit-filter" className="text-sm font-medium text-gray-700">Đơn vị</Label>
-              <Select
-                value={unitFilter}
-                onChange={(e) => handleUnitFilter(e.target.value)}
-              >
-                <option value="all">Tất cả đơn vị</option>
-                {units.map((unit) => (
-                  <option key={unit.MaDonVi} value={unit.MaDonVi}>
-                    {unit.TenDonVi}
-                  </option>
-                ))}
-              </Select>
+              <div className="mt-1">
+                <Select
+                  value={unitFilter}
+                  onChange={(e) => handleUnitFilter(e.target.value)}
+                >
+                  <option value="all">Tất cả đơn vị</option>
+                  {units.map((unit) => (
+                    <option key={unit.MaDonVi} value={unit.MaDonVi}>
+                      {unit.TenDonVi}
+                    </option>
+                  ))}
+                </Select>
+              </div>
             </div>
           )}
 
           <div>
             <Label htmlFor="compliance-filter" className="text-sm font-medium text-gray-700">Tuân thủ</Label>
-            <Select
-              value={complianceFilter}
-              onChange={(e) => handleComplianceFilter(e.target.value)}
-            >
-              <option value="all">Tất cả mức độ</option>
-              <option value="compliant">Đạt chuẩn (≥90%)</option>
-              <option value="at_risk">Rủi ro (70-89%)</option>
-              <option value="non_compliant">Chưa đạt (&lt;70%)</option>
-            </Select>
+            <div className="mt-1">
+              <Select
+                value={complianceFilter}
+                onChange={(e) => handleComplianceFilter(e.target.value)}
+              >
+                <option value="all">Tất cả mức độ</option>
+                <option value="compliant">Đạt chuẩn (≥90%)</option>
+                <option value="at_risk">Rủi ro (70-89%)</option>
+                <option value="non_compliant">Chưa đạt (&lt;70%)</option>
+              </Select>
+            </div>
           </div>
         </div>
       </GlassCard>
