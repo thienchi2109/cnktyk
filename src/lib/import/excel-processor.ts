@@ -23,9 +23,14 @@ export interface PractitionerRow {
 export interface ActivityRow {
   soCCHN: string;
   tenHoatDong: string;
-  vaiTro?: string;
-  ngayHoatDong: Date;
+  hinhThucCapNhatKienThucYKhoa?: string;
+  chiTietVaiTro?: string;
+  donViToChuc?: string;
+  ngayBatDau: Date;
+  ngayKetThuc?: Date;
+  soTiet?: number;
   soTinChi: number;
+  bangChungSoGiayChungNhan?: string;
   trangThaiDuyet: 'ChoDuyet' | 'DaDuyet' | 'TuChoi';
   ngayDuyet?: Date;
   ghiChuDuyet?: string;
@@ -179,9 +184,14 @@ export class ExcelProcessor {
     activitiesSheet.columns = [
       { key: 'soCCHN', width: 18 },
       { key: 'tenHoatDong', width: 40 },
-      { key: 'vaiTro', width: 20 },
-      { key: 'ngayHoatDong', width: 15 },
+      { key: 'hinhThucCapNhatKienThucYKhoa', width: 25 },
+      { key: 'chiTietVaiTro', width: 20 },
+      { key: 'donViToChuc', width: 30 },
+      { key: 'ngayBatDau', width: 15 },
+      { key: 'ngayKetThuc', width: 15 },
+      { key: 'soTiet', width: 12 },
       { key: 'soTinChi', width: 12 },
+      { key: 'bangChungSoGiayChungNhan', width: 20 },
       { key: 'trangThaiDuyet', width: 15 },
       { key: 'ngayDuyet', width: 15 },
       { key: 'ghiChuDuyet', width: 30 },
@@ -192,9 +202,14 @@ export class ExcelProcessor {
     const activitiesHeader = activitiesSheet.addRow([
       'Số CCHN *',
       'Tên hoạt động *',
-      'Vai trò',
-      'Ngày hoạt động *',
+      'Hình thức CNKT',
+      'Chi tiết vai trò',
+      'Đơn vị tổ chức',
+      'Ngày bắt đầu *',
+      'Ngày kết thúc',
+      'Số tiết',
       'Số tín chỉ *',
+      'Số giấy chứng nhận',
       'Trạng thái *',
       'Ngày duyệt',
       'Ghi chú duyệt',
@@ -213,8 +228,13 @@ export class ExcelProcessor {
       'Text (Required)',
       'Text (Required)',
       'Text (Optional)',
+      'Text (Optional)',
+      'Text (Optional)',
       'DD/MM/YYYY (Required)',
+      'DD/MM/YYYY (Optional)',
+      'Number (Optional)',
       'Number (Required)',
+      'Text (Optional)',
       'Enum (Required)',
       'DD/MM/YYYY (Optional)',
       'Text (Optional)',
@@ -227,9 +247,14 @@ export class ExcelProcessor {
     const activitiesExample = activitiesSheet.addRow([
       'CCHN-2023-001234',
       'Hội thảo Y học lâm sàng 2024',
+      'Hội thảo',
       'Báo cáo viên',
+      'Bệnh viện Đa khoa Trung ương Cần Thơ',
       new Date(2024, 2, 15),
+      new Date(2024, 2, 17),
+      10,
       5.5,
+      'HT-2024-001234',
       'DaDuyet',
       new Date(2024, 2, 20),
       'Đã xác minh chứng chỉ',
@@ -249,13 +274,14 @@ export class ExcelProcessor {
       };
     }
 
-    // Format date columns
-    activitiesSheet.getColumn(4).numFmt = 'dd/mm/yyyy';
-    activitiesSheet.getColumn(7).numFmt = 'dd/mm/yyyy';
+    // Format date columns (updated column indices)
+    activitiesSheet.getColumn(6).numFmt = 'dd/mm/yyyy';  // Ngày bắt đầu
+    activitiesSheet.getColumn(7).numFmt = 'dd/mm/yyyy';  // Ngày kết thúc
+    activitiesSheet.getColumn(12).numFmt = 'dd/mm/yyyy'; // Ngày duyệt
 
     // Add data validation for status (if supported)
     if ('dataValidations' in activitiesSheet) {
-      (activitiesSheet as any).dataValidations.add('F4:F10000', {
+      (activitiesSheet as any).dataValidations.add('K4:K10000', {
         type: 'list',
         allowBlank: false,
         formulae: ['"ChoDuyet,DaDuyet,TuChoi"']
@@ -358,13 +384,18 @@ export class ExcelProcessor {
         activities.push({
           soCCHN: values[1]?.toString().trim() || '',
           tenHoatDong: values[2]?.toString().trim() || '',
-          vaiTro: values[3]?.toString().trim(),
-          ngayHoatDong: this.parseDate(values[4]) || new Date(),
-          soTinChi: parseFloat(values[5]?.toString() || '0'),
-          trangThaiDuyet: (values[6]?.toString().trim() || 'ChoDuyet') as any,
-          ngayDuyet: this.parseDate(values[7]),
-          ghiChuDuyet: values[8]?.toString().trim(),
-          urlMinhChung: values[9]?.toString().trim(),
+          hinhThucCapNhatKienThucYKhoa: values[3]?.toString().trim(),
+          chiTietVaiTro: values[4]?.toString().trim(),
+          donViToChuc: values[5]?.toString().trim(),
+          ngayBatDau: this.parseDate(values[6]) || new Date(),
+          ngayKetThuc: this.parseDate(values[7]),
+          soTiet: values[8] ? parseFloat(values[8].toString()) : undefined,
+          soTinChi: parseFloat(values[9]?.toString() || '0'),
+          bangChungSoGiayChungNhan: values[10]?.toString().trim(),
+          trangThaiDuyet: (values[11]?.toString().trim() || 'ChoDuyet') as any,
+          ngayDuyet: this.parseDate(values[12]),
+          ghiChuDuyet: values[13]?.toString().trim(),
+          urlMinhChung: values[14]?.toString().trim(),
           rowNumber
         });
       });

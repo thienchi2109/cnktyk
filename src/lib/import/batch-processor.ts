@@ -22,9 +22,14 @@ export interface PractitionerBatchRow {
 export interface ActivityBatchRow {
   maNhanVien: string;
   tenHoatDong: string;
+  hinhThucCapNhatKienThucYKhoa: string | null;
   chiTietVaiTro: string | null;
+  donViToChuc: string | null;
   ngayBatDau: Date;
+  ngayKetThuc: Date | null;
+  soTiet: number | null;
   soGioTinChiQuyDoi: number;
+  bangChungSoGiayChungNhan: string | null;
   nguoiNhap: string;
   trangThaiDuyet: string;
   ngayDuyet: Date | null;
@@ -125,14 +130,19 @@ export class BatchProcessor {
 
       batch.forEach((a) => {
         valueGroups.push(
-          `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8}, $${paramIndex + 9}, $${paramIndex + 10})`
+          `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8}, $${paramIndex + 9}, $${paramIndex + 10}, $${paramIndex + 11}, $${paramIndex + 12}, $${paramIndex + 13}, $${paramIndex + 14}, $${paramIndex + 15})`
         );
         params.push(
           a.maNhanVien,
           a.tenHoatDong,
+          a.hinhThucCapNhatKienThucYKhoa,
           a.chiTietVaiTro,
+          a.donViToChuc,
           a.ngayBatDau,
+          a.ngayKetThuc,
+          a.soTiet,
           a.soGioTinChiQuyDoi,
+          a.bangChungSoGiayChungNhan,
           a.nguoiNhap,
           a.trangThaiDuyet,
           a.ngayDuyet,
@@ -140,14 +150,15 @@ export class BatchProcessor {
           a.ghiChuDuyet,
           a.fileMinhChungUrl
         );
-        paramIndex += 11;
+        paramIndex += 16;
       });
 
       const sql = `
         INSERT INTO "GhiNhanHoatDong" (
-          "MaNhanVien", "TenHoatDong", "ChiTietVaiTro", "NgayBatDau",
-          "SoGioTinChiQuyDoi", "NguoiNhap", "TrangThaiDuyet", "NgayDuyet",
-          "NguoiDuyet", "GhiChuDuyet", "FileMinhChungUrl"
+          "MaNhanVien", "TenHoatDong", "HinhThucCapNhatKienThucYKhoa", "ChiTietVaiTro",
+          "DonViToChuc", "NgayBatDau", "NgayKetThuc", "SoTiet",
+          "SoGioTinChiQuyDoi", "BangChungSoGiayChungNhan", "NguoiNhap", "TrangThaiDuyet",
+          "NgayDuyet", "NguoiDuyet", "GhiChuDuyet", "FileMinhChungUrl"
         ) VALUES ${valueGroups.join(', ')}
       `;
 
