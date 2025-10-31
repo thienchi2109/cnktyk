@@ -283,7 +283,7 @@ export class ImportValidator {
         errors.push({
           sheet: 'Hoạt động',
           row: a.rowNumber,
-          column: 'E',
+          column: 'I',
           field: 'Số tín chỉ',
           message: 'Số tín chỉ là bắt buộc',
           severity: 'error'
@@ -293,7 +293,7 @@ export class ImportValidator {
           errors.push({
             sheet: 'Hoạt động',
             row: a.rowNumber,
-            column: 'E',
+            column: 'I',
             field: 'Số tín chỉ',
             message: 'Số tín chỉ không được âm',
             severity: 'error'
@@ -303,7 +303,7 @@ export class ImportValidator {
           errors.push({
             sheet: 'Hoạt động',
             row: a.rowNumber,
-            column: 'E',
+            column: 'I',
             field: 'Số tín chỉ',
             message: 'Số tín chỉ không được vượt quá 999.99',
             severity: 'error'
@@ -313,7 +313,7 @@ export class ImportValidator {
           errors.push({
             sheet: 'Hoạt động',
             row: a.rowNumber,
-            column: 'E',
+            column: 'I',
             field: 'Số tín chỉ',
             message: 'Số tín chỉ cao bất thường (>50), vui lòng kiểm tra lại',
             severity: 'warning'
@@ -326,7 +326,7 @@ export class ImportValidator {
         errors.push({
           sheet: 'Hoạt động',
           row: a.rowNumber,
-          column: 'F',
+          column: 'K',
           field: 'Trạng thái',
           message: 'Trạng thái là bắt buộc',
           severity: 'error'
@@ -335,7 +335,7 @@ export class ImportValidator {
         errors.push({
           sheet: 'Hoạt động',
           row: a.rowNumber,
-          column: 'F',
+          column: 'K',
           field: 'Trạng thái',
           message: 'Trạng thái phải là "ChoDuyet", "DaDuyet" hoặc "TuChoi"',
           severity: 'error'
@@ -381,7 +381,7 @@ export class ImportValidator {
         errors.push({
           sheet: 'Hoạt động',
           row: a.rowNumber,
-          column: 'H',
+          column: 'M',
           field: 'Ghi chú duyệt',
           message: 'Ghi chú duyệt không được vượt quá 1000 ký tự',
           severity: 'error'
@@ -395,7 +395,7 @@ export class ImportValidator {
           errors.push({
             sheet: 'Hoạt động',
             row: a.rowNumber,
-            column: 'I',
+            column: 'N',
             field: 'URL minh chứng',
             message: 'URL minh chứng không hợp lệ',
             severity: 'error'

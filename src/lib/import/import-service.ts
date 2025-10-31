@@ -254,7 +254,7 @@ export class ImportService {
           donViToChuc: a.donViToChuc || null,
           ngayBatDau: a.ngayBatDau,
           ngayKetThuc: a.ngayKetThuc || null,
-          soTiet: a.soTiet || null,
+          soTiet: a.soTiet ?? null,
           soGioTinChiQuyDoi: a.soTinChi,
           bangChungSoGiayChungNhan: a.bangChungSoGiayChungNhan || null,
           nguoiNhap: userId,
