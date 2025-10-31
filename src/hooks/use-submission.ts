@@ -49,3 +49,27 @@ export function useReviewSubmissionMutation() {
     },
   });
 }
+
+export function useEditSubmissionMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: { id: string; data: Record<string, any> }) => {
+      const res = await fetch(`/api/submissions/${args.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(args.data),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        throw new Error(result?.error || "Failed to edit submission");
+      }
+      return result as { submission: any; message: string };
+    },
+    onSuccess: (data, vars) => {
+      // update detail cache
+      qc.setQueryData(submissionQueryKey(vars.id), { submission: data.submission });
+      // invalidate list queries
+      qc.invalidateQueries({ queryKey: ["submissions"] });
+    },
+  });
+}

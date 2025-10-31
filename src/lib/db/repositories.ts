@@ -477,6 +477,90 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
   }
 
   /**
+   * Update submission data (edit capability for DonVi role)
+   * Only allows editing submissions in ChoDuyet status
+   * Enforces tenant isolation via MaDonVi check
+   * 
+   * @param submissionId - ID of submission to update
+   * @param data - Partial update data (validated by caller)
+   * @param unitId - Unit ID for tenant isolation (required for DonVi role)
+   * @returns Updated submission or null if not found/unauthorized
+   */
+  async updateSubmission(
+    submissionId: string,
+    data: Partial<UpdateGhiNhanHoatDong>,
+    unitId?: string
+  ): Promise<{ success: boolean; submission?: GhiNhanHoatDong; error?: string }> {
+    // First, fetch the submission with practitioner data for tenant isolation
+    const query = `
+      SELECT g.*, n."MaDonVi"
+      FROM "${this.tableName}" g
+      INNER JOIN "NhanVien" n ON n."MaNhanVien" = g."MaNhanVien"
+      WHERE g."MaGhiNhan" = $1
+    `;
+    
+    const result = await db.queryOne<GhiNhanHoatDong & { MaDonVi: string }>(query, [submissionId]);
+    
+    if (!result) {
+      return { success: false, error: 'Submission not found' };
+    }
+
+    // Check tenant isolation for DonVi role
+    if (unitId && result.MaDonVi !== unitId) {
+      return { success: false, error: 'Access denied: submission belongs to different unit' };
+    }
+
+    // Check status - only ChoDuyet can be edited
+    if (result.TrangThaiDuyet !== 'ChoDuyet') {
+      return { success: false, error: 'Only pending submissions can be edited' };
+    }
+
+    // Perform the update with parameterized query
+    const updateFields: string[] = [];
+    const updateValues: any[] = [];
+    let paramCount = 1;
+
+    // Build dynamic UPDATE SET clause
+    Object.entries(data).forEach(([key, value]) => {
+      // Skip undefined values and immutable fields
+      if (value !== undefined && key !== 'MaNhanVien' && key !== 'NguoiNhap') {
+        updateFields.push(`"${key}" = $${paramCount}`);
+        updateValues.push(value);
+        paramCount++;
+      }
+    });
+
+    if (updateFields.length === 0) {
+      return { success: false, error: 'No valid fields to update' };
+    }
+
+    // Add submission ID and unit ID for WHERE clause
+    const updateQuery = `
+      UPDATE "${this.tableName}" g
+      SET ${updateFields.join(', ')}
+      FROM "NhanVien" n
+      WHERE g."MaGhiNhan" = $${paramCount}
+        AND g."MaNhanVien" = n."MaNhanVien"
+        AND g."TrangThaiDuyet" = 'ChoDuyet'
+        ${unitId ? `AND n."MaDonVi" = $${paramCount + 1}` : ''}
+      RETURNING g.*
+    `;
+
+    updateValues.push(submissionId);
+    if (unitId) {
+      updateValues.push(unitId);
+    }
+
+    const updated = await db.queryOne<GhiNhanHoatDong>(updateQuery, updateValues);
+
+    if (!updated) {
+      return { success: false, error: 'Update failed or unauthorized' };
+    }
+
+    return { success: true, submission: updated };
+  }
+
+  /**
    * Bulk approve activities.
    * If unitId is provided, only records from that unit will be approved.
    * Only pending (ChoDuyet) items are affected.

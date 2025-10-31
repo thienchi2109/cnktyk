@@ -13,7 +13,8 @@ import {
   ArrowLeft,
   AlertTriangle,
   Info,
-  Loader2
+  Loader2,
+  Edit
 } from 'lucide-react';
 
 import { GlassCard } from '@/components/ui/glass-card';
@@ -25,9 +26,11 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LoadingNotice } from '@/components/ui/loading-notice';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { formatDate } from '@/lib/utils';
 import { SheetFooter } from '@/components/ui/sheet';
-import { useSubmission, useReviewSubmissionMutation } from '@/hooks/use-submission';
+import { useSubmission, useReviewSubmissionMutation, useEditSubmissionMutation } from '@/hooks/use-submission';
 
 interface SubmissionDetails {
   MaGhiNhan: string;
@@ -96,13 +99,14 @@ export function SubmissionReview({
 }: SubmissionReviewProps) {
   const { data, isLoading, error } = useSubmission(submissionId);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const submission: SubmissionDetails | null = data?.submission || null;
   const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | 'request_info' | null>(null);
   const [comments, setComments] = useState('');
   const [reason, setReason] = useState('');
 
-
   const reviewMutation = useReviewSubmissionMutation();
+  const editMutation = useEditSubmissionMutation();
 
   const handleReviewSubmission = async (action: 'approve' | 'reject' | 'request_info') => {
     if (!submission || !submissionId) return;
@@ -143,6 +147,10 @@ export function SubmissionReview({
   const canReview = () => {
     return ['DonVi', 'SoYTe'].includes(userRole) && 
            submission?.TrangThaiDuyet === 'ChoDuyet';
+  };
+
+  const canEdit = () => {
+    return userRole === 'DonVi' && submission?.TrangThaiDuyet === 'ChoDuyet';
   };
 
   const formatFileSize = (bytes: number) => {
@@ -202,9 +210,21 @@ export function SubmissionReview({
           </div>
         </div>
 
-        <Badge className={`${statusColors[submission.TrangThaiDuyet]} border text-sm px-3 py-1`}>
-          {statusLabels[submission.TrangThaiDuyet]}
-        </Badge>
+        <div className="flex items-center space-x-3">
+          {canEdit() && (
+            <GlassButton
+              onClick={() => setShowEditDialog(true)}
+              variant="outline"
+              className="border-medical-blue text-medical-blue hover:bg-medical-blue/10"
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Chỉnh sửa
+            </GlassButton>
+          )}
+          <Badge className={`${statusColors[submission.TrangThaiDuyet]} border text-sm px-3 py-1`}>
+            {statusLabels[submission.TrangThaiDuyet]}
+          </Badge>
+        </div>
       </div>
 
       {/* Error Alert */}
@@ -512,6 +532,110 @@ export function SubmissionReview({
           </Button>
         </SheetFooter>
       )}
+
+      {/* Edit Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Chỉnh sửa hoạt động</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="edit-ten-hoat-dong">Tên hoạt động *</Label>
+              <Input
+                id="edit-ten-hoat-dong"
+                defaultValue={submission?.TenHoatDong}
+                placeholder="Nhập tên hoạt động"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-so-tiet">Số tiết</Label>
+                <Input
+                  id="edit-so-tiet"
+                  type="number"
+                  defaultValue={submission?.SoTiet || ''}
+                  placeholder="Số tiết"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-so-gio-tin-chi">Số giờ tín chỉ *</Label>
+                <Input
+                  id="edit-so-gio-tin-chi"
+                  type="number"
+                  step="0.5"
+                  defaultValue={submission?.SoGioTinChiQuyDoi ?? ''}
+                  placeholder="Số giờ tín chỉ"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="edit-don-vi-to-chuc">Đơn vị tổ chức</Label>
+              <Input
+                id="edit-don-vi-to-chuc"
+                defaultValue={submission?.DonViToChuc || ''}
+                placeholder="Tên đơn vị tổ chức"
+              />
+            </div>
+
+            <Alert className="border-medical-blue bg-medical-blue/5">
+              <Info className="h-4 w-4 text-medical-blue" />
+              <AlertDescription className="text-sm text-gray-700">
+                Chỉ có thể chỉnh sửa hoạt động đang ở trạng thái <strong>Chờ duyệt</strong>.
+                Thông tin người hành nghề không thể thay đổi.
+              </AlertDescription>
+            </Alert>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowEditDialog(false)}
+              disabled={editMutation.isPending}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              onClick={async () => {
+                if (!submission) return;
+                
+                const tenHoatDong = (document.getElementById('edit-ten-hoat-dong') as HTMLInputElement)?.value;
+                const soTiet = (document.getElementById('edit-so-tiet') as HTMLInputElement)?.value;
+                const soGioTinChi = (document.getElementById('edit-so-gio-tin-chi') as HTMLInputElement)?.value;
+                const donViToChuc = (document.getElementById('edit-don-vi-to-chuc') as HTMLInputElement)?.value;
+
+                try {
+                  await editMutation.mutateAsync({
+                    id: submissionId,
+                    data: {
+                      TenHoatDong: tenHoatDong,
+                      SoTiet: soTiet ? parseFloat(soTiet) : null,
+                      SoGioTinChiQuyDoi: soGioTinChi ? parseFloat(soGioTinChi) : undefined,
+                      DonViToChuc: donViToChuc || null,
+                    },
+                  });
+                  setShowEditDialog(false);
+                  if (onReviewComplete) onReviewComplete();
+                } catch (err) {
+                  // Error handled by mutation
+                }
+              }}
+              disabled={editMutation.isPending}
+            >
+              {editMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Đang lưu...</>
+              ) : (
+                <><Edit className="h-4 w-4 mr-2" /> Lưu thay đổi</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -256,6 +256,167 @@ export async function PUT(
   }
 }
 
+// PATCH /api/submissions/[id] - Edit submission data (DonVi only, ChoDuyet status only)
+export async function PATCH(
+  request: NextRequest,
+  { params }: RouteParams
+) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Only DonVi role can edit submissions
+    if (user.role !== 'DonVi') {
+      return NextResponse.json(
+        { error: 'Insufficient permissions. Only unit admins can edit submissions.' },
+        { status: 403 }
+      );
+    }
+
+    const { id } = await params;
+    const body = await request.json();
+
+    // Validate input - define editable fields
+    const editSchema = z.object({
+      TenHoatDong: z.string().min(1, 'Activity name is required').optional(),
+      VaiTro: z.string().nullable().optional(),
+      HinhThucCapNhatKienThucYKhoa: z.string().nullable().optional(),
+      ChiTietVaiTro: z.string().nullable().optional(),
+      DonViToChuc: z.string().nullable().optional(),
+      NgayBatDau: z.string().transform(val => val ? new Date(val) : null).optional(),
+      NgayKetThuc: z.string().transform(val => val ? new Date(val) : null).optional(),
+      SoTiet: z.number().min(0).nullable().optional(),
+      BangChungSoGiayChungNhan: z.string().nullable().optional(),
+      SoGioTinChiQuyDoi: z.number().min(0, 'Credits must be non-negative').optional(),
+      FileMinhChungUrl: z.string().url().nullable().or(z.literal('')).optional(),
+      FileMinhChungETag: z.string().nullable().optional(),
+      FileMinhChungSha256: z.string().nullable().optional(),
+      FileMinhChungSize: z.number().int().min(0).nullable().optional(),
+      MaDanhMuc: z.string().uuid().nullable().optional(),
+    }).refine(
+      (data) => {
+        if (data.NgayBatDau && data.NgayKetThuc) {
+          return data.NgayKetThuc >= data.NgayBatDau;
+        }
+        return true;
+      },
+      {
+        message: 'End time must be after start time',
+        path: ['NgayKetThuc'],
+      }
+    );
+
+    const validatedData = editSchema.parse(body);
+
+    // Get original submission for audit logging
+    const originalSubmission = await ghiNhanHoatDongRepo.findById(id);
+    if (!originalSubmission) {
+      return NextResponse.json(
+        { error: 'Submission not found' },
+        { status: 404 }
+      );
+    }
+
+    // Call repository method with tenant isolation
+    const result = await ghiNhanHoatDongRepo.updateSubmission(
+      id,
+      validatedData,
+      user.unitId
+    );
+
+    if (!result.success) {
+      const statusCode = 
+        result.error?.includes('not found') ? 404 :
+        result.error?.includes('Access denied') ? 403 :
+        result.error?.includes('pending') ? 400 : 500;
+
+      return NextResponse.json(
+        { error: result.error },
+        { status: statusCode }
+      );
+    }
+
+    // Audit logging - capture before/after state
+    const changedFields = Object.keys(validatedData).filter(key => {
+      const oldVal = (originalSubmission as any)[key];
+      const newVal = (validatedData as any)[key];
+      return oldVal !== newVal;
+    });
+
+    if (changedFields.length > 0) {
+      const { nhatKyHeThongRepo } = await import('@/lib/db/repositories');
+      const beforeState: Record<string, any> = {};
+      const afterState: Record<string, any> = {};
+
+      changedFields.forEach(field => {
+        beforeState[field] = (originalSubmission as any)[field];
+        afterState[field] = (validatedData as any)[field];
+      });
+
+      await nhatKyHeThongRepo.logAction(
+        user.id,
+        'SUA_GHI_NHAN_HOAT_DONG',
+        'GhiNhanHoatDong',
+        id,
+        {
+          MaGhiNhan: id,
+          before: beforeState,
+          after: afterState,
+          changedFields,
+        },
+        request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip')
+      );
+    }
+
+    // Get enriched data for response
+    const practitioner = await nhanVienRepo.findById(result.submission!.MaNhanVien);
+    const activityCatalog = result.submission!.MaDanhMuc 
+      ? await danhMucHoatDongRepo.findById(result.submission!.MaDanhMuc)
+      : null;
+
+    const enrichedSubmission = {
+      ...result.submission,
+      practitioner: practitioner ? {
+        HoVaTen: practitioner.HoVaTen,
+        SoCCHN: practitioner.SoCCHN,
+        ChucDanh: practitioner.ChucDanh,
+        Email: practitioner.Email,
+        DienThoai: practitioner.DienThoai,
+      } : null,
+      activityCatalog: activityCatalog ? {
+        TenDanhMuc: activityCatalog.TenDanhMuc,
+        LoaiHoatDong: activityCatalog.LoaiHoatDong,
+        TyLeQuyDoi: activityCatalog.TyLeQuyDoi,
+      } : null,
+    };
+
+    return NextResponse.json({
+      submission: enrichedSubmission,
+      message: 'Submission updated successfully',
+    });
+
+  } catch (error) {
+    console.error('Submission edit error:', error);
+    
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Validation error', details: error.issues },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
 // DELETE /api/submissions/[id] - Delete submission (only if pending)
 export async function DELETE(
   request: NextRequest,
