@@ -29,7 +29,15 @@ The activity submission form for DonVi role SHALL provide a searchable selector 
 
 #### Scenario: Search response time
 - **WHEN** a user types into the search input with a list of 100+ practitioners
-- **THEN** the filtered results appear within 100 milliseconds without perceptible lag
+- **THEN** the filtered results appear within 100 milliseconds after debounce delay without perceptible lag
+
+#### Scenario: Debounced search prevents excessive filtering
+- **WHEN** a user types quickly (multiple characters within 300ms)
+- **THEN** the search filtering only executes once after the user stops typing for 300ms, not on every keystroke
+
+#### Scenario: Search result count display
+- **WHEN** search filtering produces results
+- **THEN** the selector displays the count of matching practitioners (e.g., "Hiển thị 15 kết quả")
 
 ### Requirement: Enhanced Practitioner Display
 The practitioner selector SHALL display comprehensive practitioner information to help users distinguish between similar entries and make accurate selections.
@@ -101,19 +109,54 @@ The practitioner selector SHALL meet WCAG 2.1 AA accessibility standards for key
 - **THEN** selector animations and transitions are disabled or minimized
 
 ### Requirement: Performance with Large Lists
-The practitioner selector SHALL maintain responsive performance when rendering and filtering lists of 100+ practitioners.
+The practitioner selector SHALL maintain responsive performance when rendering and filtering lists of 100+ practitioners through debouncing and caching strategies.
 
 #### Scenario: Efficient rendering
 - **WHEN** the selector contains more than 50 practitioners
 - **THEN** the component uses efficient rendering techniques (ScrollArea) to handle large lists without performance degradation
 
-#### Scenario: Instant filtering
+#### Scenario: Debounced filtering performance
 - **WHEN** a user types into the search input with 200+ practitioners
-- **THEN** the filtered results render within 100ms without blocking the UI thread
+- **THEN** the filtering operation is debounced (300ms delay) and executes within 100ms without blocking the UI thread
+
+#### Scenario: Reduced re-render frequency
+- **WHEN** a user types 10 characters in rapid succession
+- **THEN** the component renders at most 2-3 times (initial + debounced update) instead of 10+ times without debouncing
 
 #### Scenario: Memory efficiency
 - **WHEN** the selector is used with the maximum expected practitioner count (500 items)
 - **THEN** memory usage remains below 5MB and does not cause memory leaks on repeated open/close cycles
+
+#### Scenario: Cache hit performance
+- **WHEN** a user opens the selector for the second time within 5 minutes
+- **THEN** the practitioner list loads instantly from cache without showing a loading state
+
+### Requirement: Data Fetching and Caching
+The practitioner selector SHALL use TanStack Query for efficient data fetching, caching, and background synchronization.
+
+#### Scenario: Initial data fetch with loading state
+- **WHEN** the selector opens for the first time and practitioners have not been cached
+- **THEN** a loading skeleton is displayed while TanStack Query fetches the practitioner list
+
+#### Scenario: Cached data instant display
+- **WHEN** the selector opens and practitioners are already cached (within 5 minutes)
+- **THEN** the practitioner list displays immediately without a loading state
+
+#### Scenario: Background refetch on window focus
+- **WHEN** the user returns to the browser tab after being away
+- **THEN** TanStack Query automatically refetches practitioner data in the background to ensure freshness
+
+#### Scenario: Error handling with retry
+- **WHEN** the practitioner fetch fails due to network error
+- **THEN** TanStack Query automatically retries up to 3 times before displaying an error message to the user
+
+#### Scenario: Stale data notification
+- **WHEN** cached practitioner data is older than 5 minutes but the fetch is in progress
+- **THEN** the selector displays cached data immediately while fetching fresh data in the background
+
+#### Scenario: Multiple component instances share cache
+- **WHEN** multiple components request the same practitioner list for a unit
+- **THEN** TanStack Query deduplicates requests and shares the cached data across all instances
 
 ### Requirement: Form Integration
 The practitioner selector SHALL integrate seamlessly with React Hook Form validation and maintain existing form submission behavior.
