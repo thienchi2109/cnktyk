@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { NextRequest } from 'next/server';
 
 const mocks = vi.hoisted(() => ({
   requireAuth: vi.fn(),
@@ -37,7 +38,7 @@ describe('GET /api/system/unit-summary/[id]', () => {
       totalCredits: 120,
     });
 
-    const response = (await GET(new Request('http://localhost/api/system/unit-summary/unit-1'), {
+    const response = (await GET(new NextRequest('http://localhost/api/system/unit-summary/unit-1'), {
       params: Promise.resolve({ id: 'unit-1' }),
     })) as Response;
 
@@ -53,7 +54,7 @@ describe('GET /api/system/unit-summary/[id]', () => {
       user: { id: 'unit-admin', role: 'DonVi' },
     });
 
-    const response = (await GET(new Request('http://localhost/api/system/unit-summary/unit-2'), {
+    const response = (await GET(new NextRequest('http://localhost/api/system/unit-summary/unit-2'), {
       params: Promise.resolve({ id: 'unit-2' }),
     })) as Response;
 
@@ -69,7 +70,7 @@ describe('GET /api/system/unit-summary/[id]', () => {
     });
     mocks.getSummary.mockResolvedValueOnce(null);
 
-    const response = (await GET(new Request('http://localhost/api/system/unit-summary/unit-3'), {
+    const response = (await GET(new NextRequest('http://localhost/api/system/unit-summary/unit-3'), {
       params: Promise.resolve({ id: 'unit-3' }),
     })) as Response;
 
