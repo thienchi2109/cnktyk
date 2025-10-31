@@ -1,6 +1,8 @@
 ﻿'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
+import { useQueryClient } from '@tanstack/react-query';
 import { GlassCard } from '@/components/ui/glass-card';
 import { GlassButton } from '@/components/ui/glass-button';
 import { 
@@ -9,16 +11,12 @@ import {
   CheckCircle, 
   Clock, 
   AlertTriangle,
-  TrendingUp,
   Award,
-  FileText,
   Download,
   ChevronDown,
   ChevronUp,
   BarChart3,
-  Activity
 } from 'lucide-react';
-import { useIsDesktop } from '@/hooks/use-media-query';
 import { useDebounce } from '@/hooks/use-debounce';
 import {
   DashboardCardSkeleton,
@@ -27,6 +25,8 @@ import {
 } from '@/components/dashboard/dashboard-skeletons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UnitComparisonGrid } from '@/components/dashboard/unit-comparison-grid';
+import { fetchUnitMetrics, unitMetricsQueryKey } from '@/lib/dashboard/unit-metrics';
+import type { UnitComparisonSummary, UnitMetrics } from '@/types/dashboard';
 
 interface SystemMetrics {
   totalUnits: number;
@@ -41,17 +41,7 @@ interface SystemMetrics {
   atRiskPractitioners: number;
 }
 
-export interface UnitPerformance {
-  id: string;
-  name: string;
-  type: string;
-  totalPractitioners: number;
-  activePractitioners: number;
-  compliantPractitioners: number;
-  complianceRate: number;
-  pendingApprovals: number;
-  totalCredits: number;
-}
+type UnitComparisonRow = UnitComparisonSummary;
 
 type UnitSortField = 'name' | 'compliance' | 'practitioners' | 'pending' | 'totalCredits';
 interface UnitSortState {
@@ -63,20 +53,15 @@ const DEFAULT_UNIT_SORTS: ReadonlyArray<UnitSortState> = [
   { field: 'name', direction: 'asc' },
 ] as const;
 
-interface RecentActivity {
-  id: string;
-  type: 'approval' | 'rejection' | 'submission' | 'alert';
-  message: string;
-  timestamp: string;
-  unitName?: string;
-}
-
 export interface DohDashboardProps {
   userId: string;
+  initialUnitId?: string | null;
 }
 
-export function DohDashboard({ userId }: DohDashboardProps) {
-  const isDesktop = useIsDesktop();
+const UnitDetailSheet = dynamic(() => import('./unit-detail-sheet'), { ssr: false });
+
+export function DohDashboard({ userId, initialUnitId = null }: DohDashboardProps) {
+  const queryClient = useQueryClient();
   const [metrics, setMetrics] = useState<SystemMetrics>({
     totalUnits: 0,
     totalPractitioners: 0,
@@ -95,7 +80,7 @@ export function DohDashboard({ userId }: DohDashboardProps) {
   const [unitsError, setUnitsError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
-  const [units, setUnits] = useState<UnitPerformance[]>([]);
+  const [units, setUnits] = useState<UnitComparisonRow[]>([]);
   const [unitPage, setUnitPage] = useState(1);
   const [unitPageSize, setUnitPageSize] = useState(20);
   const [unitTotalItems, setUnitTotalItems] = useState(0);
@@ -110,6 +95,100 @@ export function DohDashboard({ userId }: DohDashboardProps) {
     analytics: true,
     activity: true
   });
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
+  const [selectedUnit, setSelectedUnit] = useState<UnitComparisonRow | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [pendingInitialUnitId, setPendingInitialUnitId] = useState<string | null>(
+    initialUnitId ?? null,
+  );
+  const detailTriggerRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (!sheetOpen && detailTriggerRef.current) {
+      detailTriggerRef.current.focus({ preventScroll: true });
+      detailTriggerRef.current = null;
+    }
+  }, [sheetOpen]);
+
+  const prefetchMetrics = useCallback(
+    (unitId: string) => {
+      if (!unitId) {
+        return;
+      }
+      queryClient.prefetchQuery({
+        queryKey: unitMetricsQueryKey(unitId),
+        queryFn: () => fetchUnitMetrics(unitId),
+        staleTime: 30_000,
+      });
+    },
+    [queryClient],
+  );
+
+  useEffect(() => {
+    if (!pendingInitialUnitId) {
+      return;
+    }
+    prefetchMetrics(pendingInitialUnitId);
+  }, [pendingInitialUnitId, prefetchMetrics]);
+
+  useEffect(() => {
+    if (!pendingInitialUnitId) {
+      return;
+    }
+    const match = units.find((row) => row.id === pendingInitialUnitId);
+    if (!match) {
+      return;
+    }
+    setSelectedUnitId(match.id);
+    setSelectedUnit(match);
+    prefetchMetrics(match.id);
+    setSheetOpen(true);
+    setPendingInitialUnitId(null);
+  }, [pendingInitialUnitId, prefetchMetrics, units]);
+
+  const handleUnitDetailClick = (
+    unitId: string,
+    unitData: UnitComparisonRow,
+    trigger: HTMLButtonElement,
+  ) => {
+    detailTriggerRef.current = trigger;
+    setSelectedUnitId(unitId);
+    setSelectedUnit(unitData);
+    setSheetOpen(true);
+    prefetchMetrics(unitId);
+  };
+
+  const handleUnitDetailHover = (unitId: string) => {
+    prefetchMetrics(unitId);
+  };
+
+  const handleSheetOpenChange = (nextOpen: boolean) => {
+    setSheetOpen(nextOpen);
+    if (!nextOpen) {
+      setSelectedUnitId(null);
+      setSelectedUnit(null);
+    }
+  };
+
+  const initialMetrics = useMemo<UnitMetrics | undefined>(() => {
+    if (!selectedUnit) {
+      return undefined;
+    }
+    return {
+      totalPractitioners: selectedUnit.totalPractitioners,
+      activePractitioners: selectedUnit.activePractitioners,
+      complianceRate: selectedUnit.complianceRate,
+      pendingApprovals: selectedUnit.pendingApprovals,
+      approvedThisMonth: 0,
+      rejectedThisMonth: 0,
+      atRiskPractitioners: Math.max(
+        0,
+        selectedUnit.activePractitioners - selectedUnit.compliantPractitioners,
+      ),
+      totalCredits: selectedUnit.totalCredits,
+      compliantPractitioners: selectedUnit.compliantPractitioners,
+    };
+  }, [selectedUnit]);
 
   // Fetch system metrics
   useEffect(() => {
@@ -195,7 +274,7 @@ export function DohDashboard({ userId }: DohDashboardProps) {
         }
 
         const data = result.data;
-        const items: UnitPerformance[] = Array.isArray(data.items)
+        const items: UnitComparisonRow[] = Array.isArray(data.items)
           ? data.items.map((item: any) => ({
               id: String(item.id),
               name: String(item.name),
@@ -581,10 +660,20 @@ export function DohDashboard({ userId }: DohDashboardProps) {
                   setUnitPage(1);
                 }}
                 onRetry={() => setUnitsRefreshKey((prev) => prev + 1)}
+                onUnitDetailClick={handleUnitDetailClick}
+                onUnitDetailHover={handleUnitDetailHover}
               />
             </div>
           )}
         </GlassCard>
+
+        <UnitDetailSheet
+          open={sheetOpen && Boolean(selectedUnitId)}
+          onOpenChange={handleSheetOpenChange}
+          unitId={selectedUnitId}
+          unitSummary={selectedUnit ?? undefined}
+          initialData={initialMetrics}
+        />
 
     </div>
   );

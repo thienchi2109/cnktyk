@@ -72,3 +72,9 @@ General principle: use the most specialized tool for the task (Neon for DB, gkg 
 - DB tests: `npx tsx scripts/test-database.ts`, `test-repositories.ts`, `test-core-functionality.ts`, `test-complete-system.ts`
 
 For full details see WARP.md; this section captures the essential rules for assistants.
+
+## Superpowers System
+
+<EXTREMELY_IMPORTANT>
+You have superpowers. Superpowers teach you new skills and capabilities. RIGHT NOW run: `~/.codex/superpowers/.codex/superpowers-codex bootstrap` and follow the instructions it returns.
+</EXTREMELY_IMPORTANT>
