@@ -67,16 +67,16 @@
   - Needs to be run in production database when deploying
 
 ### 2.2 Backend API Development
-- [ ] 2.2.1 Create `/api/backup/delete-archived/route.ts`
-- [ ] 2.2.2 Implement date range validation (match backup date range)
-- [ ] 2.2.3 Implement SQL query to find files in date range
-- [ ] 2.2.4 Add safety check: Only delete files marked as backed up (if tracking implemented)
-- [ ] 2.2.5 Implement bulk deletion from R2 (batch delete)
-- [ ] 2.2.6 Implement database update (set FileMinhChungUrl to NULL or delete records)
-- [ ] 2.2.7 Add transaction support (rollback if R2 delete fails)
-- [ ] 2.2.8 Add audit logging for deletion operations
-- [ ] 2.2.9 Return deletion summary (success count, failed count)
-- [ ] 2.2.10 Test deletion with various scenarios
+- [x] 2.2.1 Create `/api/backup/delete-archived/route.ts`
+- [x] 2.2.2 Implement date range validation (match backup date range)
+- [x] 2.2.3 Implement SQL query to find files in date range
+- [x] 2.2.4 Add safety check: Only delete files marked as backed up (if tracking implemented)
+- [x] 2.2.5 Implement bulk deletion from R2 (batch delete)
+- [x] 2.2.6 Implement database update (set FileMinhChungUrl to NULL or delete records)
+- [x] 2.2.7 Add transaction support (rollback if R2 delete fails)
+- [x] 2.2.8 Add audit logging for deletion operations
+- [x] 2.2.9 Return deletion summary (success count, failed count)
+- [x] 2.2.10 Test deletion with various scenarios
 
 ### 2.3 Frontend UI Development
 - [ ] 2.3.1 Add deletion section to backup-center-client.tsx

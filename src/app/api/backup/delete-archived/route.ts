@@ -1,0 +1,356 @@
+/**
+ * Delete Archived Evidence Files API Endpoint
+ * POST /api/backup/delete-archived
+ * 
+ * Deletes evidence files from R2 storage after they have been backed up.
+ * This is a destructive operation that frees storage space.
+ * 
+ * Access: SoYTe role only
+ * Safety: Requires explicit confirmation token
+ * Max Duration: 300 seconds (5 minutes)
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { getCurrentUser } from '@/lib/auth/server';
+import { db } from '@/lib/db/client';
+import { r2Client } from '@/lib/storage/r2-client';
+import { 
+  xoaMinhChungRepo,
+  chiTietSaoLuuRepo,
+  nhatKyHeThongRepo,
+  ghiNhanHoatDongRepo
+} from '@/lib/db/repositories';
+
+// Configure route for long-running deletion operations
+export const maxDuration = 300; // 5 minutes
+
+interface DeleteRequestBody {
+  startDate: string;
+  endDate: string;
+  confirmationToken: string;
+}
+
+interface FileToDelete {
+  MaGhiNhan: string;
+  FileMinhChungUrl: string;
+  FileMinhChungSize: number | null;
+}
+
+/**
+ * Extract R2 object key from full URL
+ * Same logic as backup endpoint
+ */
+function extractR2Key(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.pathname.substring(1);
+  } catch (error) {
+    console.error(`Invalid URL format: ${url}`, error);
+    const parts = url.split('/');
+    if (parts.length >= 3) {
+      return parts.slice(parts.length - 2).join('/');
+    }
+    return parts[parts.length - 1];
+  }
+}
+
+/**
+ * Format date as YYYY-MM-DD
+ */
+function formatDate(date: Date): string {
+  return date.toISOString().split('T')[0];
+}
+
+/**
+ * Validate date range constraints
+ */
+function validateDateRange(startDate: Date, endDate: Date): { valid: boolean; error?: string } {
+  if (startDate >= endDate) {
+    return { valid: false, error: 'Start date must be before end date' };
+  }
+
+  const now = new Date();
+  if (endDate > now) {
+    return { valid: false, error: 'End date cannot be in the future' };
+  }
+
+  const oneYearMs = 365 * 24 * 60 * 60 * 1000;
+  const rangeMs = endDate.getTime() - startDate.getTime();
+  if (rangeMs > oneYearMs) {
+    return { valid: false, error: 'Date range cannot exceed 1 year' };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * POST /api/backup/delete-archived
+ * Delete evidence files that have been backed up
+ */
+export async function POST(req: NextRequest) {
+  try {
+    // 1. Authentication & Authorization
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    if (user.role !== 'SoYTe') {
+      return NextResponse.json(
+        { error: 'Access denied. SoYTe role required.' },
+        { status: 403 }
+      );
+    }
+
+    // 2. Parse and validate request body
+    let body: DeleteRequestBody;
+    try {
+      body = await req.json();
+    } catch (error) {
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
+
+    const { startDate, endDate, confirmationToken } = body;
+
+    // Validate required fields
+    if (!startDate || !endDate) {
+      return NextResponse.json(
+        { error: 'Start date and end date are required' },
+        { status: 400 }
+      );
+    }
+
+    if (!confirmationToken) {
+      return NextResponse.json(
+        { error: 'Confirmation token required. Type DELETE to confirm.' },
+        { status: 400 }
+      );
+    }
+
+    // Validate confirmation token (must be exactly "DELETE")
+    if (confirmationToken !== 'DELETE') {
+      return NextResponse.json(
+        { error: 'Invalid confirmation token. Must be exactly "DELETE".' },
+        { status: 400 }
+      );
+    }
+
+    // Parse dates
+    let startDateObj: Date;
+    let endDateObj: Date;
+    try {
+      startDateObj = new Date(startDate);
+      endDateObj = new Date(endDate);
+      
+      if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime())) {
+        throw new Error('Invalid date format');
+      }
+    } catch (error) {
+      return NextResponse.json(
+        { error: 'Invalid date format. Use ISO 8601 format (YYYY-MM-DD)' },
+        { status: 400 }
+      );
+    }
+
+    // Validate date range constraints
+    const validation = validateDateRange(startDateObj, endDateObj);
+    if (!validation.valid) {
+      return NextResponse.json(
+        { error: validation.error },
+        { status: 400 }
+      );
+    }
+
+    // 3. Query database for files to delete
+    // Only select files that have been backed up (via ChiTietSaoLuu)
+    const query = `
+      SELECT DISTINCT
+        g."MaGhiNhan",
+        g."FileMinhChungUrl",
+        g."FileMinhChungSize"
+      FROM "GhiNhanHoatDong" g
+      INNER JOIN "ChiTietSaoLuu" c ON c."MaGhiNhan" = g."MaGhiNhan"
+      WHERE g."FileMinhChungUrl" IS NOT NULL
+        AND g."NgayGhiNhan" >= $1
+        AND g."NgayGhiNhan" <= $2
+        AND g."TrangThaiDuyet" = 'DaDuyet'
+        AND c."TrangThai" = 'DaSaoLuu'
+      ORDER BY g."NgayGhiNhan" DESC
+    `;
+
+    const files = await db.query<FileToDelete>(query, [startDateObj, endDateObj]);
+
+    if (!files || files.length === 0) {
+      return NextResponse.json(
+        { error: 'No backed-up files found in the specified date range' },
+        { status: 404 }
+      );
+    }
+
+    // Check file count limit (max 5000)
+    if (files.length > 5000) {
+      return NextResponse.json(
+        { 
+          error: `Cannot delete more than 5000 files at once. Found ${files.length} files. Please use a smaller date range.` 
+        },
+        { status: 400 }
+      );
+    }
+
+    console.log(`Found ${files.length} backed-up files to delete`);
+
+    // 4. Track deletion progress
+    let deletedCount = 0;
+    let failedCount = 0;
+    let totalSpaceFreed = 0;
+    const deletedSubmissionIds: string[] = [];
+    const failedDeletions: { id: string; url: string; error: string }[] = [];
+
+    // 5. Delete files from R2 storage
+    for (const file of files) {
+      try {
+        const r2Key = extractR2Key(file.FileMinhChungUrl);
+        
+        // Delete from R2
+        const deleteSuccess = await r2Client.deleteFile(r2Key);
+        
+        if (deleteSuccess) {
+          deletedCount++;
+          deletedSubmissionIds.push(file.MaGhiNhan);
+          totalSpaceFreed += file.FileMinhChungSize || 0;
+        } else {
+          failedCount++;
+          failedDeletions.push({
+            id: file.MaGhiNhan,
+            url: file.FileMinhChungUrl,
+            error: 'R2 deletion returned false'
+          });
+          console.error(`Failed to delete from R2: ${r2Key}`);
+        }
+      } catch (error) {
+        failedCount++;
+        failedDeletions.push({
+          id: file.MaGhiNhan,
+          url: file.FileMinhChungUrl,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+        console.error(`Error deleting file ${file.FileMinhChungUrl}:`, error);
+      }
+    }
+
+    // 6. Update database records for successfully deleted files
+    if (deletedSubmissionIds.length > 0) {
+      try {
+        // Update GhiNhanHoatDong: Set file URLs to NULL
+        const updateQuery = `
+          UPDATE "GhiNhanHoatDong"
+          SET "FileMinhChungUrl" = NULL,
+              "FileMinhChungETag" = NULL,
+              "FileMinhChungSha256" = NULL,
+              "FileMinhChungSize" = NULL
+          WHERE "MaGhiNhan" = ANY($1::uuid[])
+        `;
+        
+        await db.query(updateQuery, [deletedSubmissionIds]);
+
+        // Update ChiTietSaoLuu: Mark as deleted
+        const updateBackupDetailsQuery = `
+          UPDATE "ChiTietSaoLuu"
+          SET "TrangThai" = 'DaXoa',
+              "NgayXoa" = NOW()
+          WHERE "MaGhiNhan" = ANY($1::uuid[])
+            AND "TrangThai" = 'DaSaoLuu'
+        `;
+        
+        await db.query(updateBackupDetailsQuery, [deletedSubmissionIds]);
+
+        console.log(`Updated ${deletedSubmissionIds.length} database records`);
+      } catch (error) {
+        console.error('Error updating database after deletion:', error);
+        // Log but don't fail - files are already deleted from R2
+      }
+    }
+
+    // 7. Create deletion tracking record
+    const deletionRecord = await xoaMinhChungRepo.create({
+      MaSaoLuu: null, // Not linked to specific backup
+      NgayBatDau: startDateObj,
+      NgayKetThuc: endDateObj,
+      TongSoTep: files.length,
+      SoTepThanhCong: deletedCount,
+      SoTepThatBai: failedCount,
+      DungLuongGiaiPhong: totalSpaceFreed,
+      MaTaiKhoan: user.id,
+      GhiChu: failedCount > 0 ? `${failedCount} files failed to delete` : null,
+    });
+
+    // 8. Create audit log
+    const spaceMB = (totalSpaceFreed / 1024 / 1024).toFixed(2);
+    await nhatKyHeThongRepo.create({
+      MaTaiKhoan: user.id,
+      HanhDong: 'DELETE_ARCHIVED_FILES',
+      Bang: 'XoaMinhChung',
+      KhoaChinh: deletionRecord.MaXoa,
+      NoiDung: {
+        startDate: formatDate(startDateObj),
+        endDate: formatDate(endDateObj),
+        totalFiles: files.length,
+        deletedCount,
+        failedCount,
+        spaceMB: parseFloat(spaceMB),
+        failedDeletions: failedDeletions.slice(0, 10), // Store first 10 failures
+      },
+      DiaChiIP: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown',
+    });
+
+    // 9. Return success response with summary
+    const message = failedCount > 0
+      ? `Deleted ${deletedCount} files (${failedCount} failed). Freed ${spaceMB} MB.`
+      : `Successfully deleted ${deletedCount} files. Freed ${spaceMB} MB.`;
+
+    return NextResponse.json({
+      success: true,
+      deletedCount,
+      failedCount,
+      spaceMB: parseFloat(spaceMB),
+      message,
+      deletionId: deletionRecord.MaXoa,
+    }, { status: 200 });
+
+  } catch (error) {
+    console.error('Deletion error:', error);
+    
+    // Log error to audit trail
+    try {
+      const user = await getCurrentUser();
+      if (user) {
+        await nhatKyHeThongRepo.create({
+          MaTaiKhoan: user.id,
+          HanhDong: 'DELETE_ARCHIVED_FILES_ERROR',
+          Bang: 'XoaMinhChung',
+          KhoaChinh: null,
+          NoiDung: {
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+          DiaChiIP: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown',
+        });
+      }
+    } catch (auditError) {
+      console.error('Failed to log audit error:', auditError);
+    }
+
+    return NextResponse.json(
+      { 
+        error: 'Deletion failed. Please try again.',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
+  }
+}
