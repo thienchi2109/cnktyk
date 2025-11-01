@@ -26,6 +26,6 @@
 ## 5. Testing & Validation
 
 - [ ] 5.1 Unit-test any new hooks or utilities for query parameter synchronisation.
-- [ ] 5.2 Add Playwright (or React Testing Library) coverage asserting the units page renders data, honours filters, and opens the detail sheet.
+- [ ] 5.2 Perform end-to-end verification (manual or automated) that the units page renders data, honours filters, and opens the detail sheet.
 - [ ] 5.3 Regression-test the SoYTe dashboard to confirm existing cards and overlays continue to render and navigate correctly.
 - [ ] 5.4 Run `openspec validate add-doh-units-management-page --strict` and resolve any spec issues prior to implementation handoff.

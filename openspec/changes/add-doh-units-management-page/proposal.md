@@ -18,6 +18,7 @@ SoYTe (Department of Health) operators need a dedicated Units management experie
   - Updates to SoYTe dashboard navigation (`src/components/dashboard/doh-dashboard.tsx` or related menu)
   - Adjusted redirect logic in `src/app/(authenticated)/dashboard/units/[id]/page.tsx`
 - Testing:
-  - Vitest/RTL coverage for routing guards and query sync helpers
-  - Playwright (or equivalent) integration ensuring SoYTe users reach the new page and detail sheet opens for `unit` query links
+  - Vitest/RTL coverage for routing guards and query sync helpers (e.g., `tests/dashboard/doh-units-page.test.tsx`)
+  - End-to-end verification (manual or automated; Playwright optional) confirming SoYTe users reach the new page and detail sheet opens for `unit` query links
+  - Run `npx openspec validate add-doh-units-management-page --strict` prior to review
 - No breaking API changes; reuse existing `/api/system/units-performance` and unit metrics endpoints.
