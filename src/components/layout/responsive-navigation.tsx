@@ -16,7 +16,8 @@ import {
   ChevronDown,
   Award,
   Menu,
-  X
+  X,
+  FileArchive
 } from "lucide-react";
 import { GlassHeader } from "./glass-header";
 import { GlassFooter } from "./glass-footer";
@@ -161,6 +162,12 @@ const getNavigationItems = (
         label: 'Đơn vị',
         icon: <Users className="h-4 w-4" />,
         href: '/units'
+      },
+      {
+        id: 'backup-center',
+        label: 'Sao lưu minh chứng',
+        icon: <FileArchive className="h-4 w-4" />,
+        href: '/so-y-te/backup'
       },
       {
         id: 'analytics',

@@ -35,9 +35,9 @@
 - [x] 1.2.11 Test responsive design (mobile, tablet, desktop)
 
 ### 1.3 Navigation Integration
-- [ ] 1.3.1 Add "Sao lưu minh chứng" nav item to SoYTe menu
-- [ ] 1.3.2 Add FileArchive icon from lucide-react
-- [ ] 1.3.3 Test navigation visibility (SoYTe only, hidden for other roles)
+- [x] 1.3.1 Add "Sao lưu minh chứng" nav item to SoYTe menu
+- [x] 1.3.2 Add FileArchive icon from lucide-react
+- [x] 1.3.3 Test navigation visibility (SoYTe only, hidden for other roles)
 
 ### 1.4 Access Control
 - [ ] 1.4.1 Add role check in backup page (redirect if not SoYTe)
