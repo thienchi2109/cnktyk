@@ -40,10 +40,11 @@
 - [x] 1.3.3 Test navigation visibility (SoYTe only, hidden for other roles)
 
 ### 1.4 Access Control
-- [ ] 1.4.1 Add role check in backup page (redirect if not SoYTe)
-- [ ] 1.4.2 Add role check in API route (403 if not SoYTe)
-- [ ] 1.4.3 Update middleware if needed for /so-y-te/backup route
-- [ ] 1.4.4 Test access control for all roles (SoYTe, DonVi, NguoiHanhNghe, Auditor)
+- [x] 1.4.1 Add role check in backup page (redirect if not SoYTe)
+- [x] 1.4.2 Add role check in API route (403 if not SoYTe)
+- [x] 1.4.3 Update middleware if needed for /so-y-te/backup route
+- [x] 1.4.4 Test access control for all roles (SoYTe, DonVi, NguoiHanhNghe, Auditor)
+  - Confirmed defense-in-depth layers: middleware route guard, server component `requireRole(['SoYTe'])`, and API 403 response for non-SoYTe roles.
 
 ---
 

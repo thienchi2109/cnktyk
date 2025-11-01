@@ -13,6 +13,7 @@ const PROTECTED_ROUTES = {
   "/users": ["SoYTe", "DonVi"],
   "/profile": ["SoYTe", "DonVi", "NguoiHanhNghe", "Auditor"],
   "/files": ["SoYTe", "DonVi"],
+  "/so-y-te": ["SoYTe"], // Protect backup center and other SoYTe-specific routes
 } as const;
 
 // Public routes that don't require authentication

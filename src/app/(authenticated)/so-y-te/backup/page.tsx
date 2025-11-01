@@ -1,13 +1,8 @@
-import { requireAuth } from '@/lib/auth/server';
-import { redirect } from 'next/navigation';
+import { requireRole } from '@/lib/auth/server';
 import { BackupCenterClient } from './backup-center-client';
 
 export default async function BackupPage() {
-  const session = await requireAuth();
-
-  if (session.user.role !== 'SoYTe') {
-    redirect('/dashboard');
-  }
+  const session = await requireRole(['SoYTe']);
 
   return <BackupCenterClient adminName={session.user.username} />;
 }
