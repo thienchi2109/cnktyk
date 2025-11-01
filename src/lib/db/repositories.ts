@@ -992,6 +992,111 @@ export class NhatKyHeThongRepository extends BaseRepository<NhatKyHeThong, Creat
   }
 }
 
+// SaoLuuMinhChung (Evidence Backup) Repository
+export class SaoLuuMinhChungRepository extends BaseRepository<
+  import('./schemas').SaoLuuMinhChung,
+  import('./schemas').CreateSaoLuuMinhChung,
+  import('./schemas').UpdateSaoLuuMinhChung
+> {
+  constructor() {
+    super('SaoLuuMinhChung');
+  }
+
+  protected getPrimaryKeyColumn(): string {
+    return 'MaSaoLuu';
+  }
+
+  async findById(id: string): Promise<import('./schemas').SaoLuuMinhChung | null> {
+    return db.queryOne<import('./schemas').SaoLuuMinhChung>(
+      `SELECT * FROM "${this.tableName}" WHERE "MaSaoLuu" = $1`,
+      [id]
+    );
+  }
+
+  async findByUser(userId: string, limit?: number): Promise<import('./schemas').SaoLuuMinhChung[]> {
+    let query = `
+      SELECT * FROM "${this.tableName}"
+      WHERE "MaTaiKhoan" = $1
+      ORDER BY "NgayTao" DESC
+    `;
+    const params = [userId];
+
+    if (limit) {
+      query += ` LIMIT $2`;
+      params.push(limit.toString());
+    }
+
+    return db.query<import('./schemas').SaoLuuMinhChung>(query, params);
+  }
+}
+
+// ChiTietSaoLuu (Backup Detail) Repository
+export class ChiTietSaoLuuRepository extends BaseRepository<
+  import('./schemas').ChiTietSaoLuu,
+  import('./schemas').CreateChiTietSaoLuu,
+  import('./schemas').UpdateChiTietSaoLuu
+> {
+  constructor() {
+    super('ChiTietSaoLuu');
+  }
+
+  protected getPrimaryKeyColumn(): string {
+    return 'MaChiTiet';
+  }
+
+  async findById(id: string): Promise<import('./schemas').ChiTietSaoLuu | null> {
+    return db.queryOne<import('./schemas').ChiTietSaoLuu>(
+      `SELECT * FROM "${this.tableName}" WHERE "MaChiTiet" = $1`,
+      [id]
+    );
+  }
+
+  async findByBackup(backupId: string): Promise<import('./schemas').ChiTietSaoLuu[]> {
+    return db.query<import('./schemas').ChiTietSaoLuu>(
+      `SELECT * FROM "${this.tableName}" WHERE "MaSaoLuu" = $1 ORDER BY "TrangThai" ASC`,
+      [backupId]
+    );
+  }
+}
+
+// XoaMinhChung (File Deletion) Repository
+export class XoaMinhChungRepository extends BaseRepository<
+  import('./schemas').XoaMinhChung,
+  import('./schemas').CreateXoaMinhChung,
+  import('./schemas').UpdateXoaMinhChung
+> {
+  constructor() {
+    super('XoaMinhChung');
+  }
+
+  protected getPrimaryKeyColumn(): string {
+    return 'MaXoa';
+  }
+
+  async findById(id: string): Promise<import('./schemas').XoaMinhChung | null> {
+    return db.queryOne<import('./schemas').XoaMinhChung>(
+      `SELECT * FROM "${this.tableName}" WHERE "MaXoa" = $1`,
+      [id]
+    );
+  }
+
+  async findByUser(userId: string, limit?: number): Promise<import('./schemas').XoaMinhChung[]> {
+    let query = `
+      SELECT * FROM "${this.tableName}"
+      WHERE "MaTaiKhoan" = $1
+      ORDER BY "NgayThucHien" DESC
+    `;
+    const params = [userId];
+
+    if (limit) {
+      query += ` LIMIT $2`;
+      params.push(limit.toString());
+    }
+
+    return db.query<import('./schemas').XoaMinhChung>(query, params);
+  }
+}
+
 // Export repository instances
 export const taiKhoanRepo = new TaiKhoanRepository();
 export const nhanVienRepo = new NhanVienRepository();
@@ -1002,6 +1107,9 @@ export const thongBaoRepo = new ThongBaoRepository();
 // Export the notification repository instance
 export const notificationRepo = thongBaoRepo;
 export const nhatKyHeThongRepo = new NhatKyHeThongRepository();
+export const saoLuuMinhChungRepo = new SaoLuuMinhChungRepository();
+export const chiTietSaoLuuRepo = new ChiTietSaoLuuRepository();
+export const xoaMinhChungRepo = new XoaMinhChungRepository();
 
 export interface DohUnitComparisonRow {
   id: string;

@@ -220,6 +220,55 @@ class R2StorageClient {
   isR2Configured(): boolean {
     return this.isConfigured;
   }
+
+  /**
+   * Download a file from R2 storage as a Buffer
+   * Used for backup operations
+   */
+  async downloadFile(filename: string): Promise<Buffer | null> {
+    if (!this.isConfigured || !this.client) {
+      console.warn('Cloudflare R2 is not configured. File download functionality is disabled.');
+      return null;
+    }
+
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucketName,
+        Key: filename,
+      });
+
+      const response = await this.client.send(command);
+      
+      if (!response.Body) {
+        return null;
+      }
+
+      // Convert stream to buffer
+      const chunks: Uint8Array[] = [];
+      const stream = response.Body as ReadableStream<Uint8Array>;
+      const reader = stream.getReader();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+      }
+
+      // Concatenate all chunks
+      const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+      const buffer = new Uint8Array(totalLength);
+      let offset = 0;
+      for (const chunk of chunks) {
+        buffer.set(chunk, offset);
+        offset += chunk.length;
+      }
+
+      return Buffer.from(buffer);
+    } catch (error) {
+      console.error('R2 download error:', error);
+      return null;
+    }
+  }
 }
 
 // Export singleton instance

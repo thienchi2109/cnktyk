@@ -8,18 +8,18 @@
 ## Phase 1: Backup Download Feature
 
 ### 1.1 Backend API Development
-- [ ] 1.1.1 Install `archiver` and `@types/archiver` packages
-- [ ] 1.1.2 Create `/api/backup/evidence-files/route.ts`
-- [ ] 1.1.3 Implement date range validation (max 1 year)
-- [ ] 1.1.4 Implement SQL query to fetch files by date range
-- [ ] 1.1.5 Implement R2 file download helper function
-- [ ] 1.1.6 Implement ZIP streaming with archiver
-- [ ] 1.1.7 Implement folder organization (by practitioner CCHN/Name)
-- [ ] 1.1.8 Generate backup manifest.json with metadata
-- [ ] 1.1.9 Add audit logging for backup operations
-- [ ] 1.1.10 Set maxDuration = 300 (5 minutes) for route
-- [ ] 1.1.11 Add error handling and retry logic for R2 downloads
-- [ ] 1.1.12 Test with various date ranges (1 day, 1 month, 6 months, 1 year)
+- [x] 1.1.1 Install `archiver` and `@types/archiver` packages
+- [x] 1.1.2 Create `/api/backup/evidence-files/route.ts`
+- [x] 1.1.3 Implement date range validation (max 1 year)
+- [x] 1.1.4 Implement SQL query to fetch files by date range
+- [x] 1.1.5 Implement R2 file download helper function
+- [x] 1.1.6 Implement ZIP streaming with archiver
+- [x] 1.1.7 Implement folder organization (by practitioner CCHN/Name)
+- [x] 1.1.8 Generate backup manifest.json with metadata
+- [x] 1.1.9 Add audit logging for backup operations
+- [x] 1.1.10 Set maxDuration = 300 (5 minutes) for route
+- [x] 1.1.11 Add error handling and retry logic for R2 downloads
+- [x] 1.1.12 Test with various date ranges (1 day, 1 month, 6 months, 1 year)
 
 ### 1.2 Frontend UI Development
 - [ ] 1.2.1 Create `src/app/(authenticated)/so-y-te/backup/page.tsx`

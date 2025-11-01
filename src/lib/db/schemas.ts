@@ -348,6 +348,72 @@ export const CohortFiltersSchema = z.object({
   chucDanh: z.string().optional(),
 });
 
+// ============================================================
+// BACKUP TRACKING SCHEMAS
+// ============================================================
+
+// Backup status enum
+export const TrangThaiSaoLuuSchema = z.enum(['HoanThanh', 'ThanhCong', 'ThatBai']);
+export const TrangThaiChiTietSaoLuuSchema = z.enum(['DaSaoLuu', 'DaXoa', 'ThanhCong', 'ThatBai']);
+
+// SaoLuuMinhChung (Evidence Backup) schema
+export const SaoLuuMinhChungSchema = z.object({
+  MaSaoLuu: UUIDSchema,
+  NgayBatDau: z.date(),
+  NgayKetThuc: z.date(),
+  TongSoTep: z.number().int().default(0),
+  DungLuong: z.number().int().nullable(),
+  TrangThai: TrangThaiSaoLuuSchema.default('HoanThanh'),
+  MaTaiKhoan: UUIDSchema,
+  NgayTao: z.date(),
+  GhiChu: z.string().nullable(),
+});
+
+export const CreateSaoLuuMinhChungSchema = SaoLuuMinhChungSchema.omit({
+  MaSaoLuu: true,
+  NgayTao: true,
+});
+
+export const UpdateSaoLuuMinhChungSchema = CreateSaoLuuMinhChungSchema.partial();
+
+// ChiTietSaoLuu (Backup Detail) schema
+export const ChiTietSaoLuuSchema = z.object({
+  MaChiTiet: UUIDSchema,
+  MaSaoLuu: UUIDSchema,
+  MaGhiNhan: UUIDSchema,
+  TrangThai: TrangThaiChiTietSaoLuuSchema.default('DaSaoLuu'),
+  NgayXoa: z.date().nullable(),
+  DungLuongTep: z.number().int().nullable(),
+});
+
+export const CreateChiTietSaoLuuSchema = ChiTietSaoLuuSchema.omit({
+  MaChiTiet: true,
+});
+
+export const UpdateChiTietSaoLuuSchema = CreateChiTietSaoLuuSchema.partial();
+
+// XoaMinhChung (File Deletion) schema
+export const XoaMinhChungSchema = z.object({
+  MaXoa: UUIDSchema,
+  MaSaoLuu: UUIDSchema.nullable(),
+  NgayBatDau: z.date(),
+  NgayKetThuc: z.date(),
+  TongSoTep: z.number().int().default(0),
+  SoTepThanhCong: z.number().int().default(0),
+  SoTepThatBai: z.number().int().default(0),
+  DungLuongGiaiPhong: z.number().int().nullable(),
+  MaTaiKhoan: UUIDSchema,
+  NgayThucHien: z.date(),
+  GhiChu: z.string().nullable(),
+});
+
+export const CreateXoaMinhChungSchema = XoaMinhChungSchema.omit({
+  MaXoa: true,
+  NgayThucHien: true,
+});
+
+export const UpdateXoaMinhChungSchema = CreateXoaMinhChungSchema.partial();
+
 export const CohortPresetSchema = z.object({
   MaPreset: UUIDSchema,
   MaDonVi: UUIDSchema,
@@ -420,3 +486,16 @@ export type CohortFilters = z.infer<typeof CohortFiltersSchema>;
 export type CohortPreset = z.infer<typeof CohortPresetSchema>;
 export type CreateCohortPreset = z.infer<typeof CreateCohortPresetSchema>;
 export type UpdateCohortPreset = z.infer<typeof UpdateCohortPresetSchema>;
+
+// Backup tracking types
+export type SaoLuuMinhChung = z.infer<typeof SaoLuuMinhChungSchema>;
+export type CreateSaoLuuMinhChung = z.infer<typeof CreateSaoLuuMinhChungSchema>;
+export type UpdateSaoLuuMinhChung = z.infer<typeof UpdateSaoLuuMinhChungSchema>;
+
+export type ChiTietSaoLuu = z.infer<typeof ChiTietSaoLuuSchema>;
+export type CreateChiTietSaoLuu = z.infer<typeof CreateChiTietSaoLuuSchema>;
+export type UpdateChiTietSaoLuu = z.infer<typeof UpdateChiTietSaoLuuSchema>;
+
+export type XoaMinhChung = z.infer<typeof XoaMinhChungSchema>;
+export type CreateXoaMinhChung = z.infer<typeof CreateXoaMinhChungSchema>;
+export type UpdateXoaMinhChung = z.infer<typeof UpdateXoaMinhChungSchema>;
