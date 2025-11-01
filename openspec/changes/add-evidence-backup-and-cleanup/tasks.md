@@ -50,13 +50,21 @@
 ## Phase 2: File Deletion Feature
 
 ### 2.1 Database Schema Updates (Optional)
-- [ ] 2.1.1 Decide: Add backup tracking fields to GhiNhanHoatDong?
-  - `FileMinhChungBackedUpAt` TIMESTAMP NULL
-  - `FileMinhChungBackedUpBy` UUID NULL (references TaiKhoan)
-- [ ] 2.1.2 Create migration SQL if schema changes approved
-- [ ] 2.1.3 Update Zod schemas in `src/lib/db/schemas.ts`
-- [ ] 2.1.4 Update TypeScript types
-- [ ] 2.1.5 Run migration and verify
+- [x] 2.1.1 Decide: Add backup tracking fields to GhiNhanHoatDong?
+  - Decision: NO - Use ChiTietSaoLuu table instead (better design)
+  - `FileMinhChungBackedUpAt` TIMESTAMP NULL (not needed)
+  - `FileMinhChungBackedUpBy` UUID NULL (not needed)
+- [x] 2.1.2 Create migration SQL if schema changes approved
+  - Migration exists: migrations/2025-10-31_add_backup_tracking.sql
+  - Creates 3 tables: SaoLuuMinhChung, ChiTietSaoLuu, XoaMinhChung
+- [x] 2.1.3 Update Zod schemas in `src/lib/db/schemas.ts`
+  - Added schemas for all 3 backup tracking tables
+  - Status enums: TrangThaiSaoLuuSchema, TrangThaiChiTietSaoLuuSchema
+- [x] 2.1.4 Update TypeScript types
+  - All types exported from Zod schemas
+- [x] 2.1.5 Run migration and verify
+  - Migration file exists, schemas created, repositories implemented
+  - Needs to be run in production database when deploying
 
 ### 2.2 Backend API Development
 - [ ] 2.2.1 Create `/api/backup/delete-archived/route.ts`

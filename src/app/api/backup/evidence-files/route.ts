@@ -60,20 +60,28 @@ interface ManifestFile {
  * Returning only the basename would cause 404s on R2 GetObject calls.
  */
 function extractR2Key(url: string): string {
+  // Submissions persist proxy URLs (e.g. /api/files/prefix/file.pdf)
+  if (url.startsWith('/api/files/')) {
+    const path = url.slice('/api/files/'.length);
+    return path.split('?')[0];
+  }
+
+  // Support plain keys stored without protocol or leading slash
+  if (!url.match(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//)) {
+    return url.replace(/^\/+/, '').split('?')[0];
+  }
+
   try {
     const urlObj = new URL(url);
-    // Remove leading slash from pathname to get the object key
     return urlObj.pathname.substring(1);
   } catch (error) {
-    // Fallback for invalid URLs (shouldn't happen with valid database data)
-    console.error(`Invalid URL format: ${url}`, error);
-    // Try simple path extraction as last resort
+    console.warn(`Unexpected evidence file URL format: ${url}`, error);
     const parts = url.split('/');
-    // If it looks like domain/path/file, return path/file
     if (parts.length >= 3) {
-      return parts.slice(parts.length - 2).join('/');
+      const tail = parts.slice(parts.length - 2).map((segment) => segment.split('?')[0]);
+      return tail.join('/');
     }
-    return parts[parts.length - 1];
+    return parts[parts.length - 1].split('?')[0];
   }
 }
 
