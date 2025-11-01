@@ -51,12 +51,30 @@ interface ManifestFile {
 }
 
 /**
- * Extract R2 filename from full URL
- * URL format: https://bucket.r2.dev/evidence/{uuid}.{ext}
+ * Extract R2 object key from full URL
+ * URL format: https://bucket.r2.dev/evidence/12345.pdf
+ * Returns: evidence/12345.pdf (preserves the full path)
+ * 
+ * CRITICAL: Must preserve the full key path because generateSecureFilename()
+ * uploads files with prefixes like "evidence/" or "activity-{id}/".
+ * Returning only the basename would cause 404s on R2 GetObject calls.
  */
-function extractR2Filename(url: string): string {
-  const parts = url.split('/');
-  return parts[parts.length - 1];
+function extractR2Key(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    // Remove leading slash from pathname to get the object key
+    return urlObj.pathname.substring(1);
+  } catch (error) {
+    // Fallback for invalid URLs (shouldn't happen with valid database data)
+    console.error(`Invalid URL format: ${url}`, error);
+    // Try simple path extraction as last resort
+    const parts = url.split('/');
+    // If it looks like domain/path/file, return path/file
+    if (parts.length >= 3) {
+      return parts.slice(parts.length - 2).join('/');
+    }
+    return parts[parts.length - 1];
+  }
 }
 
 /**
@@ -232,8 +250,8 @@ export async function POST(req: NextRequest) {
     // 6. Download files from R2 and add to ZIP
     for (const file of files) {
       try {
-        // Extract R2 filename from URL
-        const r2Filename = extractR2Filename(file.FileMinhChungUrl);
+        // Extract R2 object key from URL (preserves full path like "evidence/12345.pdf")
+        const r2Key = extractR2Key(file.FileMinhChungUrl);
         
         // Download file from R2 with retry logic
         let fileBuffer: Buffer | null = null;
@@ -241,10 +259,10 @@ export async function POST(req: NextRequest) {
         const maxRetries = 3;
         
         while (retryCount < maxRetries && !fileBuffer) {
-          fileBuffer = await r2Client.downloadFile(r2Filename);
+          fileBuffer = await r2Client.downloadFile(r2Key);
           if (!fileBuffer) {
             retryCount++;
-            console.warn(`Retry ${retryCount}/${maxRetries} for file: ${r2Filename}`);
+            console.warn(`Retry ${retryCount}/${maxRetries} for file: ${r2Key}`);
             if (retryCount < maxRetries) {
               await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
             }
@@ -252,16 +270,19 @@ export async function POST(req: NextRequest) {
         }
 
         if (!fileBuffer) {
-          console.error(`Failed to download file after ${maxRetries} retries: ${r2Filename}`);
+          console.error(`Failed to download file after ${maxRetries} retries: ${r2Key}`);
           skippedFiles++;
           continue;
         }
 
+        // Extract just the filename for the ZIP path (remove R2 prefix)
+        const filename = r2Key.split('/').pop() || r2Key;
+        
         // Organize files by practitioner
         const practitionerFolder = `${sanitizeFilename(file.practitioner_SoCCHN)}_${sanitizeFilename(file.practitioner_HoVaTen)}`;
         const fileDate = formatDate(new Date(file.NgayGhiNhan));
         const activityName = sanitizeFilename(file.TenHoatDong);
-        const zipPath = `${practitionerFolder}/${fileDate}_${activityName}_${r2Filename}`;
+        const zipPath = `${practitionerFolder}/${fileDate}_${activityName}_${filename}`;
 
         // Add file to ZIP
         archive.append(fileBuffer, { name: zipPath });
@@ -274,7 +295,7 @@ export async function POST(req: NextRequest) {
           practitioner: file.practitioner_HoVaTen,
           cchn: file.practitioner_SoCCHN,
           date: file.NgayGhiNhan.toISOString(),
-          filename: r2Filename,
+          filename: r2Key, // Store full R2 key for reference
           path: zipPath,
           size: file.FileMinhChungSize,
         });
