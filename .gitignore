@@ -44,6 +44,9 @@ secrets/
 *.swp
 *.swo
 
+# GitHub Copilot instructions (local only)
+.github/
+
 # OS
 .DS_Store
 Thumbs.db
