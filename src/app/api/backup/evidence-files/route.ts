@@ -188,6 +188,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Calculate exclusive upper bound so we include the entire end date
+    const endDateExclusive = new Date(endDateObj);
+    endDateExclusive.setUTCDate(endDateExclusive.getUTCDate() + 1);
+
     // 3. Query database for evidence files in date range
     const query = `
       SELECT 
@@ -202,12 +206,12 @@ export async function POST(req: NextRequest) {
       INNER JOIN "NhanVien" n ON n."MaNhanVien" = g."MaNhanVien"
       WHERE g."FileMinhChungUrl" IS NOT NULL
         AND g."NgayGhiNhan" >= $1
-        AND g."NgayGhiNhan" <= $2
+        AND g."NgayGhiNhan" < $2
         AND g."TrangThaiDuyet" = 'DaDuyet'
       ORDER BY n."SoCCHN", g."NgayGhiNhan" DESC
     `;
 
-    const files = await db.query<EvidenceFileRecord>(query, [startDateObj, endDateObj]);
+    const files = await db.query<EvidenceFileRecord>(query, [startDateObj, endDateExclusive]);
 
     if (!files || files.length === 0) {
       return NextResponse.json(
