@@ -22,17 +22,17 @@
 - [x] 1.1.12 Test with various date ranges (1 day, 1 month, 6 months, 1 year)
 
 ### 1.2 Frontend UI Development
-- [ ] 1.2.1 Create `src/app/(authenticated)/so-y-te/backup/page.tsx`
-- [ ] 1.2.2 Create `src/app/(authenticated)/so-y-te/backup/backup-center-client.tsx`
-- [ ] 1.2.3 Implement date range picker (start date + end date)
-- [ ] 1.2.4 Add quick date preset buttons (1mo, 3mo, 6mo, 1yr)
-- [ ] 1.2.5 Implement backup download button with loading state
-- [ ] 1.2.6 Add progress indicator/loading notice
-- [ ] 1.2.7 Implement error handling and user feedback
-- [ ] 1.2.8 Add success message after download
-- [ ] 1.2.9 Add instructions panel (how to backup/store)
-- [ ] 1.2.10 Add storage recommendations (Google Drive, NAS, external HDD)
-- [ ] 1.2.11 Test responsive design (mobile, tablet, desktop)
+- [x] 1.2.1 Create `src/app/(authenticated)/so-y-te/backup/page.tsx`
+- [x] 1.2.2 Create `src/app/(authenticated)/so-y-te/backup/backup-center-client.tsx`
+- [x] 1.2.3 Implement date range picker (start date + end date)
+- [x] 1.2.4 Add quick date preset buttons (1mo, 3mo, 6mo, 1yr)
+- [x] 1.2.5 Implement backup download button with loading state
+- [x] 1.2.6 Add progress indicator/loading notice
+- [x] 1.2.7 Implement error handling and user feedback
+- [x] 1.2.8 Add success message after download
+- [x] 1.2.9 Add instructions panel (how to backup/store)
+- [x] 1.2.10 Add storage recommendations (Google Drive, NAS, external HDD)
+- [x] 1.2.11 Test responsive design (mobile, tablet, desktop)
 
 ### 1.3 Navigation Integration
 - [ ] 1.3.1 Add "Sao lưu minh chứng" nav item to SoYTe menu
