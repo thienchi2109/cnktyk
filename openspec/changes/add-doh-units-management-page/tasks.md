@@ -19,7 +19,6 @@
 
 ## 4. Observability & UX Polish
 
-- [ ] 4.1 Log audit events when SoYTe users open unit details if mandated by compliance logging rules.
 - [ ] 4.2 Mirror loading, empty, and error states from the dashboard grid to maintain consistent UX.
 - [ ] 4.3 Localize any new labels or helper text in Vietnamese consistent with existing strings.
 
