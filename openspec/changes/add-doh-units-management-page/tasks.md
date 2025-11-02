@@ -27,4 +27,4 @@
 - [x] 5.1 Unit-test any new hooks or utilities for query parameter synchronisation.
 - [x] 5.2 Perform end-to-end verification (manual or automated) that the units page renders data, honours filters, and opens the detail sheet.
 - [x] 5.3 Regression-test the SoYTe dashboard to confirm existing cards and overlays continue to render and navigate correctly.
-- [ ] 5.4 Run `openspec validate add-doh-units-management-page --strict` and resolve any spec issues prior to implementation handoff.
+- [x] 5.4 Run `openspec validate add-doh-units-management-page --strict` and resolve any spec issues prior to implementation handoff.
