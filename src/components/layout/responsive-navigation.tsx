@@ -162,7 +162,7 @@ const getNavigationItems = (
         id: 'units',
         label: 'Đơn vị',
         icon: <Users className="h-4 w-4" />,
-        href: '/units'
+        href: '/dashboard/doh/units'
       },
         {
         id: 'analytics',
