@@ -287,8 +287,8 @@ export function DohUnitsClient({ userId, initialUnitId }: DohUnitsClientProps) {
           throw new Error(data.error || 'Dữ liệu không hợp lệ');
         }
 
-        console.log('[DOH Units] Units received:', data.data.units?.length || 0);
-        setUnits(data.data.units || []);
+        console.log('[DOH Units] Units received:', data.data.items?.length || 0);
+        setUnits(data.data.items || []);
         setUnitTotalItems(data.data.totalItems);
         setUnitTotalPages(data.data.totalPages);
       } catch (error) {
