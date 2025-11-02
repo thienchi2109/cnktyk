@@ -6,9 +6,9 @@
 - [x] Update Zod schemas (`CreateDanhMucHoatDongSchema`, `UpdateDanhMucHoatDongSchema`) to reflect new fields, forbid DonVi overriding `MaDonVi`, and surface `DaXoaMem` only via server logic.
 
 ## 2. Repository & Service Layer
-- [ ] Implement `findGlobal`, `findByUnit`, `findAccessible`, `assertCanMutate`, `softDelete`, and `restore` helpers in `DanhMucHoatDongRepository` with unit isolation.
-- [ ] Wire audit logging for create/update/adopt/soft-delete/restore paths in the repository layer.
-- [ ] Add Vitest coverage for repository queries, adoption guardrails, and soft-delete lifecycle.
+- [x] Implement `findGlobal`, `findByUnit`, `findAccessible`, `assertCanMutate`, `softDelete`, and `restore` helpers in `DanhMucHoatDongRepository` with unit isolation.
+- [x] Wire audit logging for create/update/adopt/soft-delete/restore paths in the repository layer.
+- [x] Add Vitest coverage for repository queries, adoption guardrails, and soft-delete lifecycle.
 
 ## 3. API Layer
 - [ ] Update `GET /api/activities` to return scoped payload with permissions map and exclude soft-deleted records by default.

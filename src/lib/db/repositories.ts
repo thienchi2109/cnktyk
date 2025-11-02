@@ -853,23 +853,307 @@ export class DanhMucHoatDongRepository extends BaseRepository<DanhMucHoatDong, C
     return db.queryOne<DanhMucHoatDong>(`SELECT * FROM "${this.tableName}" WHERE "MaDanhMuc" = $1`, [id]);
   }
 
-  async findActive(): Promise<DanhMucHoatDong[]> {
+  /**
+   * Find all global activities (visible to all units)
+   * @returns Global activities that are not soft deleted
+   */
+  async findGlobal(): Promise<DanhMucHoatDong[]> {
     return db.query<DanhMucHoatDong>(`
       SELECT * FROM "${this.tableName}"
-      WHERE ("HieuLucTu" IS NULL OR "HieuLucTu" <= CURRENT_DATE)
-        AND ("HieuLucDen" IS NULL OR "HieuLucDen" >= CURRENT_DATE)
+      WHERE "MaDonVi" IS NULL 
+        AND "DaXoaMem" = false
       ORDER BY "TenDanhMuc" ASC
     `);
   }
 
-  async findByType(type: string): Promise<DanhMucHoatDong[]> {
+  /**
+   * Find unit-specific activities (excludes global)
+   * @param unitId - The unit to query activities for
+   * @returns Unit-specific activities that are not soft deleted
+   */
+  async findByUnit(unitId: string): Promise<DanhMucHoatDong[]> {
+    return db.query<DanhMucHoatDong>(`
+      SELECT * FROM "${this.tableName}"
+      WHERE "MaDonVi" = $1 
+        AND "DaXoaMem" = false
+      ORDER BY "TenDanhMuc" ASC
+    `, [unitId]);
+  }
+
+  /**
+   * Find all activities accessible to a unit (global + unit-specific)
+   * @param unitId - The unit to query activities for
+   * @returns Object with global and unit activity arrays
+   */
+  async findAccessible(unitId: string): Promise<{ global: DanhMucHoatDong[], unit: DanhMucHoatDong[] }> {
+    const global = await this.findGlobal();
+    const unit = await this.findByUnit(unitId);
+    
+    return { global, unit };
+  }
+
+  /**
+   * Find all active activities (within validity period), optionally filtered by unit
+   * @param unitId - Optional unit ID to filter by (null for SoYTe to see all)
+   * @returns Active activities that are not soft deleted
+   */
+  async findActive(unitId?: string | null): Promise<DanhMucHoatDong[]> {
+    if (unitId === undefined || unitId === null) {
+      // SoYTe: Return all active activities
+      return db.query<DanhMucHoatDong>(`
+        SELECT * FROM "${this.tableName}"
+        WHERE ("HieuLucTu" IS NULL OR "HieuLucTu" <= CURRENT_DATE)
+          AND ("HieuLucDen" IS NULL OR "HieuLucDen" >= CURRENT_DATE)
+          AND "DaXoaMem" = false
+        ORDER BY "TenDanhMuc" ASC
+      `);
+    }
+
+    // DonVi: Return global + unit-specific active activities
+    return db.query<DanhMucHoatDong>(`
+      SELECT * FROM "${this.tableName}"
+      WHERE ("MaDonVi" IS NULL OR "MaDonVi" = $1)
+        AND ("HieuLucTu" IS NULL OR "HieuLucTu" <= CURRENT_DATE)
+        AND ("HieuLucDen" IS NULL OR "HieuLucDen" >= CURRENT_DATE)
+        AND "DaXoaMem" = false
+      ORDER BY "TenDanhMuc" ASC
+    `, [unitId]);
+  }
+
+  /**
+   * Find activities by type, optionally filtered by unit
+   * @param type - Activity type to filter by
+   * @param unitId - Optional unit ID (null for SoYTe to see all)
+   * @returns Activities of specified type that are not soft deleted
+   */
+  async findByType(type: string, unitId?: string | null): Promise<DanhMucHoatDong[]> {
+    if (unitId === undefined || unitId === null) {
+      // SoYTe: Return all activities of type
+      return db.query<DanhMucHoatDong>(`
+        SELECT * FROM "${this.tableName}"
+        WHERE "LoaiHoatDong" = $1
+          AND ("HieuLucTu" IS NULL OR "HieuLucTu" <= CURRENT_DATE)
+          AND ("HieuLucDen" IS NULL OR "HieuLucDen" >= CURRENT_DATE)
+          AND "DaXoaMem" = false
+        ORDER BY "TenDanhMuc" ASC
+      `, [type]);
+    }
+
+    // DonVi: Return global + unit-specific activities of type
     return db.query<DanhMucHoatDong>(`
       SELECT * FROM "${this.tableName}"
       WHERE "LoaiHoatDong" = $1
+        AND ("MaDonVi" IS NULL OR "MaDonVi" = $2)
         AND ("HieuLucTu" IS NULL OR "HieuLucTu" <= CURRENT_DATE)
         AND ("HieuLucDen" IS NULL OR "HieuLucDen" >= CURRENT_DATE)
+        AND "DaXoaMem" = false
       ORDER BY "TenDanhMuc" ASC
-    `, [type]);
+    `, [type, unitId]);
+  }
+
+  /**
+   * Create activity with ownership tracking
+   * @param data - Activity data
+   * @param creatorId - User ID creating the activity
+   * @param unitId - Unit ID for unit-scoped activities (null for global)
+   * @returns Created activity
+   */
+  async createWithOwnership(
+    data: CreateDanhMucHoatDong & { MaDonVi?: string | null },
+    creatorId: string,
+    unitId: string | null
+  ): Promise<DanhMucHoatDong> {
+    const now = new Date();
+    
+    const activityData = {
+      ...data,
+      MaDonVi: unitId,
+      NguoiTao: creatorId,
+      TaoLuc: now,
+      CapNhatLuc: now,
+      TrangThai: data.TrangThai || 'Active',
+      DaXoaMem: false,
+    };
+
+    return db.insert<DanhMucHoatDong>(this.tableName, activityData as Record<string, any>);
+  }
+
+  /**
+   * Update activity with ownership tracking
+   * @param id - Activity ID
+   * @param data - Update data
+   * @param updaterId - User ID updating the activity
+   * @returns Updated activity
+   */
+  async updateWithOwnership(
+    id: string,
+    data: UpdateDanhMucHoatDong,
+    updaterId: string
+  ): Promise<DanhMucHoatDong | null> {
+    const updateData = {
+      ...data,
+      NguoiCapNhat: updaterId,
+      // CapNhatLuc is auto-updated by trigger
+    };
+
+    const results = await db.update<DanhMucHoatDong>(
+      this.tableName,
+      updateData as Record<string, any>,
+      { MaDanhMuc: id }
+    );
+
+    return results.length > 0 ? results[0] : null;
+  }
+
+  /**
+   * Check if user can mutate (update/delete) an activity
+   * @param activityId - Activity ID to check
+   * @param userRole - User's role (SoYTe, DonVi, etc.)
+   * @param userUnitId - User's unit ID (null for SoYTe)
+   * @returns Object with canMutate flag and reason if denied
+   */
+  async assertCanMutate(
+    activityId: string,
+    userRole: string,
+    userUnitId: string | null
+  ): Promise<{ canMutate: boolean; reason?: string; activity?: DanhMucHoatDong }> {
+    // Load the activity
+    const activity = await this.findById(activityId);
+
+    if (!activity) {
+      return { canMutate: false, reason: 'Activity not found' };
+    }
+
+    // Cannot mutate soft-deleted activities (must restore first)
+    if (activity.DaXoaMem) {
+      return { canMutate: false, reason: 'Cannot modify soft-deleted activity', activity };
+    }
+
+    // SoYTe can mutate any activity
+    if (userRole === 'SoYTe') {
+      return { canMutate: true, activity };
+    }
+
+    // DonVi can only mutate their own unit's activities
+    if (userRole === 'DonVi') {
+      if (!userUnitId) {
+        return { canMutate: false, reason: 'User has no unit assigned', activity };
+      }
+
+      // Cannot mutate global activities
+      if (activity.MaDonVi === null) {
+        return { canMutate: false, reason: 'Cannot modify global activities', activity };
+      }
+
+      // Can only mutate own unit's activities
+      if (activity.MaDonVi !== userUnitId) {
+        return { canMutate: false, reason: 'Can only modify activities from your unit', activity };
+      }
+
+      return { canMutate: true, activity };
+    }
+
+    // Other roles cannot mutate activities
+    return { canMutate: false, reason: 'Insufficient permissions', activity };
+  }
+
+  /**
+   * Soft delete an activity
+   * @param id - Activity ID to soft delete
+   * @param userId - User performing the deletion
+   * @returns Soft-deleted activity
+   */
+  async softDelete(id: string, userId: string): Promise<DanhMucHoatDong | null> {
+    const results = await db.update<DanhMucHoatDong>(
+      this.tableName,
+      {
+        DaXoaMem: true,
+        NguoiCapNhat: userId,
+        // CapNhatLuc is auto-updated by trigger
+      },
+      { MaDanhMuc: id }
+    );
+
+    return results.length > 0 ? results[0] : null;
+  }
+
+  /**
+   * Restore a soft-deleted activity
+   * @param id - Activity ID to restore
+   * @param userId - User performing the restoration
+   * @returns Restored activity
+   */
+  async restore(id: string, userId: string): Promise<DanhMucHoatDong | null> {
+    const results = await db.update<DanhMucHoatDong>(
+      this.tableName,
+      {
+        DaXoaMem: false,
+        NguoiCapNhat: userId,
+        // CapNhatLuc is auto-updated by trigger
+      },
+      { MaDanhMuc: id }
+    );
+
+    return results.length > 0 ? results[0] : null;
+  }
+
+  /**
+   * Adopt a unit-specific activity to global scope (SoYTe only)
+   * @param id - Activity ID to adopt
+   * @param userId - SoYTe user performing the adoption
+   * @returns Adopted activity
+   */
+  async adoptToGlobal(id: string, userId: string): Promise<DanhMucHoatDong | null> {
+    const results = await db.update<DanhMucHoatDong>(
+      this.tableName,
+      {
+        MaDonVi: null,
+        NguoiCapNhat: userId,
+        // CapNhatLuc is auto-updated by trigger
+      },
+      { MaDanhMuc: id }
+    );
+
+    return results.length > 0 ? results[0] : null;
+  }
+
+  /**
+   * Find soft-deleted activities (for admin cleanup/restore)
+   * @param unitId - Optional unit ID to filter by (null for all)
+   * @returns Soft-deleted activities
+   */
+  async findSoftDeleted(unitId?: string | null): Promise<DanhMucHoatDong[]> {
+    if (unitId === undefined || unitId === null) {
+      // SoYTe: Return all soft-deleted activities
+      return db.query<DanhMucHoatDong>(`
+        SELECT * FROM "${this.tableName}"
+        WHERE "DaXoaMem" = true
+        ORDER BY "CapNhatLuc" DESC
+      `);
+    }
+
+    // DonVi: Return soft-deleted activities from their unit
+    return db.query<DanhMucHoatDong>(`
+      SELECT * FROM "${this.tableName}"
+      WHERE "DaXoaMem" = true
+        AND "MaDonVi" = $1
+      ORDER BY "CapNhatLuc" DESC
+    `, [unitId]);
+  }
+
+  /**
+   * Check if activity is referenced in submissions (for safe deletion)
+   * @param activityId - Activity ID to check
+   * @returns Count of referencing submissions
+   */
+  async countReferences(activityId: string): Promise<number> {
+    const result = await db.queryOne<{ count: string }>(`
+      SELECT COUNT(*) as count
+      FROM "GhiNhanHoatDong"
+      WHERE "MaDanhMuc" = $1
+    `, [activityId]);
+
+    return parseInt(result?.count || '0', 10);
   }
 }
 
@@ -989,6 +1273,40 @@ export class NhatKyHeThongRepository extends BaseRepository<NhatKyHeThong, Creat
     }
 
     return db.query<NhatKyHeThong>(query, params);
+  }
+
+  /**
+   * Log activity catalog changes with metadata
+   * @param userId - User performing the action
+   * @param action - Action type (CREATE, UPDATE, DELETE, SOFT_DELETE, RESTORE, ADOPT_TO_GLOBAL)
+   * @param activityId - Activity ID
+   * @param metadata - Additional context (scope, unitId, etc.)
+   * @param ipAddress - Optional IP address
+   * @returns Audit log entry
+   */
+  async logCatalogChange(
+    userId: string,
+    action: string,
+    activityId: string,
+    metadata: {
+      activityName?: string;
+      scope?: 'global' | 'unit';
+      unitId?: string | null;
+      scopeBefore?: 'global' | 'unit';
+      scopeAfter?: 'global' | 'unit';
+      actorRole?: string;
+      [key: string]: any;
+    },
+    ipAddress?: string | null
+  ): Promise<NhatKyHeThong> {
+    return this.logAction(
+      userId,
+      action,
+      'DanhMucHoatDong',
+      activityId,
+      metadata,
+      ipAddress
+    );
   }
 }
 
