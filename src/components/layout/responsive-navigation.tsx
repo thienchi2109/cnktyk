@@ -2,12 +2,12 @@
 
 import * as React from "react";
 import { useRouter } from 'next/navigation';
-import { 
-  Home, 
-  Users, 
-  FileText, 
-  BarChart3, 
-  Settings, 
+import {
+  Home,
+  Users,
+  FileText,
+  BarChart3,
+  Settings,
   Shield,
   Activity,
   AlertCircle,
@@ -17,7 +17,8 @@ import {
   Award,
   Menu,
   X,
-  FileArchive
+  FileArchive,
+  FolderOpen
 } from "lucide-react";
 import { GlassHeader } from "./glass-header";
 import { GlassFooter } from "./glass-footer";
@@ -163,13 +164,7 @@ const getNavigationItems = (
         icon: <Users className="h-4 w-4" />,
         href: '/units'
       },
-      {
-        id: 'backup-center',
-        label: 'Sao lưu minh chứng',
-        icon: <FileArchive className="h-4 w-4" />,
-        href: '/so-y-te/backup'
-      },
-      {
+        {
         id: 'analytics',
         label: 'Phân tích',
         icon: <BarChart3 className="h-4 w-4" />,
@@ -207,10 +202,23 @@ const getNavigationItems = (
         href: '/users'
       },
       {
-        id: 'files',
-        label: 'Tệp tin',
-        icon: <Upload className="h-4 w-4" />,
-        href: '/files/demo'
+        id: 'file-management',
+        label: 'Quản lý tệp tin',
+        icon: <FolderOpen className="h-4 w-4" />,
+        children: [
+          {
+            id: 'files',
+            label: 'Tải lên tệp tin',
+            icon: <Upload className="h-4 w-4" />,
+            href: '/files/demo'
+          },
+          {
+            id: 'backup-center',
+            label: 'Sao lưu minh chứng',
+            icon: <FileArchive className="h-4 w-4" />,
+            href: '/so-y-te/backup'
+          }
+        ]
       },
       {
         id: 'notifications',
