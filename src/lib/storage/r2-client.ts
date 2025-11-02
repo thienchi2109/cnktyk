@@ -5,6 +5,8 @@
 
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { Readable } from 'stream';
+import { ReadableStream as WebReadableStream } from 'stream/web';
 
 export interface FileMetadata {
   filename: string;
@@ -225,7 +227,7 @@ class R2StorageClient {
    * Download a file from R2 storage as a Buffer
    * Used for backup operations
    */
-  async downloadFile(filename: string): Promise<Buffer | null> {
+  async downloadFileStream(filename: string): Promise<Readable | null> {
     if (!this.isConfigured || !this.client) {
       console.warn('Cloudflare R2 is not configured. File download functionality is disabled.');
       return null;
@@ -238,32 +240,46 @@ class R2StorageClient {
       });
 
       const response = await this.client.send(command);
-      
-      if (!response.Body) {
+      const body = response.Body;
+
+      if (!body) {
         return null;
       }
 
-      // Convert stream to buffer
-      const chunks: Uint8Array[] = [];
-      const stream = response.Body as ReadableStream<Uint8Array>;
-      const reader = stream.getReader();
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(value);
+      if (body instanceof Readable) {
+        return body;
       }
 
-      // Concatenate all chunks
-      const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-      const buffer = new Uint8Array(totalLength);
-      let offset = 0;
-      for (const chunk of chunks) {
-        buffer.set(chunk, offset);
-        offset += chunk.length;
+      if (typeof (body as any).transformToWebStream === 'function') {
+        return Readable.fromWeb((body as any).transformToWebStream());
       }
 
-      return Buffer.from(buffer);
+      if (typeof Readable.fromWeb === 'function' && body instanceof WebReadableStream) {
+        return Readable.fromWeb(body as WebReadableStream<any>);
+      }
+
+      console.warn('Unsupported R2 body stream type, returning null');
+      return null;
+    } catch (error) {
+      console.error('R2 download stream error:', error);
+      return null;
+    }
+  }
+
+  async downloadFile(filename: string): Promise<Buffer | null> {
+    const stream = await this.downloadFileStream(filename);
+
+    if (!stream) {
+      return null;
+    }
+
+    try {
+      const chunks: Buffer[] = [];
+      for await (const chunk of stream) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      }
+
+      return Buffer.concat(chunks);
     } catch (error) {
       console.error('R2 download error:', error);
       return null;

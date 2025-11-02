@@ -10,6 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { Readable } from 'stream';
 import { getCurrentUser } from '@/lib/auth/server';
 import { db } from '@/lib/db/client';
 import { r2Client } from '@/lib/storage/r2-client';
@@ -19,7 +20,15 @@ import {
   nhatKyHeThongRepo 
 } from '@/lib/db/repositories';
 import archiver from 'archiver';
-import { Readable } from 'stream';
+
+const DOWNLOAD_CONCURRENCY = 6;
+const MAX_BACKUP_FILE_COUNT = 2000;
+
+interface SkippedManifestFile {
+  submissionId: string;
+  filename: string;
+  reason: string;
+}
 
 // Configure route for long-running backup operations
 export const maxDuration = 300; // 5 minutes
@@ -228,14 +237,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log(`Found ${files.length} evidence files to backup`);
+    const totalSizeBytes = files.reduce((sum, f) => sum + (f.FileMinhChungSize || 0), 0);
 
-    // 4. Create backup tracking record in database
+    if (files.length > MAX_BACKUP_FILE_COUNT) {
+      return NextResponse.json(
+        {
+          error:
+            'Số lượng minh chứng trong phạm vi vượt quá giới hạn 2.000 tệp. Vui lòng chia nhỏ khoảng thời gian và tạo nhiều bản sao lưu.',
+          totalFiles: files.length,
+        },
+        { status: 400 },
+      );
+    }
+
     const backupRecord = await saoLuuMinhChungRepo.create({
       NgayBatDau: startDateObj,
       NgayKetThuc: endDateObj,
       TongSoTep: files.length,
-      DungLuong: files.reduce((sum, f) => sum + (f.FileMinhChungSize || 0), 0),
+      DungLuong: totalSizeBytes,
       TrangThai: 'HoanThanh',
       MaTaiKhoan: user.id,
       GhiChu: null,
@@ -243,76 +262,103 @@ export async function POST(req: NextRequest) {
 
     const backupId = backupRecord.MaSaoLuu;
 
-    // 5. Create ZIP archive using archiver
-    const archive = archiver('zip', {
-      zlib: { level: 6 }, // Compression level (0-9)
-    });
-
-    // Track manifest data
     const manifestFiles: ManifestFile[] = [];
+    const skippedManifest: SkippedManifestFile[] = [];
     let addedFiles = 0;
-    let skippedFiles = 0;
+    let skippedCount = 0;
 
-    // Error handling for archive
-    archive.on('error', (err) => {
-      console.error('Archive error:', err);
-      throw err;
+    const archive = archiver('zip', {
+      zlib: { level: 6 },
     });
 
-    // 6. Download files from R2 and add to ZIP
-    for (const file of files) {
+    archive.on('warning', (warning) => {
+      console.warn('Archive warning:', warning);
+    });
+
+    const downloadWithRetry = async (objectPath: string): Promise<Readable | null> => {
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        const stream = await r2Client.downloadFileStream(objectPath);
+        if (stream) {
+          return stream;
+        }
+        console.warn(`Retry ${attempt}/3 for file: ${objectPath}`);
+        if (attempt < 3) {
+          await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+        }
+      }
+      return null;
+    };
+
+    const processFile = async (file: EvidenceFileRecord) => {
+      const objectPath = extractR2Key(file.FileMinhChungUrl);
+      const stream = await downloadWithRetry(objectPath);
+
+      if (!stream) {
+        skippedCount++;
+        skippedManifest.push({
+          submissionId: file.MaGhiNhan,
+          filename: objectPath,
+          reason: 'DOWNLOAD_FAILED',
+        });
+        return;
+      }
+
+      const practitionerFolder = `${sanitizeFilename(file.practitioner_SoCCHN)}_${sanitizeFilename(file.practitioner_HoVaTen)}`;
+      const fileDate = formatDate(new Date(file.NgayGhiNhan));
+      const activityName = sanitizeFilename(file.TenHoatDong);
+      const filename = objectPath.split('/').pop() || objectPath;
+      const zipPath = `${practitionerFolder}/${fileDate}_${activityName}_${filename}`;
+
       try {
-        // Extract R2 object key from URL (preserves full path like "evidence/12345.pdf")
-        const r2Key = extractR2Key(file.FileMinhChungUrl);
-        
-        // Download file from R2 with retry logic
-        let fileBuffer: Buffer | null = null;
-        let retryCount = 0;
-        const maxRetries = 3;
-        
-        while (retryCount < maxRetries && !fileBuffer) {
-          fileBuffer = await r2Client.downloadFile(r2Key);
-          if (!fileBuffer) {
-            retryCount++;
-            console.warn(`Retry ${retryCount}/${maxRetries} for file: ${r2Key}`);
-            if (retryCount < maxRetries) {
-              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+        await new Promise<void>((resolve, reject) => {
+          let done = false;
+          const cleanup = () => {
+            stream.removeListener('end', onEnd);
+            stream.removeListener('close', onClose);
+            stream.removeListener('error', onError);
+          };
+          const onEnd = () => {
+            if (!done) {
+              done = true;
+              cleanup();
+              resolve();
             }
-          }
-        }
+          };
+          const onClose = () => {
+            if (!done) {
+              done = true;
+              cleanup();
+              resolve();
+            }
+          };
+          const onError = (err: Error) => {
+            if (!done) {
+              done = true;
+              cleanup();
+              reject(err);
+            }
+          };
 
-        if (!fileBuffer) {
-          console.error(`Failed to download file after ${maxRetries} retries: ${r2Key}`);
-          skippedFiles++;
-          continue;
-        }
+          stream.once('end', onEnd);
+          stream.once('close', onClose);
+          stream.once('error', onError);
 
-        // Extract just the filename for the ZIP path (remove R2 prefix)
-        const filename = r2Key.split('/').pop() || r2Key;
-        
-        // Organize files by practitioner
-        const practitionerFolder = `${sanitizeFilename(file.practitioner_SoCCHN)}_${sanitizeFilename(file.practitioner_HoVaTen)}`;
-        const fileDate = formatDate(new Date(file.NgayGhiNhan));
-        const activityName = sanitizeFilename(file.TenHoatDong);
-        const zipPath = `${practitionerFolder}/${fileDate}_${activityName}_${filename}`;
+          archive.append(stream, { name: zipPath });
+        });
 
-        // Add file to ZIP
-        archive.append(fileBuffer, { name: zipPath });
         addedFiles++;
 
-        // Track in manifest
         manifestFiles.push({
           submissionId: file.MaGhiNhan,
           activityName: file.TenHoatDong,
           practitioner: file.practitioner_HoVaTen,
           cchn: file.practitioner_SoCCHN,
           date: file.NgayGhiNhan.toISOString(),
-          filename: r2Key, // Store full R2 key for reference
+          filename: objectPath,
           path: zipPath,
           size: file.FileMinhChungSize,
         });
 
-        // Create backup detail record
         await chiTietSaoLuuRepo.create({
           MaSaoLuu: backupId,
           MaGhiNhan: file.MaGhiNhan,
@@ -320,73 +366,138 @@ export async function POST(req: NextRequest) {
           NgayXoa: null,
           DungLuongTep: file.FileMinhChungSize || null,
         });
-
       } catch (error) {
-        console.error(`Error processing file ${file.FileMinhChungUrl}:`, error);
-        skippedFiles++;
+          console.error(`Error streaming file ${objectPath}:`, error);
+        skippedCount++;
+        skippedManifest.push({
+          submissionId: file.MaGhiNhan,
+            filename: objectPath,
+          reason: 'STREAM_ERROR',
+        });
       }
-    }
-
-    // 7. Generate manifest.json
-    const manifest = {
-      backupDate: new Date().toISOString(),
-      dateRange: {
-        start: startDateObj.toISOString(),
-        end: endDateObj.toISOString(),
-      },
-      totalFiles: files.length,
-      addedFiles,
-      skippedFiles,
-      backupBy: user.username,
-      backupId,
-      files: manifestFiles,
     };
 
-    archive.append(JSON.stringify(manifest, null, 2), { name: 'BACKUP_MANIFEST.json' });
-
-    // 8. Update backup record status with note about results
-    await saoLuuMinhChungRepo.update(backupRecord.MaSaoLuu, {
-      GhiChu: `Added: ${addedFiles}, Skipped: ${skippedFiles}`,
+    let cursor = 0;
+    const workerCount = Math.min(DOWNLOAD_CONCURRENCY, files.length);
+    const workers = Array.from({ length: workerCount }, async () => {
+      while (cursor < files.length) {
+        const currentIndex = cursor;
+        cursor += 1;
+        const file = files[currentIndex];
+        if (!file) {
+          break;
+        }
+        await processFile(file);
+      }
     });
 
-    // 9. Create audit log
-    await nhatKyHeThongRepo.create({
-      MaTaiKhoan: user.id,
-      HanhDong: 'BACKUP_EVIDENCE_FILES',
-      Bang: 'SaoLuuMinhChung',
-      KhoaChinh: backupId,
-      NoiDung: {
-        startDate: formatDate(startDateObj),
-        endDate: formatDate(endDateObj),
-        totalFiles: files.length,
-        addedFiles,
-        skippedFiles,
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        let closed = false;
+        const closeOnce = () => {
+          if (!closed) {
+            closed = true;
+            controller.close();
+          }
+        };
+
+        archive.on('data', (chunk) => {
+          controller.enqueue(chunk instanceof Uint8Array ? chunk : new Uint8Array(chunk));
+        });
+
+        archive.on('end', closeOnce);
+        archive.on('close', closeOnce);
+        archive.on('error', (err) => {
+          console.error('Archive stream error:', err);
+          controller.error(err);
+        });
+
+        try {
+          await Promise.all(workers);
+
+          const manifest = {
+            backupDate: new Date().toISOString(),
+            dateRange: {
+              start: startDateObj.toISOString(),
+              end: endDateObj.toISOString(),
+            },
+            totalFiles: files.length,
+            addedFiles,
+            skippedCount,
+            backupBy: user.username,
+            backupId,
+            totalSizeBytes,
+            files: manifestFiles,
+            skippedFiles: skippedManifest,
+          };
+
+          archive.append(JSON.stringify(manifest, null, 2), {
+            name: 'BACKUP_MANIFEST.json',
+          });
+
+          await archive.finalize();
+
+          await saoLuuMinhChungRepo.update(backupId, {
+            GhiChu: `Added: ${addedFiles}, Skipped: ${skippedCount}`,
+          });
+
+          await nhatKyHeThongRepo.create({
+            MaTaiKhoan: user.id,
+            HanhDong: 'BACKUP_EVIDENCE_FILES',
+            Bang: 'SaoLuuMinhChung',
+            KhoaChinh: backupId,
+            NoiDung: {
+              startDate: formatDate(startDateObj),
+              endDate: formatDate(endDateObj),
+              totalFiles: files.length,
+              addedFiles,
+              skippedCount,
+              skippedDetails: skippedManifest.length,
+              totalSizeBytes,
+            },
+            DiaChiIP:
+              req.headers.get('x-forwarded-for') ||
+              req.headers.get('x-real-ip') ||
+              'unknown',
+          });
+        } catch (streamError) {
+          console.error('Backup streaming error:', streamError);
+          controller.error(streamError);
+
+          await saoLuuMinhChungRepo.update(backupId, {
+            TrangThai: 'ThatBai',
+            GhiChu: `Backup failed after processing ${addedFiles} files`,
+          });
+
+          await nhatKyHeThongRepo.create({
+            MaTaiKhoan: user.id,
+            HanhDong: 'BACKUP_EVIDENCE_FILES_ERROR',
+            Bang: 'SaoLuuMinhChung',
+            KhoaChinh: backupId,
+            NoiDung: {
+              startDate: formatDate(startDateObj),
+              endDate: formatDate(endDateObj),
+              error: streamError instanceof Error ? streamError.message : 'Unknown error',
+            },
+            DiaChiIP:
+              req.headers.get('x-forwarded-for') ||
+              req.headers.get('x-real-ip') ||
+              'unknown',
+          });
+        }
       },
-      DiaChiIP: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown',
     });
 
-    // 10. Finalize archive
-    await archive.finalize();
-
-    // 11. Convert archive stream to buffer for response
-    const chunks: Uint8Array[] = [];
-    const readable = Readable.from(archive);
-    
-    for await (const chunk of readable) {
-      chunks.push(chunk);
-    }
-
-    const buffer = Buffer.concat(chunks);
-
-    // 12. Return ZIP file as response
     const filename = `CNKTYKLT_Backup_${formatDate(startDateObj)}_to_${formatDate(endDateObj)}.zip`;
-    
-    return new NextResponse(buffer, {
+
+    return new NextResponse(stream, {
       status: 200,
       headers: {
         'Content-Type': 'application/zip',
         'Content-Disposition': `attachment; filename="${filename}"`,
-        'Content-Length': buffer.length.toString(),
+        'Cache-Control': 'no-store',
+        'X-Backup-Total-Files': files.length.toString(),
+        'X-Backup-Total-Bytes': totalSizeBytes.toString(),
       },
     });
 

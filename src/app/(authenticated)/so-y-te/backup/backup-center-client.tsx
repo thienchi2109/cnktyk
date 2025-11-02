@@ -21,6 +21,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import LoadingNotice from '@/components/ui/loading-notice';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { GlassProgress } from '@/components/ui/glass-progress';
 import {
   Dialog,
   DialogContent,
@@ -42,6 +43,22 @@ const datePresets = [
   { id: '6mo', label: '6 tháng', months: 6 },
   { id: '12mo', label: '1 năm', months: 12 },
 ] as const;
+
+const formatBytesReadable = (bytes: number) => {
+  if (bytes <= 0 || Number.isNaN(bytes)) {
+    return '0 B';
+  }
+
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const exponent = Math.min(
+    Math.floor(Math.log(bytes) / Math.log(1024)),
+    units.length - 1,
+  );
+  const value = bytes / 1024 ** exponent;
+  const precision = value >= 100 ? 0 : value >= 10 ? 1 : 2;
+
+  return `${value.toFixed(precision)} ${units[exponent]}`;
+};
 
 type StatusTone = 'success' | 'error' | 'info';
 
@@ -69,6 +86,10 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [statusTone, setStatusTone] = useState<StatusTone>('info');
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [downloadedBytes, setDownloadedBytes] = useState(0);
+  const [downloadTotalBytes, setDownloadTotalBytes] = useState<number | null>(null);
+  const [downloadTotalFiles, setDownloadTotalFiles] = useState<number | null>(null);
 
   const [deleteStartDate, setDeleteStartDate] = useState<Date | null>(
     initialDeletionRange.start,
@@ -378,6 +399,10 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
     setIsDownloading(true);
     setStatusTone('info');
     setStatusMessage('Đang tạo tệp sao lưu, vui lòng đợi...');
+    setDownloadProgress(0);
+    setDownloadedBytes(0);
+    setDownloadTotalBytes(null);
+    setDownloadTotalFiles(null);
 
     try {
       const response = await fetch('/api/backup/evidence-files', {
@@ -400,7 +425,64 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
         throw new Error(errorMessage);
       }
 
-      const blob = await response.blob();
+      if (!response.body) {
+        throw new Error('Trình duyệt của bạn không hỗ trợ tải xuống dạng streaming. Vui lòng thử lại bằng trình duyệt mới hơn.');
+      }
+
+      const totalBytesHeader = response.headers.get('X-Backup-Total-Bytes');
+      const parsedTotalBytes = totalBytesHeader
+        ? Number.parseInt(totalBytesHeader, 10)
+        : Number.NaN;
+      const totalBytes = Number.isFinite(parsedTotalBytes) && parsedTotalBytes > 0
+        ? parsedTotalBytes
+        : null;
+      setDownloadTotalBytes(totalBytes);
+
+      const totalFilesHeader = response.headers.get('X-Backup-Total-Files');
+      const parsedTotalFiles = totalFilesHeader
+        ? Number.parseInt(totalFilesHeader, 10)
+        : Number.NaN;
+      setDownloadTotalFiles(
+        Number.isFinite(parsedTotalFiles) && parsedTotalFiles >= 0
+          ? parsedTotalFiles
+          : null,
+      );
+
+      const reader = response.body.getReader();
+      const chunks: BlobPart[] = [];
+      let receivedBytes = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          break;
+        }
+        if (value) {
+          const chunkCopy = value.buffer.slice(
+            value.byteOffset,
+            value.byteOffset + value.byteLength,
+          );
+          chunks.push(chunkCopy);
+          receivedBytes += value.length;
+          setDownloadedBytes(receivedBytes);
+
+          if (totalBytes) {
+            const percentage = Math.min(
+              100,
+              (receivedBytes / totalBytes) * 100,
+            );
+            setDownloadProgress(percentage);
+          }
+        }
+      }
+
+      reader.releaseLock();
+
+      if (totalBytes) {
+        setDownloadProgress(100);
+      }
+
+      const blob = new Blob(chunks, { type: 'application/zip' });
       const disposition = response.headers.get('Content-Disposition') ?? '';
       const match = disposition.match(/filename="?([^\";]+)"?/i);
       const fallbackFilename = `CNKTYKLT_Backup_${formatISODate(
@@ -430,6 +512,10 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
       );
     } finally {
       setIsDownloading(false);
+      setDownloadProgress(0);
+      setDownloadedBytes(0);
+      setDownloadTotalBytes(null);
+      setDownloadTotalFiles(null);
     }
   }, [endDate, startDate, validateRange]);
 
@@ -552,7 +638,18 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
           </div>
 
           {isDownloading && (
-            <LoadingNotice message="Hệ thống đang tổng hợp minh chứng và tạo tệp ZIP..." />
+            downloadTotalBytes ? (
+              <div className="space-y-2 rounded-lg border border-blue-100 bg-blue-50/80 p-4">
+                <GlassProgress value={downloadProgress} variant="solid" color="primary" />
+                <p className="text-sm text-slate-600">
+                  Đã tải {formatBytesReadable(downloadedBytes)}
+                  {downloadTotalBytes ? ` / ${formatBytesReadable(downloadTotalBytes)}` : ''}
+                  {downloadTotalFiles !== null ? ` · ${downloadTotalFiles} minh chứng` : ''}
+                </p>
+              </div>
+            ) : (
+              <LoadingNotice message="Hệ thống đang tổng hợp minh chứng và tạo tệp ZIP..." />
+            )
           )}
         </GlassCard>
 

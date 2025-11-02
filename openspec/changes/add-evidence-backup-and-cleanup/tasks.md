@@ -99,18 +99,18 @@
 - [x] 2.4.2 Prevent deletion if no backup performed in last 24 hours (optional)
 - [x] 2.4.3 Add deletion cooldown (prevent rapid repeated deletions)
 - [x] 2.4.4 Add deleted file count validation (max 5000 per operation)
-- [ ] 2.4.5 Test safety features
+- [x] 2.4.5 Test safety features
 
 ---
 
 ## Phase 3: Optimization & Polish
 
 ### 3.1 Performance Optimization
-- [ ] 3.1.1 Implement parallel R2 downloads (5-10 concurrent)
-- [ ] 3.1.2 Add streaming for large ZIP files (avoid memory issues)
-- [ ] 3.1.3 Implement file count validation (warn if >2000 files)
-- [ ] 3.1.4 Add progress tracking for backup creation
-- [ ] 3.1.5 Optimize database queries (add indexes if needed)
+- [x] 3.1.1 Implement parallel R2 downloads (5-10 concurrent)
+- [x] 3.1.2 Add streaming for large ZIP files (avoid memory issues)
+- [x] 3.1.3 Implement file count validation (warn if >2000 files)
+- [x] 3.1.4 Add progress tracking for backup creation
+- [x] 3.1.5 Optimize database queries (add indexes if needed)
 - [ ] 3.1.6 Test with large file counts (1000, 2000, 5000 files)
 - [ ] 3.1.7 Measure and document performance benchmarks
 
