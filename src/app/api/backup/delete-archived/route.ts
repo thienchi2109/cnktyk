@@ -16,9 +16,9 @@ import { db } from '@/lib/db/client';
 import { r2Client } from '@/lib/storage/r2-client';
 import { 
   xoaMinhChungRepo,
-  chiTietSaoLuuRepo,
   nhatKyHeThongRepo,
-  ghiNhanHoatDongRepo
+  ghiNhanHoatDongRepo,
+  saoLuuMinhChungRepo,
 } from '@/lib/db/repositories';
 
 // Configure route for long-running deletion operations
@@ -165,6 +165,73 @@ export async function POST(req: NextRequest) {
         { error: validation.error },
         { status: 400 }
       );
+    }
+
+    const now = new Date();
+
+    // Safety check: require a recent backup in the last 24 hours that covers the range
+    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const recentBackups = await saoLuuMinhChungRepo.findByUserSince(
+      user.id,
+      twentyFourHoursAgo,
+    );
+
+    if (!recentBackups.length) {
+      return NextResponse.json(
+        {
+          error:
+            'Bạn cần tạo bản sao lưu trong 24 giờ gần nhất trước khi xóa minh chứng.',
+        },
+        { status: 400 },
+      );
+    }
+
+    const hasCoveringBackup = recentBackups.some((backup) => {
+      const backupStart = backup.NgayBatDau;
+      const backupEnd = backup.NgayKetThuc;
+      return (
+        backupStart <= startDateObj &&
+        backupEnd >= endDateObj
+      );
+    });
+
+    if (!hasCoveringBackup) {
+      return NextResponse.json(
+        {
+          error:
+            'Khoảng thời gian xóa phải nằm trong một bản sao lưu đã tạo trong 24 giờ qua. Vui lòng tạo sao lưu mới bao phủ đầy đủ phạm vi này.',
+        },
+        { status: 400 },
+      );
+    }
+
+    // Safety check: enforce cooldown between deletions
+    const cooldownMinutes = 10;
+    const [latestDeletion] = await xoaMinhChungRepo.findByUser(user.id, 1);
+    if (latestDeletion?.NgayThucHien instanceof Date) {
+      const cooldownMs = cooldownMinutes * 60 * 1000;
+      const elapsedMs = now.getTime() - latestDeletion.NgayThucHien.getTime();
+      if (elapsedMs < cooldownMs) {
+        const remainingMs = cooldownMs - elapsedMs;
+        const retryAfterSeconds = Math.max(
+          1,
+          Math.ceil(remainingMs / 1000),
+        );
+        const remainingMinutes = Math.max(
+          1,
+          Math.ceil(remainingMs / 60000),
+        );
+        return NextResponse.json(
+          {
+            error: `Vui lòng chờ thêm ${remainingMinutes} phút trước khi thực hiện thao tác xóa tiếp theo.`,
+            retryAfterSeconds,
+          },
+          {
+            status: 429,
+            headers: { 'Retry-After': retryAfterSeconds.toString() },
+          },
+        );
+      }
     }
 
     // 3. Query database for files to delete

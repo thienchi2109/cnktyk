@@ -1028,6 +1028,22 @@ export class SaoLuuMinhChungRepository extends BaseRepository<
 
     return db.query<import('./schemas').SaoLuuMinhChung>(query, params);
   }
+
+  async findByUserSince(
+    userId: string,
+    since: Date,
+  ): Promise<import('./schemas').SaoLuuMinhChung[]> {
+    return db.query<import('./schemas').SaoLuuMinhChung>(
+      `
+        SELECT *
+        FROM "${this.tableName}"
+        WHERE "MaTaiKhoan" = $1
+          AND "NgayTao" >= $2
+        ORDER BY "NgayTao" DESC
+      `,
+      [userId, since],
+    );
+  }
 }
 
 // ChiTietSaoLuu (Backup Detail) Repository

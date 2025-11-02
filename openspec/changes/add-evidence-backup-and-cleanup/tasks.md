@@ -80,25 +80,25 @@
 - [x] 2.2.10 Test deletion with various scenarios
 
 ### 2.3 Frontend UI Development
-- [ ] 2.3.1 Add deletion section to backup-center-client.tsx
-- [ ] 2.3.2 Add "After backing up, you can delete files" notice
-- [ ] 2.3.3 Implement deletion date range picker (separate from backup)
-- [ ] 2.3.4 Add "Delete Files" button (danger variant, red)
-- [ ] 2.3.5 Implement multi-step confirmation dialog:
+- [x] 2.3.1 Add deletion section to backup-center-client.tsx
+- [x] 2.3.2 Add "After backing up, you can delete files" notice
+- [x] 2.3.3 Implement deletion date range picker (separate from backup)
+- [x] 2.3.4 Add "Delete Files" button (danger variant, red)
+- [x] 2.3.5 Implement multi-step confirmation dialog:
   - Step 1: "Are you sure you want to delete?"
   - Step 2: "Type DELETE to confirm"
   - Step 3: Final confirmation with file count
-- [ ] 2.3.6 Add warning messages about permanent deletion
-- [ ] 2.3.7 Add progress indicator during deletion
-- [ ] 2.3.8 Display deletion summary (X files deleted, Y failed)
-- [ ] 2.3.9 Add success/error feedback
-- [ ] 2.3.10 Test deletion flow with various date ranges
+- [x] 2.3.6 Add warning messages about permanent deletion
+- [x] 2.3.7 Add progress indicator during deletion
+- [x] 2.3.8 Display deletion summary (X files deleted, Y failed)
+- [x] 2.3.9 Add success/error feedback
+- [x] 2.3.10 Test deletion flow with various date ranges
 
 ### 2.4 Safety Features
-- [ ] 2.4.1 Add "require backup first" checkbox (optional safety)
-- [ ] 2.4.2 Prevent deletion if no backup performed in last 24 hours (optional)
-- [ ] 2.4.3 Add deletion cooldown (prevent rapid repeated deletions)
-- [ ] 2.4.4 Add deleted file count validation (max 5000 per operation)
+- [x] 2.4.1 Add "require backup first" checkbox (optional safety)
+- [x] 2.4.2 Prevent deletion if no backup performed in last 24 hours (optional)
+- [x] 2.4.3 Add deletion cooldown (prevent rapid repeated deletions)
+- [x] 2.4.4 Add deleted file count validation (max 5000 per operation)
 - [ ] 2.4.5 Test safety features
 
 ---
@@ -120,7 +120,7 @@
 - [ ] 3.2.3 Improve error messages (specific, actionable)
 - [ ] 3.2.4 Add backup history panel (show recent backups)
 - [ ] 3.2.5 Add storage space saved indicator (after deletion)
-- [ ] 3.2.6 Add keyboard shortcuts (optional)
+
 
 ### 3.3 Testing
 - [ ] 3.3.1 Test backup with 0 files (empty date range)
