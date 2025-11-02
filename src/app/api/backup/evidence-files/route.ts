@@ -14,15 +14,15 @@ import { Readable } from 'stream';
 import { getCurrentUser } from '@/lib/auth/server';
 import { db } from '@/lib/db/client';
 import { r2Client } from '@/lib/storage/r2-client';
-import { 
-  saoLuuMinhChungRepo, 
-  chiTietSaoLuuRepo, 
-  nhatKyHeThongRepo 
+import {
+  saoLuuMinhChungRepo,
+  chiTietSaoLuuRepo,
+  nhatKyHeThongRepo,
 } from '@/lib/db/repositories';
+import { MAX_BACKUP_FILE_COUNT } from './constants';
 import archiver from 'archiver';
 
 const DOWNLOAD_CONCURRENCY = 6;
-const MAX_BACKUP_FILE_COUNT = 2000;
 
 interface SkippedManifestFile {
   submissionId: string;
@@ -117,20 +117,20 @@ function formatDate(date: Date): string {
 function validateDateRange(startDate: Date, endDate: Date): { valid: boolean; error?: string } {
   // Check if start date is before end date
   if (startDate >= endDate) {
-    return { valid: false, error: 'Start date must be before end date' };
+    return { valid: false, error: 'Ngày bắt đầu phải sớm hơn ngày kết thúc.' };
   }
 
   // Check if end date is in the future
   const now = new Date();
   if (endDate > now) {
-    return { valid: false, error: 'End date cannot be in the future' };
+    return { valid: false, error: 'Ngày kết thúc không được vượt quá hôm nay.' };
   }
 
   // Check if date range exceeds 1 year
   const oneYearMs = 365 * 24 * 60 * 60 * 1000;
   const rangeMs = endDate.getTime() - startDate.getTime();
   if (rangeMs > oneYearMs) {
-    return { valid: false, error: 'Date range cannot exceed 1 year' };
+    return { valid: false, error: 'Khoảng thời gian không được vượt quá 1 năm.' };
   }
 
   return { valid: true };
@@ -146,15 +146,15 @@ export async function POST(req: NextRequest) {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
+        { error: 'Chưa đăng nhập.' },
+        { status: 401 },
       );
     }
 
     if (user.role !== 'SoYTe') {
       return NextResponse.json(
-        { error: 'Access denied. SoYTe role required.' },
-        { status: 403 }
+        { error: 'Chỉ tài khoản Sở Y tế mới có quyền tạo sao lưu.' },
+        { status: 403 },
       );
     }
 
@@ -164,8 +164,8 @@ export async function POST(req: NextRequest) {
       body = await req.json();
     } catch (error) {
       return NextResponse.json(
-        { error: 'Invalid JSON in request body' },
-        { status: 400 }
+        { error: 'Dữ liệu gửi lên không hợp lệ. Vui lòng thử lại.' },
+        { status: 400 },
       );
     }
 
@@ -173,8 +173,8 @@ export async function POST(req: NextRequest) {
 
     if (!startDate || !endDate) {
       return NextResponse.json(
-        { error: 'Start date and end date are required' },
-        { status: 400 }
+        { error: 'Vui lòng chọn đầy đủ ngày bắt đầu và kết thúc.' },
+        { status: 400 },
       );
     }
 
@@ -191,8 +191,8 @@ export async function POST(req: NextRequest) {
       }
     } catch (error) {
       return NextResponse.json(
-        { error: 'Invalid date format. Use ISO 8601 format (YYYY-MM-DD)' },
-        { status: 400 }
+        { error: 'Định dạng ngày không hợp lệ. Sử dụng định dạng YYYY-MM-DD.' },
+        { status: 400 },
       );
     }
 
@@ -201,7 +201,7 @@ export async function POST(req: NextRequest) {
     if (!validation.valid) {
       return NextResponse.json(
         { error: validation.error },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -232,8 +232,8 @@ export async function POST(req: NextRequest) {
 
     if (!files || files.length === 0) {
       return NextResponse.json(
-        { error: 'No evidence files found in the specified date range' },
-        { status: 404 }
+        { error: 'Không tìm thấy minh chứng nào trong khoảng thời gian đã chọn.' },
+        { status: 404 },
       );
     }
 
@@ -524,11 +524,11 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(
-      { 
-        error: 'Error creating backup archive',
-        details: error instanceof Error ? error.message : 'Unknown error'
+      {
+        error: 'Không thể tạo gói sao lưu. Vui lòng thử lại sau.',
+        details: error instanceof Error ? error.message : 'Unknown error',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

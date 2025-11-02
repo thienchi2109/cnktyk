@@ -111,15 +111,15 @@
 - [x] 3.1.3 Implement file count validation (warn if >2000 files)
 - [x] 3.1.4 Add progress tracking for backup creation
 - [x] 3.1.5 Optimize database queries (add indexes if needed)
-- [ ] 3.1.6 Test with large file counts (1000, 2000, 5000 files)
-- [ ] 3.1.7 Measure and document performance benchmarks
+- [x] 3.1.6 Test with large file counts (1000, 2000, 5000 files)
+- [x] 3.1.7 Measure and document performance benchmarks
 
 ### 3.2 User Experience Enhancements
-- [ ] 3.2.1 Add estimated backup size calculation
-- [ ] 3.2.2 Add estimated download time indicator
-- [ ] 3.2.3 Improve error messages (specific, actionable)
-- [ ] 3.2.4 Add backup history panel (show recent backups)
-- [ ] 3.2.5 Add storage space saved indicator (after deletion)
+- [x] 3.2.1 Add estimated backup size calculation
+- [x] 3.2.2 Add estimated download time indicator
+- [x] 3.2.3 Improve error messages (specific, actionable)
+- [x] 3.2.4 Add backup history panel (show recent backups)
+- [x] 3.2.5 Add storage space saved indicator (after deletion)
 
 
 ### 3.3 Testing

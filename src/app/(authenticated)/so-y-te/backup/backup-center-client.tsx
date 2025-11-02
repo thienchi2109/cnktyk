@@ -11,9 +11,13 @@ import {
   AlertTriangle,
   CalendarRange,
   DownloadCloud,
+  GaugeCircle,
+  History,
   Info,
   ShieldAlert,
+  Timer,
   Trash2,
+  TrendingDown,
 } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
 import { GlassButton } from '@/components/ui/glass-button';
@@ -60,12 +64,112 @@ const formatBytesReadable = (bytes: number) => {
   return `${value.toFixed(precision)} ${units[exponent]}`;
 };
 
+const formatDuration = (seconds: number) => {
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return 'Dưới 1 phút';
+  }
+
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+
+  if (minutes === 0) {
+    return `${remainingSeconds} giây`;
+  }
+
+  if (minutes < 60) {
+    return remainingSeconds
+      ? `${minutes} phút ${remainingSeconds} giây`
+      : `${minutes} phút`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const minutesPart = minutes % 60;
+
+  return minutesPart
+    ? `${hours} giờ ${minutesPart} phút`
+    : `${hours} giờ`;
+};
+
+const formatDateTime = (value: string | null | undefined) => {
+  if (!value) {
+    return '—';
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '—';
+  }
+
+  return date.toLocaleString('vi-VN', {
+    hour12: false,
+  });
+};
+
+const formatDateRangeLabel = (startISO: string, endISO: string) => {
+  const start = new Date(startISO);
+  const end = new Date(endISO);
+  const startLabel = Number.isNaN(start.getTime())
+    ? '—'
+    : start.toLocaleDateString('vi-VN');
+  const endLabel = Number.isNaN(end.getTime())
+    ? '—'
+    : end.toLocaleDateString('vi-VN');
+
+  return `${startLabel} → ${endLabel}`;
+};
+
 type StatusTone = 'success' | 'error' | 'info';
 
 type DeleteDialogStep = 'overview' | 'confirmation' | 'final';
 
 interface BackupCenterClientProps {
   adminName: string;
+}
+
+interface BackupEstimate {
+  totalFiles: number;
+  totalSizeBytes: number;
+  missingSizeCount: number;
+  averageFileSizeBytes: number;
+  estimatedCompressedSizeBytes: number;
+  estimatedDurationSeconds: number;
+  warnings: string[];
+}
+
+interface BackupHistoryItem {
+  id: string;
+  startDate: string;
+  endDate: string;
+  totalFiles: number;
+  totalBytes: number;
+  status: string;
+  note: string | null;
+  createdAt: string;
+}
+
+interface DeletionHistoryItem {
+  id: string;
+  startDate: string;
+  endDate: string;
+  totalFiles: number;
+  deletedFiles: number;
+  failedFiles: number;
+  freedBytes: number;
+  executedAt: string;
+  note: string | null;
+}
+
+interface BackupDashboardMetrics {
+  recentBackups: BackupHistoryItem[];
+  recentDeletions: DeletionHistoryItem[];
+  summary: {
+    totalBackups: number;
+    totalDeletions: number;
+    totalBackedUpBytes: number;
+    totalFreedBytes: number;
+    lastBackupAt: string | null;
+    lastDeletionAt: string | null;
+  };
 }
 
 export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
@@ -90,6 +194,9 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
   const [downloadedBytes, setDownloadedBytes] = useState(0);
   const [downloadTotalBytes, setDownloadTotalBytes] = useState<number | null>(null);
   const [downloadTotalFiles, setDownloadTotalFiles] = useState<number | null>(null);
+  const [isEstimating, setIsEstimating] = useState(false);
+  const [estimateError, setEstimateError] = useState<string | null>(null);
+  const [estimate, setEstimate] = useState<BackupEstimate | null>(null);
 
   const [deleteStartDate, setDeleteStartDate] = useState<Date | null>(
     initialDeletionRange.start,
@@ -116,6 +223,14 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
   const [deleteConfirmationInput, setDeleteConfirmationInput] = useState('');
   const [deleteCountdown, setDeleteCountdown] = useState(0);
   const deleteCountdownTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [metrics, setMetrics] = useState<BackupDashboardMetrics | null>(null);
+  const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
+  const [metricsError, setMetricsError] = useState<string | null>(null);
+
+  const totalFreedBytes = metrics?.summary.totalFreedBytes ?? 0;
+  const lastDeletionLabel = formatDateTime(metrics?.summary.lastDeletionAt ?? null);
+  const lastBackupLabel = formatDateTime(metrics?.summary.lastBackupAt ?? null);
+  const hasDeletionHistory = Boolean(metrics?.summary.lastDeletionAt) || totalFreedBytes > 0;
 
   const todayISO = useMemo(() => formatISODate(today), [today]);
   const deleteRangeLabel = useMemo(() => {
@@ -285,6 +400,113 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
     };
   }, [clearDeleteCountdown, deleteDialogStep, isDeleteDialogOpen]);
 
+  const fetchMetrics = useCallback(async () => {
+    setIsLoadingMetrics(true);
+    setMetricsError(null);
+
+    try {
+      const response = await fetch('/api/backup/dashboard');
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        const message =
+          typeof payload?.error === 'string' && payload.error.trim().length > 0
+            ? payload.error
+            : 'Không thể tải lịch sử sao lưu. Vui lòng thử lại sau.';
+        throw new Error(message);
+      }
+
+      setMetrics(payload);
+    } catch (error) {
+      console.error('Fetch backup dashboard error:', error);
+      setMetricsError(
+        error instanceof Error
+          ? error.message
+          : 'Không thể tải lịch sử sao lưu. Vui lòng thử lại sau.',
+      );
+    } finally {
+      setIsLoadingMetrics(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchMetrics();
+  }, [fetchMetrics]);
+
+  useEffect(() => {
+    if (!startDate || !endDate) {
+      setIsEstimating(false);
+      setEstimate(null);
+      setEstimateError(null);
+      return;
+    }
+
+    if (startDate > endDate || !isRangeWithinYear(startDate, endDate)) {
+      setIsEstimating(false);
+      setEstimate(null);
+      setEstimateError(null);
+      return;
+    }
+
+    setIsEstimating(true);
+    setEstimateError(null);
+
+    let isCancelled = false;
+    const controller = new AbortController();
+
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetch('/api/backup/evidence-files/estimate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            startDate: formatISODate(startDate),
+            endDate: formatISODate(endDate),
+          }),
+          signal: controller.signal,
+        });
+
+        const payload = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          const message =
+            typeof payload?.error === 'string' && payload.error.trim().length > 0
+              ? payload.error
+              : 'Không thể ước tính dung lượng sao lưu. Vui lòng thử lại.';
+          throw new Error(message);
+        }
+
+        if (!isCancelled) {
+          setEstimate(payload);
+        }
+      } catch (error) {
+        if (controller.signal.aborted || isCancelled) {
+          return;
+        }
+
+        console.error('Backup estimate error:', error);
+        setEstimate(null);
+        setEstimateError(
+          error instanceof Error
+            ? error.message
+            : 'Không thể ước tính dung lượng sao lưu. Vui lòng thử lại sau.',
+        );
+      } finally {
+        if (!isCancelled) {
+          setIsEstimating(false);
+        }
+      }
+    }, 350);
+
+    return () => {
+      isCancelled = true;
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [endDate, startDate]);
+
   const openDeleteDialog = useCallback(() => {
     if (!hasConfirmedBackup) {
       return;
@@ -333,10 +555,16 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
 
       if (!response.ok) {
         const errorMessage =
-          typeof payload?.error === 'string'
+          typeof payload?.error === 'string' && payload.error.trim().length > 0
             ? payload.error
             : 'Không thể xóa minh chứng. Vui lòng thử lại.';
-        throw new Error(errorMessage);
+        const detailMessage =
+          typeof payload?.details === 'string' && payload.details.trim().length > 0
+            ? payload.details
+            : null;
+        throw new Error(
+          detailMessage ? `${errorMessage} (${detailMessage})` : errorMessage,
+        );
       }
 
       const parts: string[] = [];
@@ -363,6 +591,8 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
 
       setDeleteStatusTone('success');
       setDeleteStatusMessage(summaryMessage);
+
+      await fetchMetrics();
     } catch (error) {
       console.error('Delete archived files error:', error);
       setDeleteStatusTone('error');
@@ -384,6 +614,7 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
     clearDeleteCountdown,
     deleteEndDate,
     deleteStartDate,
+    fetchMetrics,
     validateDeletionRange,
   ]);
 
@@ -396,13 +627,16 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
       return;
     }
 
+    const optimisticTotalBytes = estimate?.totalSizeBytes ?? null;
+    const optimisticTotalFiles = estimate?.totalFiles ?? null;
+
     setIsDownloading(true);
     setStatusTone('info');
     setStatusMessage('Đang tạo tệp sao lưu, vui lòng đợi...');
     setDownloadProgress(0);
     setDownloadedBytes(0);
-    setDownloadTotalBytes(null);
-    setDownloadTotalFiles(null);
+    setDownloadTotalBytes(optimisticTotalBytes);
+    setDownloadTotalFiles(optimisticTotalFiles);
 
     try {
       const response = await fetch('/api/backup/evidence-files', {
@@ -419,10 +653,16 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
         const errorMessage =
-          typeof payload?.error === 'string'
+          typeof payload?.error === 'string' && payload.error.trim().length > 0
             ? payload.error
             : 'Không thể tạo sao lưu. Vui lòng thử lại.';
-        throw new Error(errorMessage);
+        const detailMessage =
+          typeof payload?.details === 'string' && payload.details.trim().length > 0
+            ? payload.details
+            : null;
+        throw new Error(
+          detailMessage ? `${errorMessage} (${detailMessage})` : errorMessage,
+        );
       }
 
       if (!response.body) {
@@ -502,6 +742,8 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
       setStatusMessage(
         'Sao lưu hoàn tất! Vui lòng kiểm tra thư mục tải xuống và lưu trữ tệp an toàn.',
       );
+
+      await fetchMetrics();
     } catch (error) {
       console.error('Backup download error:', error);
       setStatusTone('error');
@@ -517,7 +759,7 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
       setDownloadTotalBytes(null);
       setDownloadTotalFiles(null);
     }
-  }, [endDate, startDate, validateRange]);
+  }, [endDate, estimate, fetchMetrics, startDate, validateRange]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-6">
@@ -622,6 +864,87 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
             </div>
           </div>
 
+        {(estimate || estimateError || isEstimating) && (
+          <div className="space-y-3 rounded-lg border border-slate-200 bg-white/70 p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-medical-blue/15 p-2">
+                <GaugeCircle className="h-5 w-5 text-medical-blue" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-700">Ước tính sao lưu</p>
+                <p className="text-xs text-slate-500">
+                  Tự động cập nhật theo phạm vi ngày đã chọn
+                </p>
+              </div>
+            </div>
+
+            {isEstimating ? (
+              <LoadingNotice message="Đang tính toán dung lượng và thời gian dự kiến..." />
+            ) : estimate ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">
+                    Dung lượng dự kiến
+                  </p>
+                  <p className="text-sm font-semibold text-slate-700">
+                    {formatBytesReadable(estimate.estimatedCompressedSizeBytes)}
+                    {estimate.estimatedCompressedSizeBytes !== estimate.totalSizeBytes && (
+                      <span className="ml-1 text-xs font-normal text-slate-500">
+                        (nén từ {formatBytesReadable(estimate.totalSizeBytes)})
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">
+                    Thời gian tải xuống ước tính
+                  </p>
+                  <p className="text-sm font-semibold text-slate-700">
+                    {formatDuration(estimate.estimatedDurationSeconds)}
+                    <span className="ml-1 text-xs font-normal text-slate-500">
+                      (tốc độ ~5 MB/s)
+                    </span>
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">
+                    Số lượng minh chứng
+                  </p>
+                  <p className="text-sm font-semibold text-slate-700">
+                    {estimate.totalFiles.toLocaleString('vi-VN')}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">
+                    Dung lượng trung bình / tệp
+                  </p>
+                  <p className="text-sm font-semibold text-slate-700">
+                    {formatBytesReadable(estimate.averageFileSizeBytes)}
+                  </p>
+                </div>
+              </div>
+            ) : estimateError ? (
+              <Alert variant="destructive" className="border-l-4 border-red-400 bg-red-50">
+                <AlertDescription>{estimateError}</AlertDescription>
+              </Alert>
+            ) : null}
+
+            {estimate?.warnings?.length ? (
+              <ul className="space-y-2 text-sm text-amber-700">
+                {estimate.warnings.map((warning) => (
+                  <li
+                    key={warning}
+                    className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50/80 p-2"
+                  >
+                    <Info className="mt-0.5 h-4 w-4 text-amber-500" />
+                    <span>{warning}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        )}
+
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-sm text-slate-600">
               Chọn phạm vi thời gian để tải xuống bản sao lưu minh chứng đã được duyệt. Mỗi tệp chứa manifest chi tiết và các minh chứng trong khoảng thời gian đã chọn.
@@ -650,6 +973,159 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
             ) : (
               <LoadingNotice message="Hệ thống đang tổng hợp minh chứng và tạo tệp ZIP..." />
             )
+          )}
+        </GlassCard>
+
+        <GlassCard className="space-y-6 p-6">
+          <div className="flex items-start gap-3">
+            <div className="rounded-lg bg-medical-blue/15 p-2">
+              <History className="h-5 w-5 text-medical-blue" />
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-xl font-semibold text-slate-800">
+                Lịch sử sao lưu & dọn dẹp
+              </h2>
+              <p className="text-slate-600">
+                Theo dõi các hoạt động gần đây để bảo đảm kế hoạch lưu trữ luôn được cập nhật.
+              </p>
+            </div>
+          </div>
+
+          {metricsError && (
+            <Alert variant="destructive" className="border-l-4 border-red-400 bg-red-50">
+              <AlertDescription>{metricsError}</AlertDescription>
+            </Alert>
+          )}
+
+          {isLoadingMetrics ? (
+            <LoadingNotice message="Đang tải lịch sử sao lưu..." />
+          ) : metrics ? (
+            <div className="space-y-6">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="rounded-lg border border-slate-200 bg-white/80 p-4">
+                  <div className="flex items-center gap-3">
+                    <Timer className="h-5 w-5 text-medical-blue" />
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-slate-500">
+                        Lần sao lưu gần nhất
+                      </p>
+                      <p className="text-sm font-semibold text-slate-700">
+                        {lastBackupLabel}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white/80 p-4">
+                  <div className="flex items-center gap-3">
+                    <Trash2 className="h-5 w-5 text-red-500" />
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-slate-500">
+                        Lần dọn dẹp gần nhất
+                      </p>
+                      <p className="text-sm font-semibold text-slate-700">
+                        {hasDeletionHistory ? lastDeletionLabel : '—'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white/80 p-4">
+                  <div className="flex items-center gap-3">
+                    <TrendingDown className="h-5 w-5 text-emerald-600" />
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-slate-500">
+                        Tổng dung lượng đã giải phóng
+                      </p>
+                      <p className="text-sm font-semibold text-slate-700">
+                        {formatBytesReadable(totalFreedBytes)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-slate-700">
+                    Bản sao lưu gần đây
+                  </h3>
+                  {metrics.recentBackups.length ? (
+                    <ul className="space-y-2">
+                      {metrics.recentBackups.map((item) => (
+                        <li
+                          key={item.id}
+                          className="rounded-lg border border-slate-200 bg-white/70 p-3"
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <p className="text-sm font-medium text-slate-700">
+                                {formatDateRangeLabel(item.startDate, item.endDate)}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {item.totalFiles.toLocaleString('vi-VN')} minh chứng · {formatBytesReadable(item.totalBytes)}
+                              </p>
+                            </div>
+                            <div className="text-right text-xs text-slate-500">
+                              <p className="font-medium text-slate-600">{item.status}</p>
+                              <p>{formatDateTime(item.createdAt)}</p>
+                            </div>
+                          </div>
+                          {item.note && (
+                            <p className="mt-2 text-xs text-slate-500">{item.note}</p>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-slate-500">
+                      Chưa có bản sao lưu nào được ghi nhận.
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-slate-700">
+                    Dọn dẹp gần đây
+                  </h3>
+                  {metrics.recentDeletions.length ? (
+                    <ul className="space-y-2">
+                      {metrics.recentDeletions.map((item) => (
+                        <li
+                          key={item.id}
+                          className="rounded-lg border border-slate-200 bg-white/70 p-3"
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <p className="text-sm font-medium text-slate-700">
+                                {formatDateRangeLabel(item.startDate, item.endDate)}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {item.deletedFiles.toLocaleString('vi-VN')} tệp đã xóa · {formatBytesReadable(item.freedBytes)}
+                              </p>
+                              {item.failedFiles > 0 && (
+                                <p className="text-xs font-medium text-red-600">
+                                  {item.failedFiles.toLocaleString('vi-VN')} tệp lỗi
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right text-xs text-slate-500">
+                              <p>{formatDateTime(item.executedAt)}</p>
+                            </div>
+                          </div>
+                          {item.note && (
+                            <p className="mt-2 text-xs text-slate-500">{item.note}</p>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-slate-500">
+                      Chưa có lần dọn dẹp nào được ghi nhận.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">Chưa có dữ liệu lịch sử.</p>
           )}
         </GlassCard>
 
@@ -692,6 +1168,24 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
                 <AlertDescription>{deleteStatusMessage}</AlertDescription>
               </Alert>
             )}
+          </div>
+
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 p-4 text-sm text-emerald-700">
+            <div className="flex items-start gap-3">
+              <div className="rounded-full bg-emerald-100 p-2">
+                <TrendingDown className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div className="space-y-1">
+                <p className="font-semibold">
+                  {totalFreedBytes > 0
+                    ? `Đã giải phóng ${formatBytesReadable(totalFreedBytes)}`
+                    : 'Chưa có dữ liệu dung lượng đã giải phóng'}
+                </p>
+                <p>
+                  Lần dọn dẹp gần nhất: {hasDeletionHistory ? lastDeletionLabel : '—'}
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-700">
