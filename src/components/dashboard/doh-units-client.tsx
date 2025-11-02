@@ -270,20 +270,29 @@ export function DohUnitsClient({ userId, initialUnitId }: DohUnitsClientProps) {
           params.append('sort', `${sort.field}:${sort.direction}`);
         });
 
+        console.log('[DOH Units] Fetching units with params:', params.toString());
         const response = await fetch(`/api/system/units-performance?${params.toString()}`);
+        console.log('[DOH Units] Response status:', response.status, response.ok);
+        
         if (!response.ok) {
+          const errorText = await response.text();
+          console.error('[DOH Units] Response error:', errorText);
           throw new Error('Không thể tải danh sách đơn vị');
         }
 
         const data = await response.json();
+        console.log('[DOH Units] Response data:', data);
+        
         if (!data.success) {
           throw new Error(data.error || 'Dữ liệu không hợp lệ');
         }
 
-        setUnits(data.data.units);
+        console.log('[DOH Units] Units received:', data.data.units?.length || 0);
+        setUnits(data.data.units || []);
         setUnitTotalItems(data.data.totalItems);
         setUnitTotalPages(data.data.totalPages);
       } catch (error) {
+        console.error('[DOH Units] Fetch error:', error);
         setUnitsError(
           error instanceof Error ? error.message : 'Không thể tải danh sách đơn vị',
         );

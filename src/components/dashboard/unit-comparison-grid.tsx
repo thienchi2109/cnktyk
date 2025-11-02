@@ -136,9 +136,10 @@ const UnitComparisonGridComponent = ({
 
   const safePage = Math.max(1, page);
   const safePageSize = Math.max(1, pageSize);
+  const safeRows = rows || [];
   const startRow = totalItems === 0 ? 0 : (safePage - 1) * safePageSize + 1;
   const endRow =
-    totalItems === 0 ? 0 : Math.min(startRow + rows.length - 1, Math.max(totalItems, 0));
+    totalItems === 0 ? 0 : Math.min(startRow + safeRows.length - 1, Math.max(totalItems, 0));
 
   const summaryText =
     totalItems === 0
@@ -313,7 +314,7 @@ const UnitComparisonGridComponent = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row, index) => (
+                  {safeRows.map((row, index) => (
                     <tr
                       key={row.id}
                       className={cn(
