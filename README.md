@@ -10,7 +10,19 @@ A modern web-based system for healthcare practitioner compliance tracking across
 - **Glassmorphism UI**: Modern glass-effect design system optimized for healthcare professionals
 - **Real-time Compliance Tracking**: 5-year cycle monitoring with automated alerts
 - **Evidence File Management**: Secure file upload with Cloudflare R2 integration
+- **Evidence Backup Center**: Streaming ZIP exports, download progress tracking, and post-backup cleanup tools for SoYTe admins
 - **Comprehensive Audit Logging**: Complete audit trail for all data modifications and user actions
+
+## Evidence Backup Center
+
+SoYTe administrators can access the backup hub at `/so-y-te/backup` to export and clean up evidence files.
+
+- **Streaming backups:** `POST /api/backup/evidence-files` packages approved evidence into a ZIP using concurrent R2 downloads, sends progress headers (`X-Backup-Total-Files`, `X-Backup-Total-Bytes`), and emits a manifest describing every file processed.
+- **Size & duration estimates:** `POST /api/backup/evidence-files/estimate` returns file counts, compressed size projections, and warnings when approaching the 2,000 file limit or long runtimes.
+- **Operational metrics:** `GET /api/backup/dashboard` summarizes recent backups/deletions and surfaces storage savings to the UI.
+- **Secure cleanup:** `POST /api/backup/delete-archived` enforces confirmation tokens, recent-backup checks, and deletion cooldowns before removing evidence from R2.
+
+Detailed playbooks for SoYTe staff and platform operators live in [`openspec/changes/add-evidence-backup-and-cleanup/docs/`](openspec/changes/add-evidence-backup-and-cleanup/docs/).
 
 ## Technology Stack
 
@@ -36,7 +48,8 @@ A modern web-based system for healthcare practitioner compliance tracking across
 │   ├── utils/             # General utilities
 │   └── validations/       # Zod validation schemas
 ├── types/                  # TypeScript type definitions
-└── .kiro/specs/           # Feature specifications and requirements
+├── .kiro/specs/           # Feature specifications and requirements (legacy)
+└── openspec/              # Active change proposals, specs, and documentation packages
 ```
 
 ## Getting Started
@@ -121,6 +134,13 @@ This project follows a spec-driven development approach. Feature specifications 
 - `requirements.md`: Feature requirements in EARS format
 - `design.md`: Technical design and architecture
 - `tasks.md`: Implementation task list
+
+## Documentation
+
+- **Evidence Backup user guide:** `openspec/changes/add-evidence-backup-and-cleanup/docs/user-guide.md`
+- **Evidence Backup admin handbook:** `openspec/changes/add-evidence-backup-and-cleanup/docs/admin-guide.md`
+- **Architecture & design references:** `openspec/changes/add-evidence-backup-and-cleanup/design.md`
+- **Change tracking:** `openspec/changes/add-evidence-backup-and-cleanup/tasks.md`
 
 ## Database Schema
 

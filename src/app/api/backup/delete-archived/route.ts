@@ -1,13 +1,10 @@
 /**
- * Delete Archived Evidence Files API Endpoint
- * POST /api/backup/delete-archived
- * 
- * Deletes evidence files from R2 storage after they have been backed up.
- * This is a destructive operation that frees storage space.
- * 
- * Access: SoYTe role only
- * Safety: Requires explicit confirmation token
- * Max Duration: 300 seconds (5 minutes)
+ * Delete Archived Evidence Files API Endpoint.
+ *
+ * @module POST /api/backup/delete-archived
+ * @remarks Permanently deletes evidence files from R2 after successful backups.
+ * @access SoYTe role only (confirmation token required)
+ * @maxDuration 300 seconds (5 minutes)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -37,8 +34,10 @@ interface FileToDelete {
 }
 
 /**
- * Extract R2 object key from full URL
- * Same logic as backup endpoint
+ * Extracts the R2 object key from a persisted URL.
+ *
+ * @param url - The stored evidence file URL.
+ * @returns The R2 object key ready for deletion commands.
  */
 function extractR2Key(url: string): string {
   try {
@@ -55,14 +54,20 @@ function extractR2Key(url: string): string {
 }
 
 /**
- * Format date as YYYY-MM-DD
+ * Formats a {@link Date} instance into `YYYY-MM-DD` for audit payloads.
+ *
+ * @param date - Date to format.
  */
 function formatDate(date: Date): string {
   return date.toISOString().split('T')[0];
 }
 
 /**
- * Validate date range constraints
+ * Validates that the deletion window is chronologically correct and within policy limits.
+ *
+ * @param startDate - Inclusive start of the deletion window.
+ * @param endDate - Inclusive end of the deletion window.
+ * @returns Result indicating validity and optional localized message.
  */
 function validateDateRange(startDate: Date, endDate: Date): { valid: boolean; error?: string } {
   if (startDate >= endDate) {
@@ -84,8 +89,10 @@ function validateDateRange(startDate: Date, endDate: Date): { valid: boolean; er
 }
 
 /**
- * POST /api/backup/delete-archived
- * Delete evidence files that have been backed up
+ * Deletes evidence files that were previously backed up and updates related bookkeeping.
+ *
+ * @param req - Incoming {@link NextRequest} carrying deletion payload and confirmation token.
+ * @returns {@link NextResponse} JSON summary or error.
  */
 export async function POST(req: NextRequest) {
   try {

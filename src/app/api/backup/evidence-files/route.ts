@@ -1,12 +1,10 @@
 /**
- * Evidence Files Backup API Endpoint
- * POST /api/backup/evidence-files
- * 
- * Downloads all evidence files from approved submissions within a date range
- * and packages them into a ZIP archive for offline storage.
- * 
- * Access: SoYTe role only
- * Max Duration: 300 seconds (5 minutes)
+ * Evidence Files Backup API Endpoint.
+ *
+ * @module POST /api/backup/evidence-files
+ * @remarks Streams evidence file backups into a ZIP archive scoped by a date range.
+ * @access SoYTe role only
+ * @maxDuration 300 seconds (5 minutes)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -60,13 +58,12 @@ interface ManifestFile {
 }
 
 /**
- * Extract R2 object key from full URL
- * URL format: https://bucket.r2.dev/evidence/12345.pdf
- * Returns: evidence/12345.pdf (preserves the full path)
- * 
- * CRITICAL: Must preserve the full key path because generateSecureFilename()
- * uploads files with prefixes like "evidence/" or "activity-{id}/".
- * Returning only the basename would cause 404s on R2 GetObject calls.
+ * Extracts the R2 object key from an evidence file URL while preserving folder prefixes.
+ *
+ * @param url - Original URL as persisted in the database (may be proxy or direct R2 URL).
+ * @returns The object key that R2 expects (e.g. `evidence/12345.pdf`).
+ * @remarks The key must retain any prefixes produced by `generateSecureFilename`; trimming the path
+ * causes downstream `GetObject` calls to fail with 404s.
  */
 function extractR2Key(url: string): string {
   // Submissions persist proxy URLs (e.g. /api/files/prefix/file.pdf)
@@ -95,7 +92,10 @@ function extractR2Key(url: string): string {
 }
 
 /**
- * Sanitize string for use in filenames
+ * Normalises a string into a safe filename segment.
+ *
+ * @param str - Raw value such as practitioner name or activity title.
+ * @returns The sanitized value limited to 50 characters and using underscores for whitespace.
  */
 function sanitizeFilename(str: string): string {
   return str
@@ -105,14 +105,20 @@ function sanitizeFilename(str: string): string {
 }
 
 /**
- * Format date as YYYY-MM-DD
+ * Formats a {@link Date} into `YYYY-MM-DD` for consistent manifest naming.
+ *
+ * @param date - Date instance to format.
  */
 function formatDate(date: Date): string {
   return date.toISOString().split('T')[0];
 }
 
 /**
- * Validate date range constraints
+ * Validates the requested backup date window.
+ *
+ * @param startDate - Inclusive start of the backup range.
+ * @param endDate - Inclusive end of the backup range.
+ * @returns Validation result with optional localized error message.
  */
 function validateDateRange(startDate: Date, endDate: Date): { valid: boolean; error?: string } {
   // Check if start date is before end date
@@ -137,8 +143,10 @@ function validateDateRange(startDate: Date, endDate: Date): { valid: boolean; er
 }
 
 /**
- * POST /api/backup/evidence-files
- * Create and download ZIP backup of evidence files
+ * Streams a ZIP archive of evidence files matching the supplied date range.
+ *
+ * @param req - The incoming Next.js request containing the date range payload.
+ * @returns Streaming {@link NextResponse} with ZIP body or JSON error.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -275,6 +283,12 @@ export async function POST(req: NextRequest) {
       console.warn('Archive warning:', warning);
     });
 
+    /**
+     * Attempts to download an R2 object stream, retrying transient failures up to three times.
+     *
+     * @param objectPath - R2 object key to retrieve.
+     * @returns Node {@link Readable} stream when available; otherwise `null` after retries.
+     */
     const downloadWithRetry = async (objectPath: string): Promise<Readable | null> => {
       for (let attempt = 1; attempt <= 3; attempt++) {
         const stream = await r2Client.downloadFileStream(objectPath);
@@ -289,6 +303,11 @@ export async function POST(req: NextRequest) {
       return null;
     };
 
+    /**
+     * Pipes a single evidence file into the ZIP archive and records manifest metadata.
+     *
+     * @param file - Evidence record sourced from the database query.
+     */
     const processFile = async (file: EvidenceFileRecord) => {
       const objectPath = extractR2Key(file.FileMinhChungUrl);
       const stream = await downloadWithRetry(objectPath);
@@ -387,6 +406,7 @@ export async function POST(req: NextRequest) {
         if (!file) {
           break;
         }
+        // Shared cursor hands each worker a unique file without additional locking primitives.
         await processFile(file);
       }
     });
@@ -413,6 +433,7 @@ export async function POST(req: NextRequest) {
         });
 
         try {
+          // Finalise once all workers finish piping their streams into the archive.
           await Promise.all(workers);
 
           const manifest = {
