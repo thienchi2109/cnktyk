@@ -1,9 +1,9 @@
 ﻿# Implementation Tasks: Add DonVi Activities Access
 
 ## 1. Database & Schema
-- [ ] Create migration `2025-11-02_add_donvi_scope_to_danh_muc_hoat_dong.sql` adding unit ownership, provenance, and soft-delete columns with indexes.
-- [ ] Backfill legacy rows (`MaDonVi = NULL`, provenance defaults, `DaXoaMem = false`) and verify rollback drops columns cleanly.
-- [ ] Update Zod schemas (`CreateDanhMucHoatDongSchema`, `UpdateDanhMucHoatDongSchema`) to reflect new fields, forbid DonVi overriding `MaDonVi`, and surface `DaXoaMem` only via server logic.
+- [x] Create migration `2025-11-02_add_donvi_scope_to_danh_muc_hoat_dong.sql` adding unit ownership, provenance, and soft-delete columns with indexes.
+- [x] Backfill legacy rows (`MaDonVi = NULL`, provenance defaults, `DaXoaMem = false`) and verify rollback drops columns cleanly.
+- [x] Update Zod schemas (`CreateDanhMucHoatDongSchema`, `UpdateDanhMucHoatDongSchema`) to reflect new fields, forbid DonVi overriding `MaDonVi`, and surface `DaXoaMem` only via server logic.
 
 ## 2. Repository & Service Layer
 - [ ] Implement `findGlobal`, `findByUnit`, `findAccessible`, `assertCanMutate`, `softDelete`, and `restore` helpers in `DanhMucHoatDongRepository` with unit isolation.

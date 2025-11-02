@@ -8,6 +8,7 @@ export const QuyenHanSchema = z.enum(['SoYTe', 'DonVi', 'NguoiHanhNghe', 'Audito
 export const LoaiHoatDongSchema = z.enum(['KhoaHoc', 'HoiThao', 'NghienCuu', 'BaoCao']);
 export const DonViTinhSchema = z.enum(['gio', 'tiet', 'tin_chi']);
 export const TrangThaiThongBaoSchema = z.enum(['Moi', 'DaDoc']);
+export const ActivityCatalogStatusSchema = z.enum(['Draft', 'Active', 'Archived']);
 
 // UUID validation schema
 // Note: Using relaxed validation to support legacy UUIDs like 00000000-0000-0000-0000-000000000002
@@ -93,6 +94,15 @@ export const DanhMucHoatDongSchema = z.object({
   YeuCauMinhChung: z.boolean().default(true),
   HieuLucTu: z.date().nullable(),
   HieuLucDen: z.date().nullable(),
+  
+  // Unit scoping and ownership (added 2025-11-02)
+  MaDonVi: UUIDSchema.nullable(),
+  NguoiTao: UUIDSchema.nullable(),
+  NguoiCapNhat: UUIDSchema.nullable(),
+  TaoLuc: z.date(),
+  CapNhatLuc: z.date(),
+  TrangThai: ActivityCatalogStatusSchema.default('Active'),
+  DaXoaMem: z.boolean().default(false),
 }).refine(
   (data) => {
     if (data.GioToiThieu !== null && data.GioToiDa !== null) {
@@ -117,8 +127,22 @@ export const DanhMucHoatDongSchema = z.object({
   }
 );
 
-export const CreateDanhMucHoatDongSchema = DanhMucHoatDongSchema.omit({ MaDanhMuc: true });
-export const UpdateDanhMucHoatDongSchema = CreateDanhMucHoatDongSchema.partial();
+// Create schema: omit auto-generated/server-managed fields
+// Note: MaDonVi is injected by API layer based on user role
+export const CreateDanhMucHoatDongSchema = DanhMucHoatDongSchema.omit({ 
+  MaDanhMuc: true,
+  NguoiTao: true,
+  NguoiCapNhat: true,
+  TaoLuc: true,
+  CapNhatLuc: true,
+  DaXoaMem: true,
+});
+
+// Update schema: prevent changing unit scope and other protected fields
+// MaDonVi can only be changed by SoYTe for adoption workflow
+export const UpdateDanhMucHoatDongSchema = CreateDanhMucHoatDongSchema.partial().omit({
+  MaDonVi: true, // Cannot change unit ownership via regular update (use adoption endpoint)
+});
 
 // QuyTacTinChi (Credit Rules) schema
 export const QuyTacTinChiSchema = z.object({
