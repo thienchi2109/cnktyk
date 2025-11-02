@@ -1,8 +1,9 @@
 import { requireAuth } from '@/lib/auth/server';
 import { notFound, redirect } from 'next/navigation';
 import { donViRepo } from '@/lib/db/repositories';
+
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function UnitDetailPage({ params }: PageProps) {
@@ -13,10 +14,11 @@ export default async function UnitDetailPage({ params }: PageProps) {
     redirect('/auth/error?error=AccessDenied');
   }
 
-  const unit = await donViRepo.findById(params.id);
+  const { id } = await params;
+  const unit = await donViRepo.findById(id);
   if (!unit) {
     notFound();
   }
 
-  redirect(`/dashboard/doh?unit=${params.id}`);
+  redirect(`/dashboard/doh/units?unit=${id}`);
 }

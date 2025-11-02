@@ -1,15 +1,15 @@
 ## 1. Routing & Access Control
 
-- [ ] 1.1 Create `src/app/(authenticated)/dashboard/doh/units/page.tsx` with `requireAuth` guard and SoYTe-only access redirect.
-- [ ] 1.2 Update `/dashboard/units/[id]/page.tsx` to redirect to `/dashboard/doh/units?unit=<id>` after validating unit existence.
-- [ ] 1.3 Add integration coverage ensuring `/dashboard/doh/units` returns 200 for SoYTe users and redirects others.
+- [x] 1.1 Create `src/app/(authenticated)/dashboard/doh/units/page.tsx` with `requireAuth` guard and SoYTe-only access redirect.
+- [x] 1.2 Update `/dashboard/units/[id]/page.tsx` to redirect to `/dashboard/doh/units?unit=<id>` after validating unit existence.
+- [x] 1.3 Add integration coverage ensuring `/dashboard/doh/units` returns 200 for SoYTe users and redirects others.
 
 ## 2. Page Composition
 
-- [ ] 2.1 Implement the units page wrapper (header, summary cards) reusing existing glass UI components plus the `DohDashboard` grid for unit listings.
-- [ ] 2.2 Persist search, sort, pagination, and unit selection state via URL query parameters for shareable deep links.
-- [ ] 2.3 Ensure the `unit` query parameter automatically opens `UnitDetailSheet` inside the page with pre-fetched metrics.
-- [ ] 2.4 Surface navigation from the SoYTe dashboard to `/dashboard/doh/units` (button/link or breadcrumb entry).
+- [x] 2.1 Implement the units page wrapper (header, summary cards) reusing existing glass UI components plus the `DohDashboard` grid for unit listings.
+- [x] 2.2 Persist search, sort, pagination, and unit selection state via URL query parameters for shareable deep links.
+- [x] 2.3 Ensure the `unit` query parameter automatically opens `UnitDetailSheet` inside the page with pre-fetched metrics.
+- [x] 2.4 Surface navigation from the SoYTe dashboard to `/dashboard/doh/units` (button/link or breadcrumb entry).
 
 ## 3. Data & Performance
 

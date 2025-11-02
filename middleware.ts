@@ -4,6 +4,7 @@ import { isDonViAccountManagementEnabled } from "@/lib/features/flags";
 
 // Define protected routes and their required roles
 const PROTECTED_ROUTES = {
+  "/dashboard/doh": ["SoYTe"], // SoYTe-specific dashboard and units management
   "/dashboard": ["SoYTe", "DonVi", "NguoiHanhNghe", "Auditor"],
   "/practitioners": ["SoYTe", "DonVi", "NguoiHanhNghe"],
   "/activities": ["SoYTe", "DonVi"],

@@ -77,7 +77,7 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
 
   const practitioners: Practitioner[] = data?.data || [];
   const totalPages: number = data?.pagination?.totalPages || 1;
-  const totalItems: number = data?.pagination?.totalItems || 0;
+  const totalItems: number = data?.pagination?.total || 0;
 
   // Calculate summary text similar to DoH dashboard
   const safePage = Math.max(1, page);
