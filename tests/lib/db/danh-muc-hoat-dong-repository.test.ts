@@ -118,9 +118,13 @@ describe('DanhMucHoatDongRepository', () => {
 
   describe('findAccessible', () => {
     it('returns both global and unit activities', async () => {
-      mocks.query
-        .mockResolvedValueOnce([mockGlobalActivity])
-        .mockResolvedValueOnce([mockUnitActivity]);
+      // Mock single optimized query that returns both global and unit activities with is_global flag
+      const mockCombinedResults = [
+        { ...mockGlobalActivity, is_global: true },
+        { ...mockUnitActivity, is_global: false }
+      ];
+      
+      mocks.query.mockResolvedValueOnce(mockCombinedResults);
 
       const result = await repo.findAccessible('unit-123');
 
@@ -128,7 +132,11 @@ describe('DanhMucHoatDongRepository', () => {
         global: [mockGlobalActivity],
         unit: [mockUnitActivity],
       });
-      expect(mocks.query).toHaveBeenCalledTimes(2);
+      expect(mocks.query).toHaveBeenCalledTimes(1); // Optimized to single query
+      expect(mocks.query).toHaveBeenCalledWith(
+        expect.stringContaining('CASE WHEN "MaDonVi" IS NULL THEN true ELSE false END as is_global'),
+        ['unit-123']
+      );
     });
   });
 
@@ -140,7 +148,8 @@ describe('DanhMucHoatDongRepository', () => {
 
       expect(result).toHaveLength(2);
       expect(mocks.query).toHaveBeenCalledWith(
-        expect.stringContaining('"HieuLucTu" IS NULL OR "HieuLucTu" <= CURRENT_DATE')
+        expect.stringContaining('"HieuLucTu" IS NULL OR "HieuLucTu" <= CURRENT_DATE'),
+        []
       );
     });
 
@@ -209,6 +218,8 @@ describe('DanhMucHoatDongRepository', () => {
           YeuCauMinhChung: true,
           HieuLucTu: null,
           HieuLucDen: null,
+          MaDonVi: null,
+          TrangThai: 'Active',
         },
         'user-soyTe',
         null
@@ -240,6 +251,8 @@ describe('DanhMucHoatDongRepository', () => {
           YeuCauMinhChung: true,
           HieuLucTu: null,
           HieuLucDen: null,
+          MaDonVi: 'unit-123',
+          TrangThai: 'Active',
         },
         'user-donVi',
         'unit-123'
@@ -434,7 +447,8 @@ describe('DanhMucHoatDongRepository', () => {
 
       expect(result).toEqual([mockSoftDeletedActivity]);
       expect(mocks.query).toHaveBeenCalledWith(
-        expect.stringContaining('"DaXoaMem" = true')
+        expect.stringContaining('"DaXoaMem" = true'),
+        []
       );
     });
 

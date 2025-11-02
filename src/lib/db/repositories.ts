@@ -859,8 +859,11 @@ export class DanhMucHoatDongRepository extends BaseRepository<DanhMucHoatDong, C
    */
   async findGlobal(): Promise<DanhMucHoatDong[]> {
     return db.query<DanhMucHoatDong>(`
-      SELECT * FROM "${this.tableName}"
-      WHERE "MaDonVi" IS NULL 
+      SELECT "MaDanhMuc", "TenDanhMuc", "LoaiHoatDong", "DonViTinh", "TyLeQuyDoi",
+             "GioToiThieu", "GioToiDa", "YeuCauMinhChung", "HieuLucTu", "HieuLucDen",
+             "MaDonVi", "NguoiTao", "NguoiCapNhat", "TaoLuc", "CapNhatLuc", "TrangThai"
+      FROM "${this.tableName}"
+      WHERE "MaDonVi" IS NULL
         AND "DaXoaMem" = false
       ORDER BY "TenDanhMuc" ASC
     `);
@@ -873,82 +876,109 @@ export class DanhMucHoatDongRepository extends BaseRepository<DanhMucHoatDong, C
    */
   async findByUnit(unitId: string): Promise<DanhMucHoatDong[]> {
     return db.query<DanhMucHoatDong>(`
-      SELECT * FROM "${this.tableName}"
-      WHERE "MaDonVi" = $1 
+      SELECT "MaDanhMuc", "TenDanhMuc", "LoaiHoatDong", "DonViTinh", "TyLeQuyDoi",
+             "GioToiThieu", "GioToiDa", "YeuCauMinhChung", "HieuLucTu", "HieuLucDen",
+             "MaDonVi", "NguoiTao", "NguoiCapNhat", "TaoLuc", "CapNhatLuc", "TrangThai"
+      FROM "${this.tableName}"
+      WHERE "MaDonVi" = $1
         AND "DaXoaMem" = false
       ORDER BY "TenDanhMuc" ASC
     `, [unitId]);
   }
 
   /**
-   * Find all activities accessible to a unit (global + unit-specific)
+   * Find all activities accessible to a unit (global + unit-specific) - OPTIMIZED
    * @param unitId - The unit to query activities for
    * @returns Object with global and unit activity arrays
    */
   async findAccessible(unitId: string): Promise<{ global: DanhMucHoatDong[], unit: DanhMucHoatDong[] }> {
-    const global = await this.findGlobal();
-    const unit = await this.findByUnit(unitId);
-    
+    // Single query with conditional aggregation for better performance
+    const results = await db.query<{
+      is_global: boolean,
+      // All activity columns
+      "MaDanhMuc": string, "TenDanhMuc": string, "LoaiHoatDong": string,
+      "DonViTinh": string, "TyLeQuyDoi": number, "GioToiThieu": number | null,
+      "GioToiDa": number | null, "YeuCauMinhChung": boolean, "HieuLucTu": string | null,
+      "HieuLucDen": string | null, "MaDonVi": string | null, "NguoiTao": string | null,
+      "NguoiCapNhat": string | null, "TaoLuc": string, "CapNhatLuc": string,
+      "TrangThai": string, "DaXoaMem": boolean
+    }>(`
+      SELECT
+        "MaDanhMuc", "TenDanhMuc", "LoaiHoatDong", "DonViTinh", "TyLeQuyDoi",
+        "GioToiThieu", "GioToiDa", "YeuCauMinhChung", "HieuLucTu", "HieuLucDen",
+        "MaDonVi", "NguoiTao", "NguoiCapNhat", "TaoLuc", "CapNhatLuc", "TrangThai", "DaXoaMem",
+        CASE WHEN "MaDonVi" IS NULL THEN true ELSE false END as is_global
+      FROM "${this.tableName}"
+      WHERE ("MaDonVi" IS NULL OR "MaDonVi" = $1)
+        AND "DaXoaMem" = false
+      ORDER BY is_global DESC, "TenDanhMuc" ASC
+    `, [unitId]);
+
+    // Partition results in JavaScript (faster than multiple queries)
+    const global: DanhMucHoatDong[] = [];
+    const unit: DanhMucHoatDong[] = [];
+
+    for (const row of results) {
+      const { is_global, ...activity } = row;
+      // Convert string dates to Date objects to match schema
+      const typedActivity = {
+        ...activity,
+        HieuLucTu: activity.HieuLucTu ? new Date(activity.HieuLucTu) : null,
+        HieuLucDen: activity.HieuLucDen ? new Date(activity.HieuLucDen) : null,
+        TaoLuc: new Date(activity.TaoLuc),
+        CapNhatLuc: new Date(activity.CapNhatLuc),
+      } as DanhMucHoatDong;
+      
+      if (is_global) {
+        global.push(typedActivity);
+      } else {
+        unit.push(typedActivity);
+      }
+    }
+
     return { global, unit };
   }
 
   /**
-   * Find all active activities (within validity period), optionally filtered by unit
+   * Find all active activities (within validity period), optionally filtered by unit - OPTIMIZED
    * @param unitId - Optional unit ID to filter by (null for SoYTe to see all)
    * @returns Active activities that are not soft deleted
    */
   async findActive(unitId?: string | null): Promise<DanhMucHoatDong[]> {
-    if (unitId === undefined || unitId === null) {
-      // SoYTe: Return all active activities
-      return db.query<DanhMucHoatDong>(`
-        SELECT * FROM "${this.tableName}"
-        WHERE ("HieuLucTu" IS NULL OR "HieuLucTu" <= CURRENT_DATE)
-          AND ("HieuLucDen" IS NULL OR "HieuLucDen" >= CURRENT_DATE)
-          AND "DaXoaMem" = false
-        ORDER BY "TenDanhMuc" ASC
-      `);
-    }
-
-    // DonVi: Return global + unit-specific active activities
+    // Optimized: Single query with better WHERE clause ordering for PostgreSQL
     return db.query<DanhMucHoatDong>(`
-      SELECT * FROM "${this.tableName}"
-      WHERE ("MaDonVi" IS NULL OR "MaDonVi" = $1)
+      SELECT "MaDanhMuc", "TenDanhMuc", "LoaiHoatDong", "DonViTinh", "TyLeQuyDoi",
+             "GioToiThieu", "GioToiDa", "YeuCauMinhChung", "HieuLucTu", "HieuLucDen",
+             "MaDonVi", "NguoiTao", "NguoiCapNhat", "TaoLuc", "CapNhatLuc", "TrangThai"
+      FROM "${this.tableName}"
+      WHERE "DaXoaMem" = false
         AND ("HieuLucTu" IS NULL OR "HieuLucTu" <= CURRENT_DATE)
         AND ("HieuLucDen" IS NULL OR "HieuLucDen" >= CURRENT_DATE)
-        AND "DaXoaMem" = false
+        ${unitId ? 'AND ("MaDonVi" IS NULL OR "MaDonVi" = $1)' : ''}
       ORDER BY "TenDanhMuc" ASC
-    `, [unitId]);
+    `, unitId ? [unitId] : []);
   }
 
   /**
-   * Find activities by type, optionally filtered by unit
+   * Find activities by type, optionally filtered by unit - OPTIMIZED
    * @param type - Activity type to filter by
    * @param unitId - Optional unit ID (null for SoYTe to see all)
    * @returns Activities of specified type that are not soft deleted
    */
   async findByType(type: string, unitId?: string | null): Promise<DanhMucHoatDong[]> {
-    if (unitId === undefined || unitId === null) {
-      // SoYTe: Return all activities of type
-      return db.query<DanhMucHoatDong>(`
-        SELECT * FROM "${this.tableName}"
-        WHERE "LoaiHoatDong" = $1
-          AND ("HieuLucTu" IS NULL OR "HieuLucTu" <= CURRENT_DATE)
-          AND ("HieuLucDen" IS NULL OR "HieuLucDen" >= CURRENT_DATE)
-          AND "DaXoaMem" = false
-        ORDER BY "TenDanhMuc" ASC
-      `, [type]);
-    }
-
-    // DonVi: Return global + unit-specific activities of type
+    // Optimized: Better parameter ordering and WHERE clause optimization
     return db.query<DanhMucHoatDong>(`
-      SELECT * FROM "${this.tableName}"
+      SELECT "MaDanhMuc", "TenDanhMuc", "LoaiHoatDong", "DonViTinh", "TyLeQuyDoi",
+             "GioToiThieu", "GioToiDa", "YeuCauMinhChung", "HieuLucTu", "HieuLucDen",
+             "MaDonVi", "NguoiTao", "NguoiCapNhat", "TaoLuc", "CapNhatLuc", "TrangThai"
+      FROM "${this.tableName}"
       WHERE "LoaiHoatDong" = $1
-        AND ("MaDonVi" IS NULL OR "MaDonVi" = $2)
+        AND "DaXoaMem" = false
         AND ("HieuLucTu" IS NULL OR "HieuLucTu" <= CURRENT_DATE)
         AND ("HieuLucDen" IS NULL OR "HieuLucDen" >= CURRENT_DATE)
-        AND "DaXoaMem" = false
+        ${unitId ? 'AND ("MaDonVi" IS NULL OR "MaDonVi" = $2)' : ''}
       ORDER BY "TenDanhMuc" ASC
-    `, [type, unitId]);
+    `, unitId ? [type, unitId] : [type]);
   }
 
   /**
@@ -1118,27 +1148,21 @@ export class DanhMucHoatDongRepository extends BaseRepository<DanhMucHoatDong, C
   }
 
   /**
-   * Find soft-deleted activities (for admin cleanup/restore)
+   * Find soft-deleted activities (for admin cleanup/restore) - OPTIMIZED
    * @param unitId - Optional unit ID to filter by (null for all)
    * @returns Soft-deleted activities
    */
   async findSoftDeleted(unitId?: string | null): Promise<DanhMucHoatDong[]> {
-    if (unitId === undefined || unitId === null) {
-      // SoYTe: Return all soft-deleted activities
-      return db.query<DanhMucHoatDong>(`
-        SELECT * FROM "${this.tableName}"
-        WHERE "DaXoaMem" = true
-        ORDER BY "CapNhatLuc" DESC
-      `);
-    }
-
-    // DonVi: Return soft-deleted activities from their unit
+    // Optimized: Single query with conditional WHERE clause and specific columns
     return db.query<DanhMucHoatDong>(`
-      SELECT * FROM "${this.tableName}"
+      SELECT "MaDanhMuc", "TenDanhMuc", "LoaiHoatDong", "DonViTinh", "TyLeQuyDoi",
+             "GioToiThieu", "GioToiDa", "YeuCauMinhChung", "HieuLucTu", "HieuLucDen",
+             "MaDonVi", "NguoiTao", "NguoiCapNhat", "TaoLuc", "CapNhatLuc", "TrangThai"
+      FROM "${this.tableName}"
       WHERE "DaXoaMem" = true
-        AND "MaDonVi" = $1
+        ${unitId ? 'AND "MaDonVi" = $1' : ''}
       ORDER BY "CapNhatLuc" DESC
-    `, [unitId]);
+    `, unitId ? [unitId] : []);
   }
 
   /**
@@ -1154,6 +1178,128 @@ export class DanhMucHoatDongRepository extends BaseRepository<DanhMucHoatDong, C
     `, [activityId]);
 
     return parseInt(result?.count || '0', 10);
+  }
+
+  /**
+   * Fast existence check for activity references (optimized for boolean checks)
+   * @param activityId - Activity ID to check
+   * @returns True if activity has any references, false otherwise
+   */
+  async hasReferences(activityId: string): Promise<boolean> {
+    const result = await db.queryOne<{ exists: boolean }>(`
+      SELECT EXISTS(
+        SELECT 1
+        FROM "GhiNhanHoatDong"
+        WHERE "MaDanhMuc" = $1
+      ) as exists
+    `, [activityId]);
+
+    return result?.exists ?? false;
+  }
+
+  /**
+   * Batch check for multiple activities' existence - OPTIMIZED
+   * @param activityIds - Array of activity IDs to check
+   * @param unitId - Optional unit ID for permission filtering
+   * @returns Map of activityId to existence boolean
+   */
+  async batchExists(activityIds: string[], unitId?: string): Promise<Map<string, boolean>> {
+    if (activityIds.length === 0) {
+      return new Map();
+    }
+
+    // Use ANY for efficient batch checking
+    const result = await db.query<{ MaDanhMuc: string }>(`
+      SELECT "MaDanhMuc"
+      FROM "${this.tableName}"
+      WHERE "MaDanhMuc" = ANY($1)
+        AND "DaXoaMem" = false
+        ${unitId ? 'AND ("MaDonVi" IS NULL OR "MaDonVi" = $2)' : ''}
+    `, unitId ? [activityIds, unitId] : [activityIds]);
+
+    const existenceMap = new Map<string, boolean>();
+    activityIds.forEach(id => existenceMap.set(id, false));
+    result.forEach(row => existenceMap.set(row.MaDanhMuc, true));
+
+    return existenceMap;
+  }
+
+  /**
+   * Find accessible activities with pagination - OPTIMIZED
+   * @param unitId - Unit ID
+   * @param page - Page number (1-indexed)
+   * @param limit - Items per page
+   * @param scope - Filter scope: 'all', 'global', 'unit'
+   * @returns Paginated activities with metadata
+   */
+  async findAccessiblePaginated(
+    unitId: string,
+    page: number = 1,
+    limit: number = 20,
+    scope: 'all' | 'global' | 'unit' = 'all'
+  ): Promise<{
+    activities: DanhMucHoatDong[];
+    pagination: { page: number; limit: number; total: number; totalPages: number; };
+  }> {
+    const offset = (page - 1) * limit;
+
+    // Build WHERE condition based on scope
+    let whereClause = '"DaXoaMem" = false';
+    let countWhereClause = '"DaXoaMem" = false';
+    const params: any[] = [];
+    const countParams: any[] = [];
+
+    switch (scope) {
+      case 'global':
+        whereClause += ' AND "MaDonVi" IS NULL';
+        countWhereClause += ' AND "MaDonVi" IS NULL';
+        break;
+      case 'unit':
+        whereClause += ' AND "MaDonVi" = $1';
+        countWhereClause += ' AND "MaDonVi" = $1';
+        params.push(unitId);
+        countParams.push(unitId);
+        break;
+      case 'all':
+      default:
+        whereClause += ' AND ("MaDonVi" IS NULL OR "MaDonVi" = $1)';
+        countWhereClause += ' AND ("MaDonVi" IS NULL OR "MaDonVi" = $1)';
+        params.push(unitId);
+        countParams.push(unitId);
+        break;
+    }
+
+    // Execute count and data queries in parallel for better performance
+    const [countResult, activitiesResult] = await Promise.all([
+      db.queryOne<{ total: string }>(`
+        SELECT COUNT(*) as total
+        FROM "${this.tableName}"
+        WHERE ${countWhereClause}
+      `, countParams),
+
+      db.query<DanhMucHoatDong>(`
+        SELECT "MaDanhMuc", "TenDanhMuc", "LoaiHoatDong", "DonViTinh", "TyLeQuyDoi",
+               "GioToiThieu", "GioToiDa", "YeuCauMinhChung", "HieuLucTu", "HieuLucDen",
+               "MaDonVi", "NguoiTao", "NguoiCapNhat", "TaoLuc", "CapNhatLuc", "TrangThai"
+        FROM "${this.tableName}"
+        WHERE ${whereClause}
+        ORDER BY "TenDanhMuc" ASC
+        LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+      `, [...params, limit, offset])
+    ]);
+
+    const total = parseInt(countResult?.total || '0', 10);
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      activities: activitiesResult,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages
+      }
+    };
   }
 }
 
