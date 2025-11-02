@@ -13,9 +13,9 @@
 
 ## 3. Data & Performance
 
-- [ ] 3.1 Reuse `/api/system/units-performance` for list data; add helpers only if additional metrics are required for the page header.
-- [ ] 3.2 Confirm React Query caching and prefetch behaviour continue to work when the grid renders outside the dashboard.
-- [ ] 3.3 Validate tenant isolation, pagination bounds, and multi-sort behaviour through server-driven queries.
+- [x] 3.1 Reuse `/api/system/units-performance` for list data; add helpers only if additional metrics are required for the page header.
+- [x] 3.2 Confirm React Query caching and prefetch behaviour continue to work when the grid renders outside the dashboard.
+- [x] 3.3 Validate tenant isolation, pagination bounds, and multi-sort behaviour through server-driven queries.
 
 ## 4. Observability & UX Polish
 
