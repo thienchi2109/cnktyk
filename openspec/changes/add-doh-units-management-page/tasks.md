@@ -19,12 +19,12 @@
 
 ## 4. Observability & UX Polish
 
-- [ ] 4.2 Mirror loading, empty, and error states from the dashboard grid to maintain consistent UX.
-- [ ] 4.3 Localize any new labels or helper text in Vietnamese consistent with existing strings.
+- [x] 4.2 Mirror loading, empty, and error states from the dashboard grid to maintain consistent UX.
+- [x] 4.3 Localize any new labels or helper text in Vietnamese consistent with existing strings.
 
 ## 5. Testing & Validation
 
-- [ ] 5.1 Unit-test any new hooks or utilities for query parameter synchronisation.
-- [ ] 5.2 Perform end-to-end verification (manual or automated) that the units page renders data, honours filters, and opens the detail sheet.
-- [ ] 5.3 Regression-test the SoYTe dashboard to confirm existing cards and overlays continue to render and navigate correctly.
+- [x] 5.1 Unit-test any new hooks or utilities for query parameter synchronisation.
+- [x] 5.2 Perform end-to-end verification (manual or automated) that the units page renders data, honours filters, and opens the detail sheet.
+- [x] 5.3 Regression-test the SoYTe dashboard to confirm existing cards and overlays continue to render and navigate correctly.
 - [ ] 5.4 Run `openspec validate add-doh-units-management-page --strict` and resolve any spec issues prior to implementation handoff.
