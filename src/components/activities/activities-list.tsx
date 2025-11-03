@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useActivitiesCatalog, ActivityCatalogItem, ActivityPermissions } from '@/hooks/use-activities';
 import { GlassCard } from '@/components/ui/glass-card';
 import { GlassButton } from '@/components/ui/glass-button';
 import { Input } from '@/components/ui/input';
@@ -31,40 +32,25 @@ import {
   Upload
 } from 'lucide-react';
 
-interface Activity {
-  MaDanhMuc: string;
-  TenDanhMuc: string;
-  LoaiHoatDong: 'KhoaHoc' | 'HoiThao' | 'NghienCuu' | 'BaoCao';
-  DonViTinh: 'gio' | 'tiet' | 'tin_chi';
-  TyLeQuyDoi: number;
-  GioToiThieu: number | null;
-  GioToiDa: number | null;
-  YeuCauMinhChung: boolean;
-  HieuLucTu: string | null;
-  HieuLucDen: string | null;
-  MaDonVi: string | null;
-  DaXoaMem?: boolean;
-}
-
-interface Permissions {
-  canCreateGlobal: boolean;
-  canCreateUnit: boolean;
-  canEditGlobal: boolean;
-  canEditUnit: boolean;
-  canAdoptToGlobal: boolean;
-  canRestoreSoftDeleted: boolean;
-}
-
 interface ActivitiesListProps {
   userRole: string;
   unitId?: string;
   onCreateActivity?: () => void;
-  onEditActivity?: (activity: Activity) => void;
+  onEditActivity?: (activity: ActivityCatalogItem) => void;
   onDeleteActivity?: (activityId: string) => void;
   onAdoptToGlobal?: (activityId: string) => Promise<void>;
   onRestoreActivity?: (activityId: string) => Promise<void>;
-  onPermissionsLoaded?: (permissions: Permissions) => void;
+  onPermissionsLoaded?: (permissions: ActivityPermissions) => void;
 }
+
+const defaultPermissions: ActivityPermissions = {
+  canCreateGlobal: false,
+  canCreateUnit: false,
+  canEditGlobal: false,
+  canEditUnit: false,
+  canAdoptToGlobal: false,
+  canRestoreSoftDeleted: false,
+};
 
 const activityTypeIcons = {
   KhoaHoc: BookOpen,
@@ -87,7 +73,7 @@ const unitLabels = {
 };
 
 // Get scope badge for activity
-const getScopeBadge = (activity: Activity, userRole: string) => {
+const getScopeBadge = (activity: ActivityCatalogItem, userRole: string) => {
   if (activity.MaDonVi === null) {
     return (
       <Badge className="bg-blue-100 text-blue-800 border-0">
@@ -106,7 +92,7 @@ const getScopeBadge = (activity: Activity, userRole: string) => {
 };
 
 // Get activity status based on validity period
-const getActivityStatus = (activity: Activity) => {
+const getActivityStatus = (activity: ActivityCatalogItem) => {
   const now = new Date();
   const startDate = activity.HieuLucTu ? new Date(activity.HieuLucTu) : null;
   const endDate = activity.HieuLucDen ? new Date(activity.HieuLucDen) : null;
@@ -122,7 +108,7 @@ const getActivityStatus = (activity: Activity) => {
   return { status: 'active', label: 'Đang hiệu lực', color: 'bg-green-100 text-green-800' };
 };
 
-const getStatusBadge = (activity: Activity) => {
+const getStatusBadge = (activity: ActivityCatalogItem) => {
   const { status, label, color } = getActivityStatus(activity);
   const Icon = status === 'active' ? CheckCircle : status === 'expired' ? XCircle : Clock;
   
@@ -144,62 +130,22 @@ export function ActivitiesList({
   onRestoreActivity,
   onPermissionsLoaded 
 }: ActivitiesListProps) {
-  const [globalActivities, setGlobalActivities] = useState<Activity[]>([]);
-  const [unitActivities, setUnitActivities] = useState<Activity[]>([]);
-  const [permissions, setPermissions] = useState<Permissions>({
-    canCreateGlobal: false,
-    canCreateUnit: false,
-    canEditGlobal: false,
-    canEditUnit: false,
-    canAdoptToGlobal: false,
-    canRestoreSoftDeleted: false,
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<string>('all');
-  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  const [selectedActivity, setSelectedActivity] = useState<ActivityCatalogItem | null>(null);
   const [showActivityDetail, setShowActivityDetail] = useState(false);
-
-  // Fetch activities with scoped API
-  const fetchActivities = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const params = new URLSearchParams({
-        scope: 'all',
-        limit: '100',
-      });
-
-      const response = await fetch(`/api/activities?${params}`);
-      
-      if (!response.ok) {
-        throw new Error('Không thể tải danh sách hoạt động');
-      }
-
-      const data = await response.json();
-      setGlobalActivities(data.global || []);
-      setUnitActivities(data.unit || []);
-      const loadedPermissions = data.permissions || {};
-      setPermissions(loadedPermissions);
-      
-      // Notify parent component of loaded permissions
-      if (onPermissionsLoaded) {
-        onPermissionsLoaded(loadedPermissions);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const { data, isLoading, isError, error } = useActivitiesCatalog();
+  const permissions = data?.permissions ?? defaultPermissions;
+  const globalActivities = data?.global ?? [];
+  const unitActivities = data?.unit ?? [];
 
   useEffect(() => {
-    fetchActivities();
-  }, []);
+    if (data?.permissions && onPermissionsLoaded) {
+      onPermissionsLoaded(data.permissions);
+    }
+  }, [data?.permissions, onPermissionsLoaded]);
 
   // Get activities based on active tab
   const getDisplayActivities = () => {
@@ -209,7 +155,7 @@ export function ActivitiesList({
   };
 
   // Filter activities based on search, type, and status
-  const filterActivities = (activities: Activity[]) => {
+  const filterActivities = (activities: ActivityCatalogItem[]) => {
     return activities.filter(activity => {
       const matchesSearch = activity.TenDanhMuc.toLowerCase().includes(searchTerm.toLowerCase());
       
@@ -235,7 +181,7 @@ export function ActivitiesList({
   };
 
   // Check if user can edit this specific activity
-  const canEditActivity = (activity: Activity) => {
+  const canEditActivity = (activity: ActivityCatalogItem) => {
     if (activity.MaDonVi === null) {
       return permissions.canEditGlobal;
     }
@@ -243,18 +189,18 @@ export function ActivitiesList({
   };
 
   // Check if user can delete this specific activity
-  const canDeleteActivity = (activity: Activity) => {
+  const canDeleteActivity = (activity: ActivityCatalogItem) => {
     if (activity.MaDonVi === null) {
       return permissions.canEditGlobal;
     }
     return permissions.canEditUnit;
   };
 
-  if (error) {
+  if (isError) {
     return (
       <Alert className="border-red-200 bg-red-50">
         <AlertDescription className="text-red-700">
-          {error}
+          {error instanceof Error ? error.message : 'Có lỗi xảy ra'}
         </AlertDescription>
       </Alert>
     );

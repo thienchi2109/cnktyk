@@ -174,24 +174,24 @@ Replace `window.location.reload()` with proper state management:
 ### Implementation Benefits
 - **Low Risk**: Backward compatible with existing ActivityForm
 - **Established Pattern**: Copy from working practitioners implementation
-- **Incremental**: Can ship sheet while keeping modal as fallback
+- **Direct Replacement**: Clean swap from modal to sheet without gradual rollout
 
 ## Implementation Tasks
 
 ### Phase 1: Create Sheet Components
-- [ ] Create `ActivityFormSheet` component based on `PractitionerDetailSheet`
-- [ ] Add `variant` prop to `ActivityForm` for sheet-specific styling
-- [ ] Implement basic sheet functionality with existing form logic
+- [x] Create `ActivityFormSheet` component based on `PractitionerDetailSheet`
+- [x] Add `variant` prop to `ActivityForm` for sheet-specific styling
+- [x] Implement basic sheet functionality with existing form logic
 
 ### Phase 2: Update Page Integration
-- [ ] Replace `GlassModal` with `ActivityFormSheet` in activities page
-- [ ] Update state management (remove `window.location.reload()`)
-- [ ] Test create/edit/permissions workflows
+- [x] Replace `GlassModal` with `ActivityFormSheet` in activities page
+- [x] Update state management (remove `window.location.reload()`)
+- [x] Test create/edit/permissions workflows
 
 ### Phase 3: Enhancements
-- [ ] Add React Query for proper cache management
-- [ ] Implement optimistic updates for better UX
-- [ ] Add loading states and success/error feedback
+- [x] Add React Query for proper cache management
+- [x] Implement optimistic updates for better UX
+- [x] Add loading states and success/error feedback
 
 ### Phase 4: Testing & Polish
 - [ ] Cross-browser and cross-device testing
@@ -201,17 +201,18 @@ Replace `window.location.reload()` with proper state management:
 
 ## Migration Strategy
 
-### Backward Compatibility
-- Keep `variant="modal"` as default for existing usages
-- No breaking changes to ActivityForm API
-- Gradual migration path for other potential modal forms
+### Direct Implementation Approach
+- **Immediate Replacement**: Replace GlassModal with ActivityFormSheet in activities page
+- **Backward Compatibility**: Keep `variant="modal"` as default for existing ActivityForm usages
+- **No Breaking Changes**: ActivityForm API remains unchanged with optional variant prop
+- **Single Deployment**: One-time deployment without gradual rollout complexity
 
 ### Rollout Plan
-1. **Feature Flag**: Add sheet form behind feature flag
-2. **Dogfooding**: Test with internal users first
-3. **Canary Release**: Enable for subset of DonVi users
-4. **Full Release**: Replace modal as default for activities page
-5. **Cleanup**: Remove modal code once sheet is proven stable
+1. **Implementation**: Replace modal with sheet form in activities page
+2. **Testing**: Comprehensive testing across all user roles (DonVi, SoYTe, NguoiHanhNghe)
+3. **Deployment**: Full deployment with backward-compatible ActivityForm component
+4. **Monitoring**: Monitor user feedback and error rates post-deployment
+5. **Future Enhancement**: Consider adding detail view mode within sheet for progressive enhancement
 
 ### Success Metrics
 - **Reduced Form Abandonment**: Users complete forms more often with better UX

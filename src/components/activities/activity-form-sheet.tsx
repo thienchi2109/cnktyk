@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Sheet,
   SheetContent,
@@ -16,8 +17,16 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LoadingNotice } from '@/components/ui/loading-notice';
-import { AlertTriangle, Plus, Edit, X } from 'lucide-react';
+import { AlertTriangle, Plus, Edit } from 'lucide-react';
 import { ActivityForm } from './activity-form';
+import {
+  activitiesCatalogQueryKey,
+  upsertActivityCatalogEntry,
+  removeActivityCatalogEntry,
+  ActivityCatalogItem,
+  ActivityPermissions,
+  ActivitiesCatalogResponse
+} from '@/hooks/use-activities';
 
 interface ActivityFormSheetProps {
   activityId?: string | null;
@@ -26,14 +35,8 @@ interface ActivityFormSheetProps {
   mode: 'create' | 'edit';
   userRole?: string;
   unitId?: string;
-  permissions?: {
-    canCreateGlobal: boolean;
-    canCreateUnit: boolean;
-    canEditGlobal: boolean;
-    canEditUnit: boolean;
-    canAdoptToGlobal: boolean;
-  };
-  onUpdate?: () => void;
+  permissions?: ActivityPermissions;
+  onUpdate?: (result: { type: 'create' | 'update'; activity: ActivityCatalogItem }) => void;
 }
 
 type ActivityFormData = {
@@ -46,7 +49,106 @@ type ActivityFormData = {
   YeuCauMinhChung: boolean;
   HieuLucTu?: string;
   HieuLucDen?: string;
+  MaDonVi?: string | null;
+  adoptToGlobal?: boolean;
 };
+
+interface ActivityMutationVariables {
+  payload: Record<string, unknown>;
+  optimistic: ActivityCatalogItem;
+  mode: 'create' | 'edit';
+  activityId?: string | null;
+}
+
+interface ActivityMutationContext {
+  previousCatalog?: ActivitiesCatalogResponse;
+  tempId?: string;
+}
+
+const detailQueryKey = (activityId?: string | null) =>
+  ['activities', 'detail', activityId ?? 'new'] as const;
+
+async function fetchActivityDetail(activityId: string, signal?: AbortSignal) {
+  const response = await fetch(`/api/activities/${activityId}`, { signal });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Không thể tải thông tin hoạt động');
+  }
+  return response.json() as Promise<ActivityCatalogItem>;
+}
+
+function prepareSubmission(options: {
+  formValues: ActivityFormData;
+  mode: 'create' | 'edit';
+  activity: ActivityCatalogItem | null;
+  activityId?: string | null;
+  userRole: string;
+  unitId?: string;
+}): { payload: Record<string, unknown>; optimistic: ActivityCatalogItem } {
+  const { formValues, mode, activity, activityId, userRole, unitId } = options;
+
+  const shouldAdoptToGlobal =
+    mode === 'edit' &&
+    userRole === 'SoYTe' &&
+    formValues.adoptToGlobal &&
+    activity?.MaDonVi !== null;
+
+  let resolvedUnitId: string | null = null;
+  if (mode === 'create') {
+    if (userRole === 'DonVi') {
+      resolvedUnitId = unitId ?? null;
+    } else {
+      const raw = formValues.MaDonVi;
+      resolvedUnitId = raw === '' ? null : raw ?? null;
+    }
+  } else {
+    if (shouldAdoptToGlobal) {
+      resolvedUnitId = null;
+    } else {
+      resolvedUnitId = activity?.MaDonVi ?? null;
+    }
+  }
+
+  const payload: Record<string, unknown> = {
+    TenDanhMuc: formValues.TenDanhMuc,
+    LoaiHoatDong: formValues.LoaiHoatDong,
+    DonViTinh: formValues.DonViTinh,
+    TyLeQuyDoi: formValues.TyLeQuyDoi,
+    GioToiThieu: formValues.GioToiThieu,
+    GioToiDa: formValues.GioToiDa,
+    YeuCauMinhChung: formValues.YeuCauMinhChung,
+    HieuLucTu: formValues.HieuLucTu ? new Date(formValues.HieuLucTu) : null,
+    HieuLucDen: formValues.HieuLucDen ? new Date(formValues.HieuLucDen) : null,
+  };
+
+  if (mode === 'create') {
+    payload.MaDonVi = resolvedUnitId;
+  } else if (shouldAdoptToGlobal) {
+    payload.MaDonVi = null;
+  }
+
+  const optimisticId =
+    mode === 'create'
+      ? `temp-${Date.now()}`
+      : activity?.MaDanhMuc ?? activityId ?? `temp-${Date.now()}`;
+
+  const optimistic: ActivityCatalogItem = {
+    MaDanhMuc: optimisticId,
+    TenDanhMuc: formValues.TenDanhMuc,
+    LoaiHoatDong: formValues.LoaiHoatDong,
+    DonViTinh: formValues.DonViTinh,
+    TyLeQuyDoi: formValues.TyLeQuyDoi,
+    GioToiThieu: formValues.GioToiThieu,
+    GioToiDa: formValues.GioToiDa,
+    YeuCauMinhChung: formValues.YeuCauMinhChung,
+    HieuLucTu: formValues.HieuLucTu && formValues.HieuLucTu.length > 0 ? formValues.HieuLucTu : null,
+    HieuLucDen: formValues.HieuLucDen && formValues.HieuLucDen.length > 0 ? formValues.HieuLucDen : null,
+    MaDonVi: resolvedUnitId,
+    DaXoaMem: activity?.DaXoaMem ?? false,
+  };
+
+  return { payload, optimistic };
+}
 
 export function ActivityFormSheet({
   activityId,
@@ -61,94 +163,132 @@ export function ActivityFormSheet({
     canEditGlobal: false,
     canEditUnit: false,
     canAdoptToGlobal: false,
+    canRestoreSoftDeleted: false,
   },
-  onUpdate
+  onUpdate,
 }: ActivityFormSheetProps) {
-  const [activity, setActivity] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (open && activityId && mode === 'edit') {
-      fetchActivityDetails();
-    } else if (mode === 'create') {
-      setActivity(null);
-      setError(null);
+    if (!open) {
+      setMutationError(null);
     }
-  }, [open, activityId, mode]);
+  }, [open]);
 
-  const fetchActivityDetails = async () => {
-    if (!activityId) return;
+  const shouldFetchDetail = open && mode === 'edit' && Boolean(activityId);
 
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`/api/activities/${activityId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setActivity(data);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Không thể tải thông tin hoạt động');
-      }
-    } catch (error) {
-      console.error('Error fetching activity details:', error);
-      setError(error instanceof Error ? error.message : 'Có lỗi xảy ra khi tải thông tin');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const activityDetailQuery = useQuery<ActivityCatalogItem>({
+    queryKey: detailQueryKey(activityId),
+    queryFn: ({ signal }) => fetchActivityDetail(activityId as string, signal),
+    enabled: shouldFetchDetail,
+    staleTime: 60 * 1000,
+  });
 
-  const handleSubmit = async (data: ActivityFormData) => {
-    try {
-      setIsSubmitting(true);
-      setError(null);
+  const activity = mode === 'edit' ? activityDetailQuery.data ?? null : null;
+  const detailError =
+    activityDetailQuery.error instanceof Error
+      ? activityDetailQuery.error.message
+      : null;
+  const displayError = mutationError ?? detailError;
 
-      // Convert date strings to Date objects or null
-      const processedData = {
-        ...data,
-        HieuLucTu: data.HieuLucTu ? new Date(data.HieuLucTu) : null,
-        HieuLucDen: data.HieuLucDen ? new Date(data.HieuLucDen) : null,
-      };
-
-      const url = mode === 'create'
-        ? '/api/activities'
-        : `/api/activities/${activityId}`;
-
-      const method = mode === 'create' ? 'POST' : 'PUT';
+  const mutation = useMutation<ActivityCatalogItem, Error, ActivityMutationVariables, ActivityMutationContext>({
+    mutationFn: async ({ payload, mode: submitMode, activityId: submitId }) => {
+      const url = submitMode === 'create' ? '/api/activities' : `/api/activities/${submitId}`;
+      const method = submitMode === 'create' ? 'POST' : 'PUT';
 
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(processedData),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Không thể ${mode === 'create' ? 'tạo' : 'cập nhật'} hoạt động`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.error ||
+            `Không thể ${submitMode === 'create' ? 'tạo' : 'cập nhật'} hoạt động`
+        );
       }
 
-      // Call update callback
-      if (onUpdate) {
-        onUpdate();
+      const result = await response.json();
+      return result as ActivityCatalogItem;
+    },
+    onMutate: async (variables) => {
+      setMutationError(null);
+      const catalogKey = activitiesCatalogQueryKey();
+      await queryClient.cancelQueries({ queryKey: catalogKey });
+
+      const previousCatalog = queryClient.getQueryData<ActivitiesCatalogResponse>(catalogKey);
+      if (previousCatalog) {
+        const nextCatalog = upsertActivityCatalogEntry(previousCatalog, variables.optimistic);
+        if (nextCatalog) {
+          queryClient.setQueryData(catalogKey, nextCatalog);
+        }
       }
 
-      // Close sheet
+      const tempId =
+        variables.mode === 'create' ? variables.optimistic.MaDanhMuc : undefined;
+
+      return { previousCatalog, tempId };
+    },
+    onError: (error, _variables, context) => {
+      if (context?.previousCatalog) {
+        queryClient.setQueryData(activitiesCatalogQueryKey(), context.previousCatalog);
+      }
+      setMutationError(error instanceof Error ? error.message : 'Có lỗi xảy ra');
+    },
+    onSuccess: (result, variables, context) => {
+      queryClient.setQueryData(activitiesCatalogQueryKey(), (current) => {
+        let nextCatalog = current as ActivitiesCatalogResponse | undefined;
+        if (context?.tempId) {
+          nextCatalog = removeActivityCatalogEntry(nextCatalog, context.tempId);
+        }
+        return upsertActivityCatalogEntry(nextCatalog, result) ?? nextCatalog;
+      });
+
+      onUpdate?.({
+        type: variables.mode === 'create' ? 'create' : 'update',
+        activity: result,
+      });
+
       onOpenChange(false);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: activitiesCatalogQueryKey() });
+    },
+  });
 
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
-    } finally {
-      setIsSubmitting(false);
+  const handleSubmit = async (formValues: ActivityFormData) => {
+    const { payload, optimistic } = prepareSubmission({
+      formValues,
+      mode,
+      activity,
+      activityId,
+      userRole,
+      unitId,
+    });
+
+    try {
+      await mutation.mutateAsync({
+        payload,
+        optimistic,
+        mode,
+        activityId,
+      });
+    } catch (error) {
+      throw error;
     }
   };
 
   const handleCancel = () => {
     onOpenChange(false);
   };
+
+  const isDetailLoading = activityDetailQuery.isLoading && mode === 'edit';
+  const formKey = mode === 'create' ? 'create' : activityId ?? 'edit';
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -170,35 +310,39 @@ export function ActivityFormSheet({
           <SheetDescription>
             {mode === 'create'
               ? 'Tạo hoạt động mới cho danh mục'
-              : 'Cập nhật thông tin hoạt động'
-            }
+              : 'Cập nhật thông tin hoạt động'}
           </SheetDescription>
         </SheetHeader>
 
         <div className="mt-6">
-          {loading ? (
+          {isDetailLoading ? (
             <div className="space-y-4">
-              <LoadingNotice message="Đang tải thông tin hoạt động..." align="left" size="sm" />
+              <LoadingNotice
+                message="Đang tải thông tin hoạt động..."
+                align="left"
+                size="sm"
+              />
               <Skeleton className="h-8 w-full" />
               <Skeleton className="h-12 w-full" />
               <Skeleton className="h-12 w-full" />
               <Skeleton className="h-24 w-full" />
             </div>
-          ) : error ? (
+          ) : displayError ? (
             <Alert className="mb-4 border-red-200 bg-red-50">
               <AlertTriangle className="h-4 w-4 text-red-600" />
               <AlertDescription className="text-red-700">
-                {error}
+                {displayError}
               </AlertDescription>
             </Alert>
           ) : (
             <ActivityForm
+              key={formKey}
               variant="sheet"
               activity={activity}
               mode={mode}
               onSubmit={handleSubmit}
               onCancel={handleCancel}
-              isLoading={isSubmitting}
+              isLoading={mutation.isPending}
               userRole={userRole}
               unitId={unitId}
               permissions={permissions}
