@@ -521,7 +521,8 @@ export function ActivitySubmissionForm({
           </div>
         ) : (
           /* Sheet variant - for modal */
-          <div className="fixed bottom-6 right-6 flex gap-3 z-50">
+          <div className="fixed bottom-0 left-0 right-0 flex justify-end gap-3 z-50 p-4 bg-white/95 backdrop-blur-sm border-t border-gray-200">
+            {/* Secondary Action Button - Cancel (only if onCancel provided) */}
             {onCancel && (
               <Button
                 type="button"
@@ -535,6 +536,8 @@ export function ActivitySubmissionForm({
                 Hủy
               </Button>
             )}
+
+            {/* Primary Action Button - Save/Update */}
             <Button
               type="submit"
               disabled={isLoading}
