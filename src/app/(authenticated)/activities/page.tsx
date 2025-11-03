@@ -39,6 +39,13 @@ export default function ActivitiesPage() {
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [permissions, setPermissions] = useState({
+    canCreateGlobal: false,
+    canCreateUnit: false,
+    canEditGlobal: false,
+    canEditUnit: false,
+    canAdoptToGlobal: false,
+  });
 
   // Loading state
   if (status === 'loading') {
@@ -257,6 +264,7 @@ export default function ActivitiesPage() {
           onDeleteActivity={handleDeleteActivity}
           onAdoptToGlobal={handleAdoptToGlobal}
           onRestoreActivity={handleRestoreActivity}
+          onPermissionsLoaded={setPermissions}
         />
 
         {/* Create/Edit Modal */}
@@ -273,6 +281,9 @@ export default function ActivitiesPage() {
               onSubmit={selectedActivity ? handleUpdateActivity : handleCreateActivity}
               onCancel={handleModalClose}
               isLoading={isSubmitting}
+              userRole={userRole}
+              unitId={session.user.unitId}
+              permissions={permissions}
             />
           </GlassModal>
         )}

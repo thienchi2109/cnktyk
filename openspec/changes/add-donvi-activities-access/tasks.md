@@ -19,8 +19,8 @@
 ## 4. Frontend
 - [x] Refactor Activities page to consume scoped payload, render tabs (global, unit, soft-deleted for SoYTe), and display scope badges.
 - [x] Update `ActivitiesList` actions for permission-aware create/edit/delete/adopt/restore flows with confirmation dialogs.
-- [ ] Update `ActivityForm` to hide scope controls for DonVi, expose adopt-to-global options for SoYTe, and display soft-delete warnings.
-- [ ] Add Playwright coverage for DonVi CRUD (within unit) and SoYTe adoption/restore flows.
+- [x] Update `ActivityForm` to hide scope controls for DonVi, expose adopt-to-global options for SoYTe, and display soft-delete warnings.
+- [x] Add Playwright coverage for DonVi CRUD (within unit) and SoYTe adoption/restore flows.
 
 ## 5. Docs & Telemetry
 - [ ] Update `docs/add-donvi-activities-access.md` and unit admin guides with adoption and soft-delete procedures.

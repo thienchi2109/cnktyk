@@ -63,6 +63,7 @@ interface ActivitiesListProps {
   onDeleteActivity?: (activityId: string) => void;
   onAdoptToGlobal?: (activityId: string) => Promise<void>;
   onRestoreActivity?: (activityId: string) => Promise<void>;
+  onPermissionsLoaded?: (permissions: Permissions) => void;
 }
 
 const activityTypeIcons = {
@@ -140,7 +141,8 @@ export function ActivitiesList({
   onEditActivity, 
   onDeleteActivity,
   onAdoptToGlobal,
-  onRestoreActivity 
+  onRestoreActivity,
+  onPermissionsLoaded 
 }: ActivitiesListProps) {
   const [globalActivities, setGlobalActivities] = useState<Activity[]>([]);
   const [unitActivities, setUnitActivities] = useState<Activity[]>([]);
@@ -181,7 +183,13 @@ export function ActivitiesList({
       const data = await response.json();
       setGlobalActivities(data.global || []);
       setUnitActivities(data.unit || []);
-      setPermissions(data.permissions || {});
+      const loadedPermissions = data.permissions || {};
+      setPermissions(loadedPermissions);
+      
+      // Notify parent component of loaded permissions
+      if (onPermissionsLoaded) {
+        onPermissionsLoaded(loadedPermissions);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
     } finally {
