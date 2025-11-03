@@ -2,12 +2,12 @@
 
 import * as React from "react";
 import { useRouter } from 'next/navigation';
-import { 
-  Home, 
-  Users, 
-  FileText, 
-  BarChart3, 
-  Settings, 
+import {
+  Home,
+  Users,
+  FileText,
+  BarChart3,
+  Settings,
   Shield,
   Activity,
   AlertCircle,
@@ -16,7 +16,9 @@ import {
   ChevronDown,
   Award,
   Menu,
-  X
+  X,
+  FileArchive,
+  FolderOpen
 } from "lucide-react";
 import { GlassHeader } from "./glass-header";
 import { GlassFooter } from "./glass-footer";
@@ -82,7 +84,7 @@ const getNavigationItems = (
       },
       {
         id: 'submissions',
-        label: 'Hoạt động',
+        label: 'Ghi nhận hoạt động',
         icon: <Activity className="h-4 w-4" />,
         href: '/submissions'
       },
@@ -113,11 +115,24 @@ const getNavigationItems = (
         href: '/practitioners'
       },
       {
-        id: 'submissions',
-        label: 'Hoạt động',
+        id: 'activity-management',
+        label: 'Quản lý hoạt động',
         icon: <Activity className="h-4 w-4" />,
-        href: '/submissions',
-        badge: pending > 0 ? pending : undefined
+        children: [
+          {
+            id: 'submissions',
+            label: 'Ghi nhận hoạt động',
+            icon: <Activity className="h-4 w-4" />,
+            href: '/submissions',
+            badge: pending > 0 ? pending : undefined
+          },
+          {
+            id: 'activities',
+            label: 'Danh mục hoạt động',
+            icon: <FileText className="h-4 w-4" />,
+            href: '/activities'
+          }
+        ]
       },
       {
         id: 'reports',
@@ -160,9 +175,9 @@ const getNavigationItems = (
         id: 'units',
         label: 'Đơn vị',
         icon: <Users className="h-4 w-4" />,
-        href: '/units'
+        href: '/dashboard/doh/units'
       },
-      {
+        {
         id: 'analytics',
         label: 'Phân tích',
         icon: <BarChart3 className="h-4 w-4" />,
@@ -200,10 +215,23 @@ const getNavigationItems = (
         href: '/users'
       },
       {
-        id: 'files',
-        label: 'Tệp tin',
-        icon: <Upload className="h-4 w-4" />,
-        href: '/files/demo'
+        id: 'file-management',
+        label: 'Quản lý tệp tin',
+        icon: <FolderOpen className="h-4 w-4" />,
+        children: [
+          {
+            id: 'files',
+            label: 'Tải lên tệp tin',
+            icon: <Upload className="h-4 w-4" />,
+            href: '/files/demo'
+          },
+          {
+            id: 'backup-center',
+            label: 'Sao lưu minh chứng',
+            icon: <FileArchive className="h-4 w-4" />,
+            href: '/so-y-te/backup'
+          }
+        ]
       },
       {
         id: 'notifications',

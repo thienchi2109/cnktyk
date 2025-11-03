@@ -4,6 +4,7 @@ import { isDonViAccountManagementEnabled } from "@/lib/features/flags";
 
 // Define protected routes and their required roles
 const PROTECTED_ROUTES = {
+  "/dashboard/doh": ["SoYTe"], // SoYTe-specific dashboard and units management
   "/dashboard": ["SoYTe", "DonVi", "NguoiHanhNghe", "Auditor"],
   "/practitioners": ["SoYTe", "DonVi", "NguoiHanhNghe"],
   "/activities": ["SoYTe", "DonVi"],
@@ -13,6 +14,7 @@ const PROTECTED_ROUTES = {
   "/users": ["SoYTe", "DonVi"],
   "/profile": ["SoYTe", "DonVi", "NguoiHanhNghe", "Auditor"],
   "/files": ["SoYTe", "DonVi"],
+  "/so-y-te": ["SoYTe"], // Protect backup center and other SoYTe-specific routes
 } as const;
 
 // Public routes that don't require authentication

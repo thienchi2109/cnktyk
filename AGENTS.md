@@ -50,6 +50,13 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - **Deployment**: Cloudflare Workers + Pages (primary), Vercel (fallback)
 - **Package Manager**: Use `npm` exclusively
 
+## Backup Documentation Access
+- When implementing or auditing evidence backup or cleanup workflows, review:
+  - `openspec/changes/add-evidence-backup-and-cleanup/docs/user-guide.md`
+  - `openspec/changes/add-evidence-backup-and-cleanup/docs/admin-guide.md`
+  - `openspec/changes/add-evidence-backup-and-cleanup/design.md`
+- Reference `src/app/api/backup/*` for the latest endpoints (streaming ZIP creation, estimation, dashboard metrics, deletion safeguards).
+
 ## WARP Integration Guidelines (from WARP.md)
 
 ### MCP Tool Prioritization

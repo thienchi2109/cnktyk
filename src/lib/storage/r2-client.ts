@@ -5,6 +5,8 @@
 
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { Readable } from 'stream';
+import { ReadableStream as WebReadableStream } from 'stream/web';
 
 export interface FileMetadata {
   filename: string;
@@ -219,6 +221,69 @@ class R2StorageClient {
    */
   isR2Configured(): boolean {
     return this.isConfigured;
+  }
+
+  /**
+   * Download a file from R2 storage as a Buffer
+   * Used for backup operations
+   */
+  async downloadFileStream(filename: string): Promise<Readable | null> {
+    if (!this.isConfigured || !this.client) {
+      console.warn('Cloudflare R2 is not configured. File download functionality is disabled.');
+      return null;
+    }
+
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucketName,
+        Key: filename,
+      });
+
+      const response = await this.client.send(command);
+      const body = response.Body;
+
+      if (!body) {
+        return null;
+      }
+
+      if (body instanceof Readable) {
+        return body;
+      }
+
+      if (typeof (body as any).transformToWebStream === 'function') {
+        return Readable.fromWeb((body as any).transformToWebStream());
+      }
+
+      if (typeof Readable.fromWeb === 'function' && body instanceof WebReadableStream) {
+        return Readable.fromWeb(body as WebReadableStream<any>);
+      }
+
+      console.warn('Unsupported R2 body stream type, returning null');
+      return null;
+    } catch (error) {
+      console.error('R2 download stream error:', error);
+      return null;
+    }
+  }
+
+  async downloadFile(filename: string): Promise<Buffer | null> {
+    const stream = await this.downloadFileStream(filename);
+
+    if (!stream) {
+      return null;
+    }
+
+    try {
+      const chunks: Buffer[] = [];
+      for await (const chunk of stream) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      }
+
+      return Buffer.concat(chunks);
+    } catch (error) {
+      console.error('R2 download error:', error);
+      return null;
+    }
   }
 }
 

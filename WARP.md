@@ -41,6 +41,16 @@ When working with this codebase, prioritize tools in the following order:
 
 **General Principle:** Use the most specialized tool for the task. Neon for DB, gkg for code, human for thinking.
 
+## Evidence Backup Operations
+
+- **UI entrypoint:** `/so-y-te/backup` (SoYTe role only) provides backup creation, size estimation, and post-backup deletion flows.
+- **Endpoints:**
+  - `POST /api/backup/evidence-files` – streams ZIP archives with concurrent Cloudflare R2 downloads and manifest generation.
+  - `POST /api/backup/evidence-files/estimate` – returns file counts, size projections, and warnings before backup execution.
+  - `GET /api/backup/dashboard` – exposes recent backup/deletion metrics for the dashboard cards.
+  - `POST /api/backup/delete-archived` – enforces confirmation tokens, recent backup checks, and cooldowns before deleting R2 objects.
+- **Documentation:** See `openspec/changes/add-evidence-backup-and-cleanup/docs/` for user/admin guides and `design.md` for deeper architectural details.
+
 ## Common Commands
 
 ### Development

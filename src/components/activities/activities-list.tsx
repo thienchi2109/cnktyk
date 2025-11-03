@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useActivitiesCatalog, ActivityCatalogItem, ActivityPermissions } from '@/hooks/use-activities';
 import { GlassCard } from '@/components/ui/glass-card';
 import { GlassButton } from '@/components/ui/glass-button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { LoadingNotice } from '@/components/ui/loading-notice';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ActivityDetailSheet } from './activity-detail-sheet';
 import { 
   Search, 
@@ -23,28 +25,32 @@ import {
   FileText,
   Clock,
   CheckCircle,
-  XCircle
+  XCircle,
+  Globe,
+  Building2,
+  ArchiveRestore,
+  Upload
 } from 'lucide-react';
-
-interface Activity {
-  MaDanhMuc: string;
-  TenDanhMuc: string;
-  LoaiHoatDong: 'KhoaHoc' | 'HoiThao' | 'NghienCuu' | 'BaoCao';
-  DonViTinh: 'gio' | 'tiet' | 'tin_chi';
-  TyLeQuyDoi: number;
-  GioToiThieu: number | null;
-  GioToiDa: number | null;
-  YeuCauMinhChung: boolean;
-  HieuLucTu: string | null;
-  HieuLucDen: string | null;
-}
 
 interface ActivitiesListProps {
   userRole: string;
+  unitId?: string;
   onCreateActivity?: () => void;
-  onEditActivity?: (activity: Activity) => void;
+  onEditActivity?: (activity: ActivityCatalogItem) => void;
   onDeleteActivity?: (activityId: string) => void;
+  onAdoptToGlobal?: (activityId: string) => Promise<void>;
+  onRestoreActivity?: (activityId: string) => Promise<void>;
+  onPermissionsLoaded?: (permissions: ActivityPermissions) => void;
 }
+
+const defaultPermissions: ActivityPermissions = {
+  canCreateGlobal: false,
+  canCreateUnit: false,
+  canEditGlobal: false,
+  canEditUnit: false,
+  canAdoptToGlobal: false,
+  canRestoreSoftDeleted: false,
+};
 
 const activityTypeIcons = {
   KhoaHoc: BookOpen,
@@ -66,13 +72,27 @@ const unitLabels = {
   tin_chi: 'Tín chỉ',
 };
 
-// Check if user can manage activities (admin only)
-const canManageActivities = (userRole: string) => {
-  return userRole === 'SoYTe';
+// Get scope badge for activity
+const getScopeBadge = (activity: ActivityCatalogItem, userRole: string) => {
+  if (activity.MaDonVi === null) {
+    return (
+      <Badge className="bg-blue-100 text-blue-800 border-0">
+        <Globe className="h-3 w-3 mr-1" />
+        Hệ thống
+      </Badge>
+    );
+  }
+  
+  return (
+    <Badge className="bg-purple-100 text-purple-800 border-0">
+      <Building2 className="h-3 w-3 mr-1" />
+      Đơn vị
+    </Badge>
+  );
 };
 
 // Get activity status based on validity period
-const getActivityStatus = (activity: Activity) => {
+const getActivityStatus = (activity: ActivityCatalogItem) => {
   const now = new Date();
   const startDate = activity.HieuLucTu ? new Date(activity.HieuLucTu) : null;
   const endDate = activity.HieuLucDen ? new Date(activity.HieuLucDen) : null;
@@ -88,7 +108,7 @@ const getActivityStatus = (activity: Activity) => {
   return { status: 'active', label: 'Đang hiệu lực', color: 'bg-green-100 text-green-800' };
 };
 
-const getStatusBadge = (activity: Activity) => {
+const getStatusBadge = (activity: ActivityCatalogItem) => {
   const { status, label, color } = getActivityStatus(activity);
   const Icon = status === 'active' ? CheckCircle : status === 'expired' ? XCircle : Clock;
   
@@ -100,77 +120,87 @@ const getStatusBadge = (activity: Activity) => {
   );
 };
 
-export function ActivitiesList({ userRole, onCreateActivity, onEditActivity, onDeleteActivity }: ActivitiesListProps) {
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export function ActivitiesList({ 
+  userRole, 
+  unitId,
+  onCreateActivity, 
+  onEditActivity, 
+  onDeleteActivity,
+  onAdoptToGlobal,
+  onRestoreActivity,
+  onPermissionsLoaded 
+}: ActivitiesListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [page, setPage] = useState(1);
-  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('all');
+  const [selectedActivity, setSelectedActivity] = useState<ActivityCatalogItem | null>(null);
   const [showActivityDetail, setShowActivityDetail] = useState(false);
-
-  // Fetch activities
-  const fetchActivities = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: '20',
-      });
-
-      if (typeFilter !== 'all') {
-        params.append('type', typeFilter);
-      }
-
-      const response = await fetch(`/api/activities?${params}`);
-      
-      if (!response.ok) {
-        throw new Error('Không thể tải danh sách hoạt động');
-      }
-
-      const data = await response.json();
-      setActivities(data.activities || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const { data, isLoading, isError, error } = useActivitiesCatalog();
+  const permissions = data?.permissions ?? defaultPermissions;
+  const globalActivities = data?.global ?? [];
+  const unitActivities = data?.unit ?? [];
 
   useEffect(() => {
-    fetchActivities();
-  }, [page, typeFilter]);
-
-  // Filter activities based on search and status
-  const filteredActivities = activities.filter(activity => {
-    const matchesSearch = activity.TenDanhMuc.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    if (statusFilter === 'all') {
-      return matchesSearch;
+    if (data?.permissions && onPermissionsLoaded) {
+      onPermissionsLoaded(data.permissions);
     }
-    
-    const { status } = getActivityStatus(activity);
-    return matchesSearch && status === statusFilter;
-  });
+  }, [data?.permissions, onPermissionsLoaded]);
+
+  // Get activities based on active tab
+  const getDisplayActivities = () => {
+    if (activeTab === 'global') return globalActivities;
+    if (activeTab === 'unit') return unitActivities;
+    return [...globalActivities, ...unitActivities]; // all
+  };
+
+  // Filter activities based on search, type, and status
+  const filterActivities = (activities: ActivityCatalogItem[]) => {
+    return activities.filter(activity => {
+      const matchesSearch = activity.TenDanhMuc.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesType = typeFilter === 'all' || activity.LoaiHoatDong === typeFilter;
+      
+      if (statusFilter === 'all') {
+        return matchesSearch && matchesType;
+      }
+      
+      const { status } = getActivityStatus(activity);
+      return matchesSearch && matchesType && status === statusFilter;
+    });
+  };
+
+  const filteredActivities = filterActivities(getDisplayActivities());
 
   const handleTypeFilter = (value: string) => {
     setTypeFilter(value);
-    setPage(1);
   };
 
   const handleStatusFilter = (value: string) => {
     setStatusFilter(value);
   };
 
-  if (error) {
+  // Check if user can edit this specific activity
+  const canEditActivity = (activity: ActivityCatalogItem) => {
+    if (activity.MaDonVi === null) {
+      return permissions.canEditGlobal;
+    }
+    return permissions.canEditUnit;
+  };
+
+  // Check if user can delete this specific activity
+  const canDeleteActivity = (activity: ActivityCatalogItem) => {
+    if (activity.MaDonVi === null) {
+      return permissions.canEditGlobal;
+    }
+    return permissions.canEditUnit;
+  };
+
+  if (isError) {
     return (
       <Alert className="border-red-200 bg-red-50">
         <AlertDescription className="text-red-700">
-          {error}
+          {error instanceof Error ? error.message : 'Có lỗi xảy ra'}
         </AlertDescription>
       </Alert>
     );
@@ -185,7 +215,7 @@ export function ActivitiesList({ userRole, onCreateActivity, onEditActivity, onD
           <p className="text-gray-600 mt-1">Quản lý các loại hoạt động đào tạo liên tục</p>
         </div>
         
-        {canManageActivities(userRole) && onCreateActivity && (
+        {(permissions.canCreateGlobal || permissions.canCreateUnit) && onCreateActivity && (
           <GlassButton
             onClick={onCreateActivity}
             className="bg-medical-blue hover:bg-medical-blue/90"
@@ -196,58 +226,77 @@ export function ActivitiesList({ userRole, onCreateActivity, onEditActivity, onD
         )}
       </div>
 
-      {/* Filters */}
-      <GlassCard className="p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          {/* Search */}
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Tìm kiếm hoạt động..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+      {/* Tabs and Filters */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+          <TabsList>
+            <TabsTrigger value="all">
+              Tất cả ({globalActivities.length + unitActivities.length})
+            </TabsTrigger>
+            <TabsTrigger value="global">
+              <Globe className="h-4 w-4 mr-2" />
+              Hệ thống ({globalActivities.length})
+            </TabsTrigger>
+            <TabsTrigger value="unit">
+              <Building2 className="h-4 w-4 mr-2" />
+              Đơn vị ({unitActivities.length})
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        {/* Filters */}
+        <GlassCard className="p-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            {/* Search */}
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Tìm kiếm hoạt động..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            {/* Type Filter */}
+            <div className="sm:w-48">
+              <Select value={typeFilter} onValueChange={handleTypeFilter}>
+                <SelectTrigger>
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Loại hoạt động" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả loại</SelectItem>
+                  <SelectItem value="KhoaHoc">Khóa học</SelectItem>
+                  <SelectItem value="HoiThao">Hội thảo</SelectItem>
+                  <SelectItem value="NghienCuu">Nghiên cứu</SelectItem>
+                  <SelectItem value="BaoCao">Báo cáo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Status Filter */}
+            <div className="sm:w-48">
+              <Select value={statusFilter} onValueChange={handleStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Trạng thái" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                  <SelectItem value="active">Đang hiệu lực</SelectItem>
+                  <SelectItem value="pending">Chưa hiệu lực</SelectItem>
+                  <SelectItem value="expired">Hết hiệu lực</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
+        </GlassCard>
 
-          {/* Type Filter */}
-          <div className="sm:w-48">
-            <Select value={typeFilter} onValueChange={handleTypeFilter}>
-              <SelectTrigger>
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Loại hoạt động" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả loại</SelectItem>
-                <SelectItem value="KhoaHoc">Khóa học</SelectItem>
-                <SelectItem value="HoiThao">Hội thảo</SelectItem>
-                <SelectItem value="NghienCuu">Nghiên cứu</SelectItem>
-                <SelectItem value="BaoCao">Báo cáo</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Status Filter */}
-          <div className="sm:w-48">
-            <Select value={statusFilter} onValueChange={handleStatusFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Trạng thái" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                <SelectItem value="active">Đang hiệu lực</SelectItem>
-                <SelectItem value="pending">Chưa hiệu lực</SelectItem>
-                <SelectItem value="expired">Hết hiệu lực</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </GlassCard>
-
-      {/* Activities Table */}
-      <GlassCard className="overflow-hidden">
+        {/* Activities Table */}
+        <TabsContent value={activeTab} className="mt-0">
+        <GlassCard className="overflow-hidden">
         {isLoading ? (
           <div className="p-12">
             <LoadingNotice message="Đang tải danh mục hoạt động..." />
@@ -268,12 +317,13 @@ export function ActivitiesList({ userRole, onCreateActivity, onEditActivity, onD
               <TableHeader>
                 <TableRow>
                   <TableHead>Hoạt động</TableHead>
+                  <TableHead>Phạm vi</TableHead>
                   <TableHead>Loại</TableHead>
                   <TableHead>Đơn vị tính</TableHead>
                   <TableHead>Tỷ lệ quy đổi</TableHead>
                   <TableHead>Giới hạn giờ</TableHead>
                   <TableHead>Trạng thái</TableHead>
-                  {canManageActivities(userRole) && <TableHead>Thao tác</TableHead>}
+                  {(permissions.canEditGlobal || permissions.canEditUnit) && <TableHead>Thao tác</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -315,6 +365,10 @@ export function ActivitiesList({ userRole, onCreateActivity, onEditActivity, onD
                       </TableCell>
                       
                       <TableCell>
+                        {getScopeBadge(activity, userRole)}
+                      </TableCell>
+                      
+                      <TableCell>
                         <Badge variant="outline">
                           {activityTypeLabels[activity.LoaiHoatDong]}
                         </Badge>
@@ -346,25 +400,38 @@ export function ActivitiesList({ userRole, onCreateActivity, onEditActivity, onD
                         {getStatusBadge(activity)}
                       </TableCell>
                       
-                      {canManageActivities(userRole) && (
+                      {(permissions.canEditGlobal || permissions.canEditUnit) && (
                         <TableCell>
                           <div className="flex items-center space-x-2">
-                            {onEditActivity && (
+                            {canEditActivity(activity) && onEditActivity && (
                               <GlassButton
                                 variant="ghost"
                                 size="sm"
                                 onClick={(e) => { e.stopPropagation(); onEditActivity(activity); }}
                                 className="text-gray-600 hover:text-medical-blue"
+                                title="Chỉnh sửa"
                               >
                                 <Edit className="h-4 w-4" />
                               </GlassButton>
                             )}
-                            {onDeleteActivity && (
+                            {permissions.canAdoptToGlobal && activity.MaDonVi !== null && onAdoptToGlobal && (
+                              <GlassButton
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => { e.stopPropagation(); onAdoptToGlobal(activity.MaDanhMuc); }}
+                                className="text-gray-600 hover:text-green-600"
+                                title="Chuyển thành hoạt động hệ thống"
+                              >
+                                <Upload className="h-4 w-4" />
+                              </GlassButton>
+                            )}
+                            {canDeleteActivity(activity) && onDeleteActivity && (
                               <GlassButton
                                 variant="ghost"
                                 size="sm"
                                 onClick={(e) => { e.stopPropagation(); onDeleteActivity(activity.MaDanhMuc); }}
                                 className="text-gray-600 hover:text-red-600"
+                                title="Xóa"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </GlassButton>
@@ -380,6 +447,8 @@ export function ActivitiesList({ userRole, onCreateActivity, onEditActivity, onD
           </div>
         )}
       </GlassCard>
+        </TabsContent>
+      </Tabs>
 
       {/* Activity Detail Sheet */}
       <ActivityDetailSheet

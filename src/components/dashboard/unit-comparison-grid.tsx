@@ -136,9 +136,10 @@ const UnitComparisonGridComponent = ({
 
   const safePage = Math.max(1, page);
   const safePageSize = Math.max(1, pageSize);
+  const safeRows = rows || [];
   const startRow = totalItems === 0 ? 0 : (safePage - 1) * safePageSize + 1;
   const endRow =
-    totalItems === 0 ? 0 : Math.min(startRow + rows.length - 1, Math.max(totalItems, 0));
+    totalItems === 0 ? 0 : Math.min(startRow + safeRows.length - 1, Math.max(totalItems, 0));
 
   const summaryText =
     totalItems === 0
@@ -268,7 +269,7 @@ const UnitComparisonGridComponent = ({
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm text-gray-700" role="grid">
-                <thead className="bg-white/40 backdrop-blur-md sticky top-0 z-10">
+                <thead className="bg-gray-200/90 backdrop-blur-md sticky top-0 z-10 border-b-2 border-gray-300/50 shadow-sm">
                   <tr>
                     {headerColumns.map((column) => {
                       const sortable = Boolean(column.field);
@@ -288,7 +289,7 @@ const UnitComparisonGridComponent = ({
                           scope="col"
                           aria-sort={ariaSort}
                           className={cn(
-                            'px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600',
+                            'px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700',
                             column.align === 'right' ? 'text-right' : 'text-left',
                             column.className,
                           )}
@@ -313,7 +314,7 @@ const UnitComparisonGridComponent = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row, index) => (
+                  {safeRows.map((row, index) => (
                     <tr
                       key={row.id}
                       className={cn(

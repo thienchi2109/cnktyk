@@ -60,12 +60,15 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
   const [showDetailSheet, setShowDetailSheet] = useState(false);
   const [showBulkImportSheet, setShowBulkImportSheet] = useState(false);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const PAGE_SIZE_OPTIONS = [10, 20, 30, 50] as const;
 
   const queryClient = useQueryClient();
 
   const { data, isLoading, isError, error } = usePractitioners({
     page,
-    limit: 10,
+    limit: pageSize,
     searchTerm,
     statusFilter,
     unitFilter,
@@ -74,13 +77,25 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
 
   const practitioners: Practitioner[] = data?.data || [];
   const totalPages: number = data?.pagination?.totalPages || 1;
+  const totalItems: number = data?.pagination?.total || 0;
+
+  // Calculate summary text similar to DoH dashboard
+  const safePage = Math.max(1, page);
+  const safePageSize = Math.max(1, pageSize);
+  const startRow = totalItems === 0 ? 0 : (safePage - 1) * safePageSize + 1;
+  const endRow = totalItems === 0 ? 0 : Math.min(startRow + practitioners.length - 1, Math.max(totalItems, 0));
+
+  const summaryText =
+    totalItems === 0
+      ? 'Không có người hành nghề nào phù hợp với bộ lọc hiện tại.'
+      : `Hiển thị ${startRow} - ${endRow} trên tổng ${totalItems} người hành nghề.`;
 
   // Prefetch next page for smoother navigation
   useEffect(() => {
     if (page < totalPages) {
       const nextOpts = {
         page: page + 1,
-        limit: 10,
+        limit: pageSize,
         searchTerm,
         statusFilter,
         unitFilter,
@@ -111,6 +126,25 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
   const handleComplianceFilter = (value: string) => {
     setComplianceFilter(value);
     setPage(1); // Reset to first page when filter changes
+  };
+
+  const handlePageSizeChange = (value: string) => {
+    const parsed = Number.parseInt(value, 10);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return;
+    }
+    setPageSize(parsed);
+    setPage(1); // Reset to first page when page size changes
+  };
+
+  const handlePageChange = (next: number) => {
+    if (totalPages > 0 && (next < 1 || next > totalPages)) {
+      return;
+    }
+    if (next < 1) {
+      return;
+    }
+    setPage(next);
   };
 
   const getStatusBadge = (status: string) => {
@@ -333,38 +367,47 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
             <p className="text-gray-600 font-medium">Đang tải danh sách người hành nghề...</p>
           </div>
         ) : filteredPractitioners.length === 0 ? (
-          <div className="p-12 text-center">
+          <div className="p-12 text-center space-y-4">
             <div className="p-4 rounded-full bg-gray-100/50 w-fit mx-auto mb-4">
               <UserCircle className="h-12 w-12 text-gray-400" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Không tìm thấy người hành nghề</h3>
-            <p className="text-gray-500">Thử điều chỉnh bộ lọc hoặc thêm người hành nghề mới</p>
+            <h3 className="text-lg font-semibold text-gray-900">Không tìm thấy người hành nghề</h3>
+            <p className="text-gray-500">Điều chỉnh bộ lọc hoặc từ khóa tìm kiếm để xem dữ liệu khác.</p>
+            <GlassButton variant="outline" onClick={() => {
+              setSearchTerm('');
+              setStatusFilter('all');
+              setUnitFilter('all');
+              setComplianceFilter('all');
+              setPage(1);
+            }}>
+              Đặt lại bộ lọc
+            </GlassButton>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50/50 border-b border-gray-200/50">
+                <thead className="bg-gray-200/90 backdrop-blur-md sticky top-0 z-10 border-b-2 border-gray-300/50 shadow-sm">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-700">
                       Họ và Tên
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-700">
                       Chức Danh
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-700">
                       Số CCHN
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-700">
                       Trạng Thái
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-700">
                       Tuân Thủ
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-700">
                       Tín Chỉ
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-700">
                       Liên Hệ
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -449,31 +492,50 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
             </div>
 
             {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="px-6 py-4 border-t border-gray-200/50 flex items-center justify-between">
-                <div className="text-sm text-gray-500">
-                  Trang {page} / {totalPages}
-                </div>
-                <div className="flex gap-2">
+            <div className="px-6 py-4 border-t border-gray-200/50 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <p className="text-sm text-gray-600" aria-live="polite">
+                {summaryText}
+              </p>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                <label className="flex items-center gap-2 text-sm text-gray-600">
+                  <span>Hiển thị</span>
+                  <select
+                    value={pageSize}
+                    onChange={(event) => handlePageSizeChange(event.target.value)}
+                    className="rounded-lg border border-gray-200 bg-white/70 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-medical-blue/50"
+                  >
+                    {PAGE_SIZE_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}/trang
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="flex items-center gap-2">
                   <GlassButton
+                    variant="outline"
                     size="sm"
-                    variant="secondary"
-                    onClick={() => setPage(page - 1)}
-                    disabled={page === 1}
+                    onClick={() => handlePageChange(page - 1)}
+                    disabled={page <= 1 || totalPages === 0}
                   >
                     <ChevronLeft className="h-4 w-4" />
+                    Trước
                   </GlassButton>
+                  <span className="text-sm text-gray-600">
+                    Trang {totalPages === 0 ? 0 : page} / {totalPages}
+                  </span>
                   <GlassButton
+                    variant="outline"
                     size="sm"
-                    variant="secondary"
-                    onClick={() => setPage(page + 1)}
-                    disabled={page === totalPages}
+                    onClick={() => handlePageChange(page + 1)}
+                    disabled={totalPages === 0 || page >= totalPages}
                   >
+                    Sau
                     <ChevronRight className="h-4 w-4" />
                   </GlassButton>
                 </div>
               </div>
-            )}
+            </div>
           </>
         )}
       </GlassCard>

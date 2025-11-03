@@ -853,23 +853,521 @@ export class DanhMucHoatDongRepository extends BaseRepository<DanhMucHoatDong, C
     return db.queryOne<DanhMucHoatDong>(`SELECT * FROM "${this.tableName}" WHERE "MaDanhMuc" = $1`, [id]);
   }
 
-  async findActive(): Promise<DanhMucHoatDong[]> {
-    return db.query<DanhMucHoatDong>(`
-      SELECT * FROM "${this.tableName}"
-      WHERE ("HieuLucTu" IS NULL OR "HieuLucTu" <= CURRENT_DATE)
-        AND ("HieuLucDen" IS NULL OR "HieuLucDen" >= CURRENT_DATE)
+  /**
+   * Find all global activities (visible to all units)
+   * @param options - Pagination options
+   * @returns Global activities that are not soft deleted
+   */
+  async findGlobal(options?: { limit?: number; offset?: number }): Promise<DanhMucHoatDong[]> {
+    const { limit, offset } = options || {};
+
+    let query = `
+      SELECT "MaDanhMuc", "TenDanhMuc", "LoaiHoatDong", "DonViTinh", "TyLeQuyDoi",
+             "GioToiThieu", "GioToiDa", "YeuCauMinhChung", "HieuLucTu", "HieuLucDen",
+             "MaDonVi", "NguoiTao", "NguoiCapNhat", "TaoLuc", "CapNhatLuc", "TrangThai"
+      FROM "${this.tableName}"
+      WHERE "MaDonVi" IS NULL
+        AND "DaXoaMem" = false
       ORDER BY "TenDanhMuc" ASC
-    `);
+    `;
+
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    if (limit !== undefined) {
+      query += ` LIMIT $${paramIndex++}`;
+      params.push(limit);
+
+      if (offset !== undefined) {
+        query += ` OFFSET $${paramIndex++}`;
+        params.push(offset);
+      }
+    }
+
+    return db.query<DanhMucHoatDong>(query, params);
   }
 
-  async findByType(type: string): Promise<DanhMucHoatDong[]> {
+  /**
+   * Find unit-specific activities (excludes global)
+   * @param unitId - The unit to query activities for
+   * @param options - Pagination options
+   * @returns Unit-specific activities that are not soft deleted
+   */
+  async findByUnit(unitId: string, options?: { limit?: number; offset?: number }): Promise<DanhMucHoatDong[]> {
+    const { limit, offset } = options || {};
+
+    let query = `
+      SELECT "MaDanhMuc", "TenDanhMuc", "LoaiHoatDong", "DonViTinh", "TyLeQuyDoi",
+             "GioToiThieu", "GioToiDa", "YeuCauMinhChung", "HieuLucTu", "HieuLucDen",
+             "MaDonVi", "NguoiTao", "NguoiCapNhat", "TaoLuc", "CapNhatLuc", "TrangThai"
+      FROM "${this.tableName}"
+      WHERE "MaDonVi" = $1
+        AND "DaXoaMem" = false
+      ORDER BY "TenDanhMuc" ASC
+    `;
+
+    const params: any[] = [unitId];
+    let paramIndex = 2;
+
+    if (limit !== undefined) {
+      query += ` LIMIT $${paramIndex++}`;
+      params.push(limit);
+
+      if (offset !== undefined) {
+        query += ` OFFSET $${paramIndex++}`;
+        params.push(offset);
+      }
+    }
+
+    return db.query<DanhMucHoatDong>(query, params);
+  }
+
+  /**
+   * Find all activities accessible to a unit (global + unit-specific) - OPTIMIZED
+   * @param unitId - The unit to query activities for
+   * @returns Object with global and unit activity arrays
+   */
+  async findAccessible(unitId: string): Promise<{ global: DanhMucHoatDong[], unit: DanhMucHoatDong[] }> {
+    // Single query with conditional aggregation for better performance
+    const results = await db.query<{
+      is_global: boolean,
+      // All activity columns
+      "MaDanhMuc": string, "TenDanhMuc": string, "LoaiHoatDong": string,
+      "DonViTinh": string, "TyLeQuyDoi": number, "GioToiThieu": number | null,
+      "GioToiDa": number | null, "YeuCauMinhChung": boolean, "HieuLucTu": string | null,
+      "HieuLucDen": string | null, "MaDonVi": string | null, "NguoiTao": string | null,
+      "NguoiCapNhat": string | null, "TaoLuc": string, "CapNhatLuc": string,
+      "TrangThai": string, "DaXoaMem": boolean
+    }>(`
+      SELECT
+        "MaDanhMuc", "TenDanhMuc", "LoaiHoatDong", "DonViTinh", "TyLeQuyDoi",
+        "GioToiThieu", "GioToiDa", "YeuCauMinhChung", "HieuLucTu", "HieuLucDen",
+        "MaDonVi", "NguoiTao", "NguoiCapNhat", "TaoLuc", "CapNhatLuc", "TrangThai", "DaXoaMem",
+        CASE WHEN "MaDonVi" IS NULL THEN true ELSE false END as is_global
+      FROM "${this.tableName}"
+      WHERE ("MaDonVi" IS NULL OR "MaDonVi" = $1)
+        AND "DaXoaMem" = false
+      ORDER BY is_global DESC, "TenDanhMuc" ASC
+    `, [unitId]);
+
+    // Partition results in JavaScript (faster than multiple queries)
+    const global: DanhMucHoatDong[] = [];
+    const unit: DanhMucHoatDong[] = [];
+
+    for (const row of results) {
+      const { is_global, ...activity } = row;
+      // Convert string dates to Date objects to match schema
+      const typedActivity = {
+        ...activity,
+        HieuLucTu: activity.HieuLucTu ? new Date(activity.HieuLucTu) : null,
+        HieuLucDen: activity.HieuLucDen ? new Date(activity.HieuLucDen) : null,
+        TaoLuc: new Date(activity.TaoLuc),
+        CapNhatLuc: new Date(activity.CapNhatLuc),
+      } as DanhMucHoatDong;
+      
+      if (is_global) {
+        global.push(typedActivity);
+      } else {
+        unit.push(typedActivity);
+      }
+    }
+
+    return { global, unit };
+  }
+
+  /**
+   * Count global activities (visible to all units)
+   * @returns Count of global activities that are not soft deleted
+   */
+  async countGlobal(): Promise<number> {
+    const result = await db.queryOne<{ count: number }>(
+      `SELECT COUNT(*) as count FROM "${this.tableName}" WHERE "MaDonVi" IS NULL AND "DaXoaMem" = false`
+    );
+    return result?.count || 0;
+  }
+
+  /**
+   * Count unit-specific activities
+   * @param unitId - The unit to count activities for (null for all units)
+   * @returns Count of unit activities that are not soft deleted
+   */
+  async countByUnit(unitId?: string | null): Promise<number> {
+    if (unitId) {
+      const result = await db.queryOne<{ count: number }>(
+        `SELECT COUNT(*) as count FROM "${this.tableName}" WHERE "MaDonVi" = $1 AND "DaXoaMem" = false`,
+        [unitId]
+      );
+      return result?.count || 0;
+    } else {
+      // Count all unit activities (excluding global)
+      const result = await db.queryOne<{ count: number }>(
+        `SELECT COUNT(*) as count FROM "${this.tableName}" WHERE "MaDonVi" IS NOT NULL AND "DaXoaMem" = false`
+      );
+      return result?.count || 0;
+    }
+  }
+
+  /**
+   * Find all active activities (within validity period), optionally filtered by unit - OPTIMIZED
+   * @param unitId - Optional unit ID to filter by (null for SoYTe to see all)
+   * @returns Active activities that are not soft deleted
+   */
+  async findActive(unitId?: string | null): Promise<DanhMucHoatDong[]> {
+    // Optimized: Single query with better WHERE clause ordering for PostgreSQL
     return db.query<DanhMucHoatDong>(`
-      SELECT * FROM "${this.tableName}"
-      WHERE "LoaiHoatDong" = $1
+      SELECT "MaDanhMuc", "TenDanhMuc", "LoaiHoatDong", "DonViTinh", "TyLeQuyDoi",
+             "GioToiThieu", "GioToiDa", "YeuCauMinhChung", "HieuLucTu", "HieuLucDen",
+             "MaDonVi", "NguoiTao", "NguoiCapNhat", "TaoLuc", "CapNhatLuc", "TrangThai"
+      FROM "${this.tableName}"
+      WHERE "DaXoaMem" = false
         AND ("HieuLucTu" IS NULL OR "HieuLucTu" <= CURRENT_DATE)
         AND ("HieuLucDen" IS NULL OR "HieuLucDen" >= CURRENT_DATE)
+        ${unitId ? 'AND ("MaDonVi" IS NULL OR "MaDonVi" = $1)' : ''}
       ORDER BY "TenDanhMuc" ASC
-    `, [type]);
+    `, unitId ? [unitId] : []);
+  }
+
+  /**
+   * Find activities by type, optionally filtered by unit - OPTIMIZED
+   * @param type - Activity type to filter by
+   * @param unitId - Optional unit ID (null for SoYTe to see all)
+   * @returns Activities of specified type that are not soft deleted
+   */
+  async findByType(type: string, unitId?: string | null): Promise<DanhMucHoatDong[]> {
+    // Optimized: Better parameter ordering and WHERE clause optimization
+    return db.query<DanhMucHoatDong>(`
+      SELECT "MaDanhMuc", "TenDanhMuc", "LoaiHoatDong", "DonViTinh", "TyLeQuyDoi",
+             "GioToiThieu", "GioToiDa", "YeuCauMinhChung", "HieuLucTu", "HieuLucDen",
+             "MaDonVi", "NguoiTao", "NguoiCapNhat", "TaoLuc", "CapNhatLuc", "TrangThai"
+      FROM "${this.tableName}"
+      WHERE "LoaiHoatDong" = $1
+        AND "DaXoaMem" = false
+        AND ("HieuLucTu" IS NULL OR "HieuLucTu" <= CURRENT_DATE)
+        AND ("HieuLucDen" IS NULL OR "HieuLucDen" >= CURRENT_DATE)
+        ${unitId ? 'AND ("MaDonVi" IS NULL OR "MaDonVi" = $2)' : ''}
+      ORDER BY "TenDanhMuc" ASC
+    `, unitId ? [type, unitId] : [type]);
+  }
+
+  /**
+   * Create activity with ownership tracking
+   * @param data - Activity data
+   * @param creatorId - User ID creating the activity
+   * @param unitId - Unit ID for unit-scoped activities (null for global)
+   * @returns Created activity
+   */
+  async createWithOwnership(
+    data: CreateDanhMucHoatDong & { MaDonVi?: string | null },
+    creatorId: string,
+    unitId: string | null
+  ): Promise<DanhMucHoatDong> {
+    const now = new Date();
+    
+    const activityData = {
+      ...data,
+      MaDonVi: unitId,
+      NguoiTao: creatorId,
+      TaoLuc: now,
+      CapNhatLuc: now,
+      TrangThai: data.TrangThai || 'Active',
+      DaXoaMem: false,
+    };
+
+    return db.insert<DanhMucHoatDong>(this.tableName, activityData as Record<string, any>);
+  }
+
+  /**
+   * Update activity with ownership tracking
+   * @param id - Activity ID
+   * @param data - Update data
+   * @param updaterId - User ID updating the activity
+   * @returns Updated activity
+   */
+  async updateWithOwnership(
+    id: string,
+    data: UpdateDanhMucHoatDong,
+    updaterId: string
+  ): Promise<DanhMucHoatDong | null> {
+    const updateData = {
+      ...data,
+      NguoiCapNhat: updaterId,
+      // CapNhatLuc is auto-updated by trigger
+    };
+
+    const results = await db.update<DanhMucHoatDong>(
+      this.tableName,
+      updateData as Record<string, any>,
+      { MaDanhMuc: id }
+    );
+
+    return results.length > 0 ? results[0] : null;
+  }
+
+  /**
+   * Check if user can mutate (update/delete) an activity
+   * @param activityId - Activity ID to check
+   * @param userRole - User's role (SoYTe, DonVi, etc.)
+   * @param userUnitId - User's unit ID (null for SoYTe)
+   * @returns Object with canMutate flag and reason if denied
+   */
+  async assertCanMutate(
+    activityId: string,
+    userRole: string,
+    userUnitId: string | null
+  ): Promise<{ canMutate: boolean; reason?: string; activity?: DanhMucHoatDong }> {
+    // Load the activity
+    const activity = await this.findById(activityId);
+
+    if (!activity) {
+      return { canMutate: false, reason: 'Activity not found' };
+    }
+
+    // Cannot mutate soft-deleted activities (must restore first)
+    if (activity.DaXoaMem) {
+      return { canMutate: false, reason: 'Cannot modify soft-deleted activity', activity };
+    }
+
+    // SoYTe can mutate any activity
+    if (userRole === 'SoYTe') {
+      return { canMutate: true, activity };
+    }
+
+    // DonVi can only mutate their own unit's activities
+    if (userRole === 'DonVi') {
+      if (!userUnitId) {
+        return { canMutate: false, reason: 'User has no unit assigned', activity };
+      }
+
+      // Cannot mutate global activities
+      if (activity.MaDonVi === null) {
+        return { canMutate: false, reason: 'Cannot modify global activities', activity };
+      }
+
+      // Can only mutate own unit's activities
+      if (activity.MaDonVi !== userUnitId) {
+        return { canMutate: false, reason: 'Can only modify activities from your unit', activity };
+      }
+
+      return { canMutate: true, activity };
+    }
+
+    // Other roles cannot mutate activities
+    return { canMutate: false, reason: 'Insufficient permissions', activity };
+  }
+
+  /**
+   * Soft delete an activity
+   * @param id - Activity ID to soft delete
+   * @param userId - User performing the deletion
+   * @returns Soft-deleted activity
+   */
+  async softDelete(id: string, userId: string): Promise<DanhMucHoatDong | null> {
+    const results = await db.update<DanhMucHoatDong>(
+      this.tableName,
+      {
+        DaXoaMem: true,
+        NguoiCapNhat: userId,
+        // CapNhatLuc is auto-updated by trigger
+      },
+      { MaDanhMuc: id }
+    );
+
+    return results.length > 0 ? results[0] : null;
+  }
+
+  /**
+   * Restore a soft-deleted activity
+   * @param id - Activity ID to restore
+   * @param userId - User performing the restoration
+   * @returns Restored activity
+   */
+  async restore(id: string, userId: string): Promise<DanhMucHoatDong | null> {
+    const results = await db.update<DanhMucHoatDong>(
+      this.tableName,
+      {
+        DaXoaMem: false,
+        NguoiCapNhat: userId,
+        // CapNhatLuc is auto-updated by trigger
+      },
+      { MaDanhMuc: id }
+    );
+
+    return results.length > 0 ? results[0] : null;
+  }
+
+  /**
+   * Adopt a unit-specific activity to global scope (SoYTe only)
+   * @param id - Activity ID to adopt
+   * @param userId - SoYTe user performing the adoption
+   * @returns Adopted activity
+   */
+  async adoptToGlobal(id: string, userId: string): Promise<DanhMucHoatDong | null> {
+    const results = await db.update<DanhMucHoatDong>(
+      this.tableName,
+      {
+        MaDonVi: null,
+        NguoiCapNhat: userId,
+        // CapNhatLuc is auto-updated by trigger
+      },
+      { MaDanhMuc: id }
+    );
+
+    return results.length > 0 ? results[0] : null;
+  }
+
+  /**
+   * Find soft-deleted activities (for admin cleanup/restore) - OPTIMIZED
+   * @param unitId - Optional unit ID to filter by (null for all)
+   * @returns Soft-deleted activities
+   */
+  async findSoftDeleted(unitId?: string | null): Promise<DanhMucHoatDong[]> {
+    // Optimized: Single query with conditional WHERE clause and specific columns
+    return db.query<DanhMucHoatDong>(`
+      SELECT "MaDanhMuc", "TenDanhMuc", "LoaiHoatDong", "DonViTinh", "TyLeQuyDoi",
+             "GioToiThieu", "GioToiDa", "YeuCauMinhChung", "HieuLucTu", "HieuLucDen",
+             "MaDonVi", "NguoiTao", "NguoiCapNhat", "TaoLuc", "CapNhatLuc", "TrangThai"
+      FROM "${this.tableName}"
+      WHERE "DaXoaMem" = true
+        ${unitId ? 'AND "MaDonVi" = $1' : ''}
+      ORDER BY "CapNhatLuc" DESC
+    `, unitId ? [unitId] : []);
+  }
+
+  /**
+   * Check if activity is referenced in submissions (for safe deletion)
+   * @param activityId - Activity ID to check
+   * @returns Count of referencing submissions
+   */
+  async countReferences(activityId: string): Promise<number> {
+    const result = await db.queryOne<{ count: string }>(`
+      SELECT COUNT(*) as count
+      FROM "GhiNhanHoatDong"
+      WHERE "MaDanhMuc" = $1
+    `, [activityId]);
+
+    return parseInt(result?.count || '0', 10);
+  }
+
+  /**
+   * Fast existence check for activity references (optimized for boolean checks)
+   * @param activityId - Activity ID to check
+   * @returns True if activity has any references, false otherwise
+   */
+  async hasReferences(activityId: string): Promise<boolean> {
+    const result = await db.queryOne<{ exists: boolean }>(`
+      SELECT EXISTS(
+        SELECT 1
+        FROM "GhiNhanHoatDong"
+        WHERE "MaDanhMuc" = $1
+      ) as exists
+    `, [activityId]);
+
+    return result?.exists ?? false;
+  }
+
+  /**
+   * Batch check for multiple activities' existence - OPTIMIZED
+   * @param activityIds - Array of activity IDs to check
+   * @param unitId - Optional unit ID for permission filtering
+   * @returns Map of activityId to existence boolean
+   */
+  async batchExists(activityIds: string[], unitId?: string): Promise<Map<string, boolean>> {
+    if (activityIds.length === 0) {
+      return new Map();
+    }
+
+    // Use ANY for efficient batch checking
+    const result = await db.query<{ MaDanhMuc: string }>(`
+      SELECT "MaDanhMuc"
+      FROM "${this.tableName}"
+      WHERE "MaDanhMuc" = ANY($1)
+        AND "DaXoaMem" = false
+        ${unitId ? 'AND ("MaDonVi" IS NULL OR "MaDonVi" = $2)' : ''}
+    `, unitId ? [activityIds, unitId] : [activityIds]);
+
+    const existenceMap = new Map<string, boolean>();
+    activityIds.forEach(id => existenceMap.set(id, false));
+    result.forEach(row => existenceMap.set(row.MaDanhMuc, true));
+
+    return existenceMap;
+  }
+
+  /**
+   * Find accessible activities with pagination - OPTIMIZED
+   * @param unitId - Unit ID
+   * @param page - Page number (1-indexed)
+   * @param limit - Items per page
+   * @param scope - Filter scope: 'all', 'global', 'unit'
+   * @returns Paginated activities with metadata
+   */
+  async findAccessiblePaginated(
+    unitId: string,
+    page: number = 1,
+    limit: number = 20,
+    scope: 'all' | 'global' | 'unit' = 'all'
+  ): Promise<{
+    activities: DanhMucHoatDong[];
+    pagination: { page: number; limit: number; total: number; totalPages: number; };
+  }> {
+    const offset = (page - 1) * limit;
+
+    // Build WHERE condition based on scope
+    let whereClause = '"DaXoaMem" = false';
+    let countWhereClause = '"DaXoaMem" = false';
+    const params: any[] = [];
+    const countParams: any[] = [];
+
+    switch (scope) {
+      case 'global':
+        whereClause += ' AND "MaDonVi" IS NULL';
+        countWhereClause += ' AND "MaDonVi" IS NULL';
+        break;
+      case 'unit':
+        whereClause += ' AND "MaDonVi" = $1';
+        countWhereClause += ' AND "MaDonVi" = $1';
+        params.push(unitId);
+        countParams.push(unitId);
+        break;
+      case 'all':
+      default:
+        whereClause += ' AND ("MaDonVi" IS NULL OR "MaDonVi" = $1)';
+        countWhereClause += ' AND ("MaDonVi" IS NULL OR "MaDonVi" = $1)';
+        params.push(unitId);
+        countParams.push(unitId);
+        break;
+    }
+
+    // Execute count and data queries in parallel for better performance
+    const [countResult, activitiesResult] = await Promise.all([
+      db.queryOne<{ total: string }>(`
+        SELECT COUNT(*) as total
+        FROM "${this.tableName}"
+        WHERE ${countWhereClause}
+      `, countParams),
+
+      db.query<DanhMucHoatDong>(`
+        SELECT "MaDanhMuc", "TenDanhMuc", "LoaiHoatDong", "DonViTinh", "TyLeQuyDoi",
+               "GioToiThieu", "GioToiDa", "YeuCauMinhChung", "HieuLucTu", "HieuLucDen",
+               "MaDonVi", "NguoiTao", "NguoiCapNhat", "TaoLuc", "CapNhatLuc", "TrangThai"
+        FROM "${this.tableName}"
+        WHERE ${whereClause}
+        ORDER BY "TenDanhMuc" ASC
+        LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+      `, [...params, limit, offset])
+    ]);
+
+    const total = parseInt(countResult?.total || '0', 10);
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      activities: activitiesResult,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages
+      }
+    };
   }
 }
 
@@ -990,6 +1488,161 @@ export class NhatKyHeThongRepository extends BaseRepository<NhatKyHeThong, Creat
 
     return db.query<NhatKyHeThong>(query, params);
   }
+
+  /**
+   * Log activity catalog changes with metadata
+   * @param userId - User performing the action
+   * @param action - Action type (CREATE, UPDATE, DELETE, SOFT_DELETE, RESTORE, ADOPT_TO_GLOBAL)
+   * @param activityId - Activity ID
+   * @param metadata - Additional context (scope, unitId, etc.)
+   * @param ipAddress - Optional IP address
+   * @returns Audit log entry
+   */
+  async logCatalogChange(
+    userId: string,
+    action: string,
+    activityId: string,
+    metadata: {
+      activityName?: string;
+      scope?: 'global' | 'unit';
+      unitId?: string | null;
+      scopeBefore?: 'global' | 'unit';
+      scopeAfter?: 'global' | 'unit';
+      actorRole?: string;
+      [key: string]: any;
+    },
+    ipAddress?: string | null
+  ): Promise<NhatKyHeThong> {
+    return this.logAction(
+      userId,
+      action,
+      'DanhMucHoatDong',
+      activityId,
+      metadata,
+      ipAddress
+    );
+  }
+}
+
+// SaoLuuMinhChung (Evidence Backup) Repository
+export class SaoLuuMinhChungRepository extends BaseRepository<
+  import('./schemas').SaoLuuMinhChung,
+  import('./schemas').CreateSaoLuuMinhChung,
+  import('./schemas').UpdateSaoLuuMinhChung
+> {
+  constructor() {
+    super('SaoLuuMinhChung');
+  }
+
+  protected getPrimaryKeyColumn(): string {
+    return 'MaSaoLuu';
+  }
+
+  async findById(id: string): Promise<import('./schemas').SaoLuuMinhChung | null> {
+    return db.queryOne<import('./schemas').SaoLuuMinhChung>(
+      `SELECT * FROM "${this.tableName}" WHERE "MaSaoLuu" = $1`,
+      [id]
+    );
+  }
+
+  async findByUser(userId: string, limit?: number): Promise<import('./schemas').SaoLuuMinhChung[]> {
+    let query = `
+      SELECT * FROM "${this.tableName}"
+      WHERE "MaTaiKhoan" = $1
+      ORDER BY "NgayTao" DESC
+    `;
+    const params = [userId];
+
+    if (limit) {
+      query += ` LIMIT $2`;
+      params.push(limit.toString());
+    }
+
+    return db.query<import('./schemas').SaoLuuMinhChung>(query, params);
+  }
+
+  async findByUserSince(
+    userId: string,
+    since: Date,
+  ): Promise<import('./schemas').SaoLuuMinhChung[]> {
+    return db.query<import('./schemas').SaoLuuMinhChung>(
+      `
+        SELECT *
+        FROM "${this.tableName}"
+        WHERE "MaTaiKhoan" = $1
+          AND "NgayTao" >= $2
+        ORDER BY "NgayTao" DESC
+      `,
+      [userId, since],
+    );
+  }
+}
+
+// ChiTietSaoLuu (Backup Detail) Repository
+export class ChiTietSaoLuuRepository extends BaseRepository<
+  import('./schemas').ChiTietSaoLuu,
+  import('./schemas').CreateChiTietSaoLuu,
+  import('./schemas').UpdateChiTietSaoLuu
+> {
+  constructor() {
+    super('ChiTietSaoLuu');
+  }
+
+  protected getPrimaryKeyColumn(): string {
+    return 'MaChiTiet';
+  }
+
+  async findById(id: string): Promise<import('./schemas').ChiTietSaoLuu | null> {
+    return db.queryOne<import('./schemas').ChiTietSaoLuu>(
+      `SELECT * FROM "${this.tableName}" WHERE "MaChiTiet" = $1`,
+      [id]
+    );
+  }
+
+  async findByBackup(backupId: string): Promise<import('./schemas').ChiTietSaoLuu[]> {
+    return db.query<import('./schemas').ChiTietSaoLuu>(
+      `SELECT * FROM "${this.tableName}" WHERE "MaSaoLuu" = $1 ORDER BY "TrangThai" ASC`,
+      [backupId]
+    );
+  }
+}
+
+// XoaMinhChung (File Deletion) Repository
+export class XoaMinhChungRepository extends BaseRepository<
+  import('./schemas').XoaMinhChung,
+  import('./schemas').CreateXoaMinhChung,
+  import('./schemas').UpdateXoaMinhChung
+> {
+  constructor() {
+    super('XoaMinhChung');
+  }
+
+  protected getPrimaryKeyColumn(): string {
+    return 'MaXoa';
+  }
+
+  async findById(id: string): Promise<import('./schemas').XoaMinhChung | null> {
+    return db.queryOne<import('./schemas').XoaMinhChung>(
+      `SELECT * FROM "${this.tableName}" WHERE "MaXoa" = $1`,
+      [id]
+    );
+  }
+
+  async findByUser(userId: string, limit?: number): Promise<import('./schemas').XoaMinhChung[]> {
+    let query = `
+      SELECT * FROM "${this.tableName}"
+      WHERE "MaTaiKhoan" = $1
+      ORDER BY "NgayThucHien" DESC
+    `;
+    const params = [userId];
+
+    if (limit) {
+      query += ` LIMIT $2`;
+      params.push(limit.toString());
+    }
+
+    return db.query<import('./schemas').XoaMinhChung>(query, params);
+  }
 }
 
 // Export repository instances
@@ -1002,6 +1655,9 @@ export const thongBaoRepo = new ThongBaoRepository();
 // Export the notification repository instance
 export const notificationRepo = thongBaoRepo;
 export const nhatKyHeThongRepo = new NhatKyHeThongRepository();
+export const saoLuuMinhChungRepo = new SaoLuuMinhChungRepository();
+export const chiTietSaoLuuRepo = new ChiTietSaoLuuRepository();
+export const xoaMinhChungRepo = new XoaMinhChungRepository();
 
 export interface DohUnitComparisonRow {
   id: string;

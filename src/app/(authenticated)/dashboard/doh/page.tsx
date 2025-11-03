@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { DohDashboard } from '@/components/dashboard/doh-dashboard';
 
 interface PageProps {
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export default async function DohDashboardPage({ searchParams }: PageProps = {}) {
@@ -14,7 +14,8 @@ export default async function DohDashboardPage({ searchParams }: PageProps = {})
     redirect('/dashboard');
   }
 
-  const unitParam = searchParams?.unit;
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const unitParam = resolvedSearchParams.unit;
   const initialUnitId = Array.isArray(unitParam) ? unitParam[0] ?? null : unitParam ?? null;
 
   return <DohDashboard userId={session.user.id} initialUnitId={initialUnitId} />;

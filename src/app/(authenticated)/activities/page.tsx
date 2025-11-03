@@ -2,45 +2,216 @@
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { ActivitiesList } from '@/components/activities/activities-list';
-import { ActivityForm } from '@/components/activities/activity-form';
-import { GlassModal } from '@/components/ui/glass-modal';
+import { ActivityFormSheet } from '@/components/activities/activity-form-sheet';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  activitiesCatalogQueryKey,
+  ActivityCatalogItem,
+  ActivityPermissions,
+  ActivitiesCatalogResponse,
+  removeActivityCatalogEntry,
+  upsertActivityCatalogEntry,
+} from '@/hooks/use-activities';
 
-interface Activity {
-  MaDanhMuc: string;
-  TenDanhMuc: string;
-  LoaiHoatDong: 'KhoaHoc' | 'HoiThao' | 'NghienCuu' | 'BaoCao';
-  DonViTinh: 'gio' | 'tiet' | 'tin_chi';
-  TyLeQuyDoi: number;
-  GioToiThieu: number | null;
-  GioToiDa: number | null;
-  YeuCauMinhChung: boolean;
-  HieuLucTu: string | null;
-  HieuLucDen: string | null;
-}
+type FeedbackState =
+  | { type: 'success'; message: string }
+  | { type: 'error'; message: string }
+  | null;
 
-type ActivityFormData = {
-  TenDanhMuc: string;
-  LoaiHoatDong: 'KhoaHoc' | 'HoiThao' | 'NghienCuu' | 'BaoCao';
-  DonViTinh: 'gio' | 'tiet' | 'tin_chi';
-  TyLeQuyDoi: number;
-  GioToiThieu: number | null;
-  GioToiDa: number | null;
-  YeuCauMinhChung: boolean;
-  HieuLucTu?: string;
-  HieuLucDen?: string;
+const defaultPermissions: ActivityPermissions = {
+  canCreateGlobal: false,
+  canCreateUnit: false,
+  canEditGlobal: false,
+  canEditUnit: false,
+  canAdoptToGlobal: false,
+  canRestoreSoftDeleted: false,
 };
 
 export default function ActivitiesPage() {
   const { data: session, status } = useSession();
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  // Loading state
+  const [showCreateSheet, setShowCreateSheet] = useState(false);
+  const [selectedActivity, setSelectedActivity] = useState<ActivityCatalogItem | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackState>(null);
+  const [permissions, setPermissions] = useState<ActivityPermissions>(defaultPermissions);
+
+  const catalogKey = activitiesCatalogQueryKey();
+
+  const deleteMutation = useMutation<ActivityCatalogItem, Error, string, { previousCatalog?: ActivitiesCatalogResponse }>({
+    mutationFn: async (activityId: string) => {
+      const response = await fetch(`/api/activities/${activityId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Không thể xóa hoạt động');
+      }
+
+      const data = await response.json();
+      if (!data?.activity) {
+        throw new Error('Không nhận được phản hồi hoạt động sau khi xóa');
+      }
+      return data.activity as ActivityCatalogItem;
+    },
+    onMutate: async (activityId) => {
+      setFeedback(null);
+      await queryClient.cancelQueries({ queryKey: catalogKey });
+
+      const previousCatalog = queryClient.getQueryData<ActivitiesCatalogResponse>(catalogKey);
+      if (previousCatalog) {
+        const nextCatalog = removeActivityCatalogEntry(previousCatalog, activityId);
+        if (nextCatalog) {
+          queryClient.setQueryData(catalogKey, nextCatalog);
+        }
+      }
+
+      return { previousCatalog };
+    },
+    onError: (error, _activityId, context) => {
+      if (context?.previousCatalog) {
+        queryClient.setQueryData(catalogKey, context.previousCatalog);
+      }
+      setFeedback({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Có lỗi xảy ra trong quá trình xóa hoạt động',
+      });
+    },
+    onSuccess: (activity) => {
+      setFeedback({
+        type: 'success',
+        message: `Đã xóa hoạt động "${activity.TenDanhMuc}".`,
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: catalogKey });
+    },
+  });
+
+  const adoptMutation = useMutation<ActivityCatalogItem, Error, string, { previousCatalog?: ActivitiesCatalogResponse }>({
+    mutationFn: async (activityId: string) => {
+      const response = await fetch(`/api/activities/${activityId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ MaDonVi: null }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Không thể chuyển hoạt động thành hoạt động hệ thống');
+      }
+
+      const data = await response.json();
+      return data as ActivityCatalogItem;
+    },
+    onMutate: async (activityId) => {
+      setFeedback(null);
+      await queryClient.cancelQueries({ queryKey: catalogKey });
+
+      const previousCatalog = queryClient.getQueryData<ActivitiesCatalogResponse>(catalogKey);
+      if (previousCatalog) {
+        const existing =
+          previousCatalog.unit.find((item) => item.MaDanhMuc === activityId) ||
+          previousCatalog.global.find((item) => item.MaDanhMuc === activityId);
+
+        if (existing) {
+          const optimistic: ActivityCatalogItem = {
+            ...existing,
+            MaDonVi: null,
+          };
+
+          const removed = removeActivityCatalogEntry(previousCatalog, activityId);
+          const nextCatalog = upsertActivityCatalogEntry(removed, optimistic);
+          if (nextCatalog) {
+            queryClient.setQueryData(catalogKey, nextCatalog);
+          }
+        }
+      }
+
+      return { previousCatalog };
+    },
+    onError: (error, _activityId, context) => {
+      if (context?.previousCatalog) {
+        queryClient.setQueryData(catalogKey, context.previousCatalog);
+      }
+      setFeedback({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Có lỗi xảy ra khi chuyển hoạt động',
+      });
+    },
+    onSuccess: (activity) => {
+      queryClient.setQueryData(catalogKey, (current) =>
+        upsertActivityCatalogEntry(current as ActivitiesCatalogResponse | undefined, activity) ??
+        current
+      );
+
+      setFeedback({
+        type: 'success',
+        message: `Đã chuyển hoạt động "${activity.TenDanhMuc}" thành hoạt động hệ thống.`,
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: catalogKey });
+    },
+  });
+
+  const restoreMutation = useMutation<ActivityCatalogItem, Error, string, { previousCatalog?: ActivitiesCatalogResponse }>({
+    mutationFn: async (activityId: string) => {
+      const response = await fetch(`/api/activities/${activityId}/restore`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Không thể khôi phục hoạt động');
+      }
+
+      const data = await response.json();
+      if (!data?.activity) {
+        throw new Error('Không nhận được dữ liệu hoạt động sau khi khôi phục');
+      }
+      return data.activity as ActivityCatalogItem;
+    },
+    onMutate: async () => {
+      setFeedback(null);
+      await queryClient.cancelQueries({ queryKey: catalogKey });
+      const previousCatalog = queryClient.getQueryData<ActivitiesCatalogResponse>(catalogKey);
+      return { previousCatalog };
+    },
+    onError: (error, _activityId, context) => {
+      if (context?.previousCatalog) {
+        queryClient.setQueryData(catalogKey, context.previousCatalog);
+      }
+      setFeedback({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Có lỗi xảy ra khi khôi phục hoạt động',
+      });
+    },
+    onSuccess: (activity) => {
+      queryClient.setQueryData(catalogKey, (current) =>
+        upsertActivityCatalogEntry(current as ActivitiesCatalogResponse | undefined, activity) ??
+        current
+      );
+
+      setFeedback({
+        type: 'success',
+        message: `Đã khôi phục hoạt động "${activity.TenDanhMuc}".`,
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: catalogKey });
+    },
+  });
+
+  const isMutating =
+    deleteMutation.isPending || adoptMutation.isPending || restoreMutation.isPending;
+
   if (status === 'loading') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-6">
@@ -55,7 +226,6 @@ export default function ActivitiesPage() {
     );
   }
 
-  // Authentication check
   if (status === 'unauthenticated' || !session?.user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
@@ -70,159 +240,133 @@ export default function ActivitiesPage() {
 
   const userRole = session.user.role;
 
-  // Handle create activity
   const handleCreateClick = () => {
     setSelectedActivity(null);
-    setShowCreateModal(true);
-    setError(null);
+    setShowCreateSheet(true);
   };
 
-  // Handle edit activity
-  const handleEditClick = (activity: Activity) => {
+  const handleEditClick = (activity: ActivityCatalogItem) => {
     setSelectedActivity(activity);
-    setShowCreateModal(true);
-    setError(null);
+    setShowCreateSheet(true);
   };
 
-  // Handle form submission
-  const handleCreateActivity = async (data: ActivityFormData) => {
-    try {
-      setIsSubmitting(true);
-      setError(null);
-
-      // Convert date strings to Date objects or null
-      const processedData = {
-        ...data,
-        HieuLucTu: data.HieuLucTu ? new Date(data.HieuLucTu) : null,
-        HieuLucDen: data.HieuLucDen ? new Date(data.HieuLucDen) : null,
-      };
-
-      const response = await fetch('/api/activities', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(processedData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Không thể tạo hoạt động');
-      }
-
-      setShowCreateModal(false);
-      // Refresh the list by reloading the page or triggering a refetch
-      window.location.reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Handle update activity
-  const handleUpdateActivity = async (data: ActivityFormData) => {
-    if (!selectedActivity) return;
-
-    try {
-      setIsSubmitting(true);
-      setError(null);
-
-      // Convert date strings to Date objects or null
-      const processedData = {
-        ...data,
-        HieuLucTu: data.HieuLucTu ? new Date(data.HieuLucTu) : null,
-        HieuLucDen: data.HieuLucDen ? new Date(data.HieuLucDen) : null,
-      };
-
-      const response = await fetch(`/api/activities/${selectedActivity.MaDanhMuc}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(processedData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Không thể cập nhật hoạt động');
-      }
-
-      setShowCreateModal(false);
-      setSelectedActivity(null);
-      // Refresh the list
-      window.location.reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Handle delete activity
   const handleDeleteActivity = async (activityId: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa hoạt động này?')) {
+    if (deleteMutation.isPending) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      'Bạn có chắc chắn muốn xóa hoạt động này? Hoạt động sẽ được đánh dấu xóa mềm và có thể khôi phục sau.'
+    );
+    if (!confirmed) {
       return;
     }
 
     try {
-      const response = await fetch(`/api/activities/${activityId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Không thể xóa hoạt động');
-      }
-
-      // Refresh the list
-      window.location.reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+      await deleteMutation.mutateAsync(activityId);
+    } catch {
+      // Mutation onError already sets feedback
     }
   };
 
-  // Handle modal close
-  const handleModalClose = () => {
-    setShowCreateModal(false);
-    setSelectedActivity(null);
-    setError(null);
+  const handleAdoptToGlobal = async (activityId: string) => {
+    if (adoptMutation.isPending) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      'Chuyển hoạt động này thành hoạt động hệ thống? Tất cả đơn vị sẽ có thể sử dụng hoạt động này.'
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await adoptMutation.mutateAsync(activityId);
+    } catch {
+      // handled in mutation
+    }
+  };
+
+  const handleRestoreActivity = async (activityId: string) => {
+    if (restoreMutation.isPending) {
+      return;
+    }
+
+    const confirmed = window.confirm('Khôi phục hoạt động đã xóa?');
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await restoreMutation.mutateAsync(activityId);
+    } catch {
+      // handled in mutation
+    }
+  };
+
+  const handleSheetToggle = (openState: boolean) => {
+    setShowCreateSheet(openState);
+    if (!openState) {
+      setSelectedActivity(null);
+    }
+  };
+
+  const handleSheetUpdate = (result: { type: 'create' | 'update'; activity: ActivityCatalogItem }) => {
+    const message =
+      result.type === 'create'
+        ? `Đã tạo hoạt động "${result.activity.TenDanhMuc}".`
+        : `Đã cập nhật hoạt động "${result.activity.TenDanhMuc}".`;
+    setFeedback({ type: 'success', message });
   };
 
   return (
     <div className="max-w-7xl mx-auto">
-        {error && (
-          <Alert className="mb-6 border-red-200 bg-red-50">
-            <AlertDescription className="text-red-700">
-              {error}
-            </AlertDescription>
-          </Alert>
-        )}
+      {isMutating && (
+        <Alert className="mb-4 border-blue-200 bg-blue-50">
+          <AlertDescription className="text-blue-700">
+            Đang xử lý thao tác, vui lòng đợi...
+          </AlertDescription>
+        </Alert>
+      )}
 
-        <ActivitiesList
-          userRole={userRole}
-          onCreateActivity={handleCreateClick}
-          onEditActivity={handleEditClick}
-          onDeleteActivity={handleDeleteActivity}
-        />
-
-        {/* Create/Edit Modal */}
-        {showCreateModal && (
-          <GlassModal
-            isOpen={showCreateModal}
-            onClose={handleModalClose}
-            title={selectedActivity ? 'Chỉnh sửa hoạt động' : 'Thêm hoạt động mới'}
-            size="lg"
+      {feedback && (
+        <Alert
+          className={
+            feedback.type === 'success'
+              ? 'mb-6 border-green-200 bg-green-50'
+              : 'mb-6 border-red-200 bg-red-50'
+          }
+        >
+          <AlertDescription
+            className={feedback.type === 'success' ? 'text-green-700' : 'text-red-700'}
           >
-            <ActivityForm
-              activity={selectedActivity}
-              mode={selectedActivity ? 'edit' : 'create'}
-              onSubmit={selectedActivity ? handleUpdateActivity : handleCreateActivity}
-              onCancel={handleModalClose}
-              isLoading={isSubmitting}
-            />
-          </GlassModal>
-        )}
-      </div>
+            {feedback.message}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <ActivitiesList
+        userRole={userRole}
+        unitId={session.user.unitId}
+        onCreateActivity={handleCreateClick}
+        onEditActivity={handleEditClick}
+        onDeleteActivity={handleDeleteActivity}
+        onAdoptToGlobal={handleAdoptToGlobal}
+        onRestoreActivity={handleRestoreActivity}
+        onPermissionsLoaded={setPermissions}
+      />
+
+      <ActivityFormSheet
+        activityId={selectedActivity?.MaDanhMuc}
+        open={showCreateSheet}
+        onOpenChange={handleSheetToggle}
+        mode={selectedActivity ? 'edit' : 'create'}
+        userRole={userRole}
+        unitId={session.user.unitId}
+        permissions={permissions}
+        onUpdate={handleSheetUpdate}
+      />
+    </div>
   );
 }
