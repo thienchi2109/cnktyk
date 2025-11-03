@@ -11,10 +11,10 @@
 - [x] Add Vitest coverage for repository queries, adoption guardrails, and soft-delete lifecycle.
 
 ## 3. API Layer
-- [ ] Update `GET /api/activities` to return scoped payload with permissions map and exclude soft-deleted records by default.
-- [ ] Allow DonVi POST/PUT/DELETE with automatic unit assignment and scope validation; enable SoYTe adoption and cross-unit reassignment.
-- [ ] Add soft-delete (`DELETE`) and restore (`POST /api/activities/:id/restore`) endpoints, ensuring audit events and permission denials are logged.
-- [ ] Extend API tests to cover DonVi, SoYTe, and unauthorized access patterns, including adoption and restore scenarios.
+- [x] Update `GET /api/activities` to return scoped payload with permissions map and exclude soft-deleted records by default.
+- [x] Allow DonVi POST/PUT/DELETE with automatic unit assignment and scope validation; enable SoYTe adoption and cross-unit reassignment.
+- [x] Add soft-delete (`DELETE`) and restore (`POST /api/activities/:id/restore`) endpoints, ensuring audit events and permission denials are logged.
+- [x] Extend API tests to cover DonVi, SoYTe, and unauthorized access patterns, including adoption and restore scenarios.
 
 ## 4. Frontend
 - [ ] Refactor Activities page to consume scoped payload, render tabs (global, unit, soft-deleted for SoYTe), and display scope badges.

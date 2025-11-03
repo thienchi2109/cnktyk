@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/server';
-import { danhMucHoatDongRepo } from '@/lib/db/repositories';
+import { danhMucHoatDongRepo, nhatKyHeThongRepo } from '@/lib/db/repositories';
 import { CreateDanhMucHoatDongSchema, UpdateDanhMucHoatDongSchema } from '@/lib/db/schemas';
 import { z } from 'zod';
 
-// GET /api/activities - List activity catalog with filtering
+// GET /api/activities - List activity catalog with scope filtering
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
@@ -13,33 +13,68 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type');
-    const activeOnly = searchParams.get('activeOnly') === 'true';
+    const scope = searchParams.get('scope') || 'all'; // 'all', 'global', 'unit'
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const limit = parseInt(searchParams.get('limit') || '50');
 
-    let activities;
+    // SoYTe can see all activities, DonVi only their unit + global
+    const isSoYTe = user.role === 'SoYTe';
     
-    if (type) {
-      activities = await danhMucHoatDongRepo.findByType(type);
-    } else if (activeOnly) {
-      activities = await danhMucHoatDongRepo.findActive();
+    let global: any[] = [];
+    let unit: any[] = [];
+
+    if (isSoYTe) {
+      // SoYTe sees all activities
+      if (scope === 'all' || scope === 'global') {
+        global = await danhMucHoatDongRepo.findGlobal();
+      }
+      
+      if (scope === 'all' || scope === 'unit') {
+        // For SoYTe, get all unit activities (from all units)
+        const allActivities = await danhMucHoatDongRepo.findAll();
+        unit = allActivities.filter(a => a.MaDonVi !== null && !a.DaXoaMem);
+      }
+    } else if (user.role === 'DonVi') {
+      // DonVi sees global + their unit activities
+      if (!user.unitId) {
+        return NextResponse.json({ error: 'User has no unit assigned' }, { status: 403 });
+      }
+
+      if (scope === 'all') {
+        const accessible = await danhMucHoatDongRepo.findAccessible(user.unitId);
+        global = accessible.global;
+        unit = accessible.unit;
+      } else if (scope === 'global') {
+        global = await danhMucHoatDongRepo.findGlobal();
+      } else if (scope === 'unit') {
+        unit = await danhMucHoatDongRepo.findByUnit(user.unitId);
+      }
     } else {
-      activities = await danhMucHoatDongRepo.findAll();
+      // Other roles only see global activities
+      if (scope === 'all' || scope === 'global') {
+        global = await danhMucHoatDongRepo.findGlobal();
+      }
     }
 
-    // Apply pagination
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    const paginatedActivities = activities.slice(startIndex, endIndex);
+    // Calculate permissions based on role
+    const permissions = {
+      canCreateGlobal: isSoYTe,
+      canCreateUnit: user.role === 'DonVi' || isSoYTe,
+      canEditGlobal: isSoYTe,
+      canEditUnit: user.role === 'DonVi' || isSoYTe,
+      canAdoptToGlobal: isSoYTe,
+      canRestoreSoftDeleted: isSoYTe || user.role === 'DonVi',
+    };
 
     return NextResponse.json({
-      activities: paginatedActivities,
+      global,
+      unit,
+      permissions,
       pagination: {
         page,
         limit,
-        total: activities.length,
-        totalPages: Math.ceil(activities.length / limit)
+        totalGlobal: global.length,
+        totalUnit: unit.length,
       }
     });
 
@@ -52,7 +87,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/activities - Create new activity (admin only)
+// POST /api/activities - Create new activity (SoYTe and DonVi)
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
@@ -60,8 +95,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only SoYTe can create activities
-    if (user.role !== 'SoYTe') {
+    // Both SoYTe and DonVi can create activities
+    if (user.role !== 'SoYTe' && user.role !== 'DonVi') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -70,8 +105,46 @@ export async function POST(request: NextRequest) {
     // Validate input
     const validatedData = CreateDanhMucHoatDongSchema.parse(body);
 
-    // Create activity
-    const newActivity = await danhMucHoatDongRepo.create(validatedData);
+    // Determine scope based on user role
+    let unitId: string | null = null;
+    let scope: 'global' | 'unit' = 'global';
+
+    if (user.role === 'DonVi') {
+      // DonVi can only create unit activities - auto-inject their unitId
+      if (!user.unitId) {
+        return NextResponse.json({ error: 'User has no unit assigned' }, { status: 403 });
+      }
+      unitId = user.unitId;
+      scope = 'unit';
+      
+      // Security: Ignore any MaDonVi from client input for DonVi users
+      delete (body as any).MaDonVi;
+    } else if (user.role === 'SoYTe') {
+      // SoYTe can create global (MaDonVi = null) or unit-specific activities
+      // If MaDonVi is provided in body, use it; otherwise create global
+      unitId = body.MaDonVi || null;
+      scope = unitId ? 'unit' : 'global';
+    }
+
+    // Create activity with ownership tracking
+    const newActivity = await danhMucHoatDongRepo.createWithOwnership(
+      validatedData,
+      user.id,
+      unitId
+    );
+
+    // Log catalog change
+    await nhatKyHeThongRepo.logCatalogChange(
+      user.id,
+      'CREATE',
+      newActivity.MaDanhMuc,
+      {
+        activityName: newActivity.TenDanhMuc,
+        scope,
+        unitId,
+        actorRole: user.role,
+      }
+    );
 
     return NextResponse.json(newActivity, { status: 201 });
 
