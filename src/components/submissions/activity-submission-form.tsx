@@ -39,6 +39,8 @@ interface ActivityCatalog {
   GioToiThieu: number | null;
   GioToiDa: number | null;
   YeuCauMinhChung: boolean;
+  MaDonVi?: string | null;
+  DaXoaMem?: boolean;
 }
 
 interface Practitioner {
@@ -134,9 +136,34 @@ export function ActivitySubmissionForm({
 
   // Load activity catalog via React Query
   useEffect(() => {
-    if (activitiesData?.activities) {
-      setActivityCatalog(activitiesData.activities);
+    if (!activitiesData) {
+      return;
     }
+
+    const fromFlat = (activitiesData as { activities?: ActivityCatalog[] }).activities;
+    if (Array.isArray(fromFlat)) {
+      setActivityCatalog(fromFlat.filter((activity) => !activity?.DaXoaMem));
+      return;
+    }
+
+    const maybeGlobal = (activitiesData as { global?: ActivityCatalog[] }).global;
+    const maybeUnit = (activitiesData as { unit?: ActivityCatalog[] }).unit;
+    const global = Array.isArray(maybeGlobal) ? maybeGlobal : [];
+    const unit = Array.isArray(maybeUnit) ? maybeUnit : [];
+
+    if (global.length === 0 && unit.length === 0) {
+      return;
+    }
+
+    const dedupedMap = new Map<string, ActivityCatalog>();
+    for (const activity of [...global, ...unit]) {
+      if (!activity || activity.DaXoaMem) {
+        continue;
+      }
+      dedupedMap.set(activity.MaDanhMuc, activity);
+    }
+
+    setActivityCatalog(Array.from(dedupedMap.values()));
   }, [activitiesData]);
 
   // Handle activity catalog selection
