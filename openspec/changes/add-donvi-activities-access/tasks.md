@@ -17,8 +17,8 @@
 - [x] Extend API tests to cover DonVi, SoYTe, and unauthorized access patterns, including adoption and restore scenarios.
 
 ## 4. Frontend
-- [ ] Refactor Activities page to consume scoped payload, render tabs (global, unit, soft-deleted for SoYTe), and display scope badges.
-- [ ] Update `ActivitiesList` actions for permission-aware create/edit/delete/adopt/restore flows with confirmation dialogs.
+- [x] Refactor Activities page to consume scoped payload, render tabs (global, unit, soft-deleted for SoYTe), and display scope badges.
+- [x] Update `ActivitiesList` actions for permission-aware create/edit/delete/adopt/restore flows with confirmation dialogs.
 - [ ] Update `ActivityForm` to hide scope controls for DonVi, expose adopt-to-global options for SoYTe, and display soft-delete warnings.
 - [ ] Add Playwright coverage for DonVi CRUD (within unit) and SoYTe adoption/restore flows.
 

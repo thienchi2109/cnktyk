@@ -159,9 +159,9 @@ export default function ActivitiesPage() {
     }
   };
 
-  // Handle delete activity
+  // Handle delete activity (soft delete)
   const handleDeleteActivity = async (activityId: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa hoạt động này?')) {
+    if (!confirm('Bạn có chắc chắn muốn xóa hoạt động này? Hoạt động sẽ được đánh dấu xóa mềm và có thể khôi phục sau.')) {
       return;
     }
 
@@ -173,6 +173,56 @@ export default function ActivitiesPage() {
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Không thể xóa hoạt động');
+      }
+
+      // Refresh the list
+      window.location.reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+    }
+  };
+
+  // Handle adopt to global (SoYTe only)
+  const handleAdoptToGlobal = async (activityId: string) => {
+    if (!confirm('Chuyển hoạt động này thành hoạt động hệ thống? Tất cả đơn vị sẽ có thể sử dụng hoạt động này.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/activities/${activityId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ MaDonVi: null }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Không thể chuyển hoạt động');
+      }
+
+      // Refresh the list
+      window.location.reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+    }
+  };
+
+  // Handle restore soft-deleted activity
+  const handleRestoreActivity = async (activityId: string) => {
+    if (!confirm('Khôi phục hoạt động đã xóa?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/activities/${activityId}/restore`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Không thể khôi phục hoạt động');
       }
 
       // Refresh the list
@@ -201,9 +251,12 @@ export default function ActivitiesPage() {
 
         <ActivitiesList
           userRole={userRole}
+          unitId={session.user.unitId}
           onCreateActivity={handleCreateClick}
           onEditActivity={handleEditClick}
           onDeleteActivity={handleDeleteActivity}
+          onAdoptToGlobal={handleAdoptToGlobal}
+          onRestoreActivity={handleRestoreActivity}
         />
 
         {/* Create/Edit Modal */}
