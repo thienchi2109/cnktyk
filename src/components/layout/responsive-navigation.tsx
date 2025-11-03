@@ -122,6 +122,12 @@ const getNavigationItems = (
         badge: pending > 0 ? pending : undefined
       },
       {
+        id: 'activities',
+        label: 'Danh mục hoạt động',
+        icon: <FileText className="h-4 w-4" />,
+        href: '/activities'
+      },
+      {
         id: 'reports',
         label: 'Báo cáo',
         icon: <BarChart3 className="h-4 w-4" />,
