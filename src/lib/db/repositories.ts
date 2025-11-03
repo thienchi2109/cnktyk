@@ -855,10 +855,13 @@ export class DanhMucHoatDongRepository extends BaseRepository<DanhMucHoatDong, C
 
   /**
    * Find all global activities (visible to all units)
+   * @param options - Pagination options
    * @returns Global activities that are not soft deleted
    */
-  async findGlobal(): Promise<DanhMucHoatDong[]> {
-    return db.query<DanhMucHoatDong>(`
+  async findGlobal(options?: { limit?: number; offset?: number }): Promise<DanhMucHoatDong[]> {
+    const { limit, offset } = options || {};
+
+    let query = `
       SELECT "MaDanhMuc", "TenDanhMuc", "LoaiHoatDong", "DonViTinh", "TyLeQuyDoi",
              "GioToiThieu", "GioToiDa", "YeuCauMinhChung", "HieuLucTu", "HieuLucDen",
              "MaDonVi", "NguoiTao", "NguoiCapNhat", "TaoLuc", "CapNhatLuc", "TrangThai"
@@ -866,16 +869,34 @@ export class DanhMucHoatDongRepository extends BaseRepository<DanhMucHoatDong, C
       WHERE "MaDonVi" IS NULL
         AND "DaXoaMem" = false
       ORDER BY "TenDanhMuc" ASC
-    `);
+    `;
+
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    if (limit !== undefined) {
+      query += ` LIMIT $${paramIndex++}`;
+      params.push(limit);
+
+      if (offset !== undefined) {
+        query += ` OFFSET $${paramIndex++}`;
+        params.push(offset);
+      }
+    }
+
+    return db.query<DanhMucHoatDong>(query, params);
   }
 
   /**
    * Find unit-specific activities (excludes global)
    * @param unitId - The unit to query activities for
+   * @param options - Pagination options
    * @returns Unit-specific activities that are not soft deleted
    */
-  async findByUnit(unitId: string): Promise<DanhMucHoatDong[]> {
-    return db.query<DanhMucHoatDong>(`
+  async findByUnit(unitId: string, options?: { limit?: number; offset?: number }): Promise<DanhMucHoatDong[]> {
+    const { limit, offset } = options || {};
+
+    let query = `
       SELECT "MaDanhMuc", "TenDanhMuc", "LoaiHoatDong", "DonViTinh", "TyLeQuyDoi",
              "GioToiThieu", "GioToiDa", "YeuCauMinhChung", "HieuLucTu", "HieuLucDen",
              "MaDonVi", "NguoiTao", "NguoiCapNhat", "TaoLuc", "CapNhatLuc", "TrangThai"
@@ -883,7 +904,22 @@ export class DanhMucHoatDongRepository extends BaseRepository<DanhMucHoatDong, C
       WHERE "MaDonVi" = $1
         AND "DaXoaMem" = false
       ORDER BY "TenDanhMuc" ASC
-    `, [unitId]);
+    `;
+
+    const params: any[] = [unitId];
+    let paramIndex = 2;
+
+    if (limit !== undefined) {
+      query += ` LIMIT $${paramIndex++}`;
+      params.push(limit);
+
+      if (offset !== undefined) {
+        query += ` OFFSET $${paramIndex++}`;
+        params.push(offset);
+      }
+    }
+
+    return db.query<DanhMucHoatDong>(query, params);
   }
 
   /**
@@ -937,6 +973,38 @@ export class DanhMucHoatDongRepository extends BaseRepository<DanhMucHoatDong, C
     }
 
     return { global, unit };
+  }
+
+  /**
+   * Count global activities (visible to all units)
+   * @returns Count of global activities that are not soft deleted
+   */
+  async countGlobal(): Promise<number> {
+    const result = await db.queryOne<{ count: number }>(
+      `SELECT COUNT(*) as count FROM "${this.tableName}" WHERE "MaDonVi" IS NULL AND "DaXoaMem" = false`
+    );
+    return result?.count || 0;
+  }
+
+  /**
+   * Count unit-specific activities
+   * @param unitId - The unit to count activities for (null for all units)
+   * @returns Count of unit activities that are not soft deleted
+   */
+  async countByUnit(unitId?: string | null): Promise<number> {
+    if (unitId) {
+      const result = await db.queryOne<{ count: number }>(
+        `SELECT COUNT(*) as count FROM "${this.tableName}" WHERE "MaDonVi" = $1 AND "DaXoaMem" = false`,
+        [unitId]
+      );
+      return result?.count || 0;
+    } else {
+      // Count all unit activities (excluding global)
+      const result = await db.queryOne<{ count: number }>(
+        `SELECT COUNT(*) as count FROM "${this.tableName}" WHERE "MaDonVi" IS NOT NULL AND "DaXoaMem" = false`
+      );
+      return result?.count || 0;
+    }
   }
 
   /**

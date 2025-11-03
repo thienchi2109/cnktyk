@@ -17,22 +17,31 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '50');
 
+    // Calculate offset for pagination
+    const offset = (page - 1) * limit;
+    const paginationOptions = { limit, offset };
+
     // SoYTe can see all activities, DonVi only their unit + global
     const isSoYTe = user.role === 'SoYTe';
-    
+
     let global: any[] = [];
     let unit: any[] = [];
+    let totalGlobal = 0;
+    let totalUnit = 0;
 
     if (isSoYTe) {
       // SoYTe sees all activities
       if (scope === 'all' || scope === 'global') {
-        global = await danhMucHoatDongRepo.findGlobal();
+        global = await danhMucHoatDongRepo.findGlobal(paginationOptions);
+        totalGlobal = await danhMucHoatDongRepo.countGlobal();
       }
-      
+
       if (scope === 'all' || scope === 'unit') {
         // For SoYTe, get all unit activities (from all units)
-        const allActivities = await danhMucHoatDongRepo.findAll();
+        const allActivities = await danhMucHoatDongRepo.findAll(paginationOptions.limit, paginationOptions.offset);
+        // Filter out global activities for unit view
         unit = allActivities.filter(a => a.MaDonVi !== null && !a.DaXoaMem);
+        totalUnit = await danhMucHoatDongRepo.countByUnit(null); // All units
       }
     } else if (user.role === 'DonVi') {
       // DonVi sees global + their unit activities
@@ -44,15 +53,20 @@ export async function GET(request: NextRequest) {
         const accessible = await danhMucHoatDongRepo.findAccessible(user.unitId);
         global = accessible.global;
         unit = accessible.unit;
+        totalGlobal = await danhMucHoatDongRepo.countGlobal();
+        totalUnit = await danhMucHoatDongRepo.countByUnit(user.unitId);
       } else if (scope === 'global') {
-        global = await danhMucHoatDongRepo.findGlobal();
+        global = await danhMucHoatDongRepo.findGlobal(paginationOptions);
+        totalGlobal = await danhMucHoatDongRepo.countGlobal();
       } else if (scope === 'unit') {
-        unit = await danhMucHoatDongRepo.findByUnit(user.unitId);
+        unit = await danhMucHoatDongRepo.findByUnit(user.unitId, paginationOptions);
+        totalUnit = await danhMucHoatDongRepo.countByUnit(user.unitId);
       }
     } else {
       // Other roles only see global activities
       if (scope === 'all' || scope === 'global') {
-        global = await danhMucHoatDongRepo.findGlobal();
+        global = await danhMucHoatDongRepo.findGlobal(paginationOptions);
+        totalGlobal = await danhMucHoatDongRepo.countGlobal();
       }
     }
 
@@ -73,8 +87,12 @@ export async function GET(request: NextRequest) {
       pagination: {
         page,
         limit,
-        totalGlobal: global.length,
-        totalUnit: unit.length,
+        totalGlobal,
+        totalUnit,
+        totalPages: {
+          global: Math.ceil(totalGlobal / limit),
+          unit: Math.ceil(totalUnit / limit),
+        },
       }
     });
 

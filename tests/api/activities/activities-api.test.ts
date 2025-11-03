@@ -18,6 +18,8 @@ vi.mock('@/lib/db/repositories', () => ({
     restore: vi.fn(),
     adoptToGlobal: vi.fn(),
     assertCanMutate: vi.fn(),
+    countGlobal: vi.fn(),
+    countByUnit: vi.fn(),
   },
   nhatKyHeThongRepo: {
     logCatalogChange: vi.fn(),
@@ -677,5 +679,122 @@ describe('POST /api/activities/[id]/restore - Restore Soft-Deleted Activity', ()
     const res = await makeRestoreRequest('activity-global-1');
 
     expect(res.status).toBe(200);
+  });
+});
+
+describe('Pagination Tests', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('paginates global activities with limit and page', async () => {
+    const user = { id: 'soyte-1', username: 'soyte@admin.vn', role: 'SoYTe', unitId: undefined };
+    (getCurrentUser as any).mockResolvedValueOnce(user);
+
+    const mockGlobal = Array.from({ length: 100 }, (_, i) => ({
+      ...mockGlobalActivity,
+      MaDanhMuc: `global-${i}`,
+      TenDanhMuc: `Global Activity ${i}`,
+    }));
+
+    // Mock paginated response and count
+    (danhMucHoatDongRepo.findGlobal as any).mockResolvedValueOnce(mockGlobal.slice(0, 10));
+    (danhMucHoatDongRepo.countGlobal as any).mockResolvedValueOnce(100);
+
+    const res = await makeGetRequest({ scope: 'global', page: '1', limit: '10' });
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.global).toHaveLength(10);
+    expect(json.pagination.page).toBe(1);
+    expect(json.pagination.limit).toBe(10);
+    expect(json.pagination.totalGlobal).toBe(100);
+    expect(json.pagination.totalPages.global).toBe(10);
+    expect(danhMucHoatDongRepo.findGlobal).toHaveBeenCalledWith({ limit: 10, offset: 0 });
+  });
+
+  it('paginates to page 2 with correct offset', async () => {
+    const user = { id: 'donvi-1', username: 'donvi@unit1.vn', role: 'DonVi', unitId: 'unit-1' };
+    (getCurrentUser as any).mockResolvedValueOnce(user);
+
+    const mockUnit = Array.from({ length: 50 }, (_, i) => ({
+      ...mockUnitActivity,
+      MaDanhMuc: `unit-${i}`,
+      TenDanhMuc: `Unit Activity ${i}`,
+    }));
+
+    // Mock paginated response and count
+    (danhMucHoatDongRepo.findByUnit as any).mockResolvedValueOnce(mockUnit.slice(10, 20));
+    (danhMucHoatDongRepo.countByUnit as any).mockResolvedValueOnce(50);
+
+    const res = await makeGetRequest({ scope: 'unit', page: '2', limit: '10' });
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.unit).toHaveLength(10);
+    expect(json.pagination.page).toBe(2);
+    expect(json.pagination.limit).toBe(10);
+    expect(json.pagination.totalUnit).toBe(50);
+    expect(json.pagination.totalPages.unit).toBe(5);
+    expect(danhMucHoatDongRepo.findByUnit).toHaveBeenCalledWith('unit-1', { limit: 10, offset: 10 });
+  });
+
+  it('handles pagination without limit parameter (uses default 50)', async () => {
+    const user = { id: 'soyte-1', username: 'soyte@admin.vn', role: 'SoYTe', unitId: undefined };
+    (getCurrentUser as any).mockResolvedValueOnce(user);
+
+    (danhMucHoatDongRepo.findGlobal as any).mockResolvedValueOnce([]);
+    (danhMucHoatDongRepo.countGlobal as any).mockResolvedValueOnce(0);
+
+    await makeGetRequest({ scope: 'global', page: '1' });
+
+    expect(danhMucHoatDongRepo.findGlobal).toHaveBeenCalledWith({ limit: 50, offset: 0 });
+  });
+
+  it('handles pagination without page parameter (defaults to page 1)', async () => {
+    const user = { id: 'donvi-1', username: 'donvi@unit1.vn', role: 'DonVi', unitId: 'unit-1' };
+    (getCurrentUser as any).mockResolvedValueOnce(user);
+
+    (danhMucHoatDongRepo.findByUnit as any).mockResolvedValueOnce([]);
+    (danhMucHoatDongRepo.countByUnit as any).mockResolvedValueOnce(0);
+
+    await makeGetRequest({ scope: 'unit', limit: '20' });
+
+    expect(danhMucHoatDongRepo.findByUnit).toHaveBeenCalledWith('unit-1', { limit: 20, offset: 0 });
+  });
+
+  it('calls countByUnit with null for all units (SoYTe)', async () => {
+    const user = { id: 'soyte-1', username: 'soyte@admin.vn', role: 'SoYTe', unitId: undefined };
+    (getCurrentUser as any).mockResolvedValueOnce(user);
+
+    (danhMucHoatDongRepo.findAll as any).mockResolvedValueOnce([]);
+    (danhMucHoatDongRepo.countByUnit as any).mockResolvedValueOnce(0);
+
+    await makeGetRequest({ scope: 'unit', page: '1', limit: '10' });
+
+    expect(danhMucHoatDongRepo.countByUnit).toHaveBeenCalledWith(null); // All units
+  });
+
+  it('returns correct pagination metadata for "all" scope', async () => {
+    const user = { id: 'donvi-1', username: 'donvi@unit1.vn', role: 'DonVi', unitId: 'unit-1' };
+    (getCurrentUser as any).mockResolvedValueOnce(user);
+
+    const accessible = {
+      global: [mockGlobalActivity],
+      unit: [mockUnitActivity],
+    };
+
+    (danhMucHoatDongRepo.findAccessible as any).mockResolvedValueOnce(accessible);
+    (danhMucHoatDongRepo.countGlobal as any).mockResolvedValueOnce(1);
+    (danhMucHoatDongRepo.countByUnit as any).mockResolvedValueOnce(1);
+
+    const res = await makeGetRequest({ scope: 'all', page: '1', limit: '10' });
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.pagination.totalGlobal).toBe(1);
+    expect(json.pagination.totalUnit).toBe(1);
+    expect(json.pagination.totalPages.global).toBe(1);
+    expect(json.pagination.totalPages.unit).toBe(1);
   });
 });
