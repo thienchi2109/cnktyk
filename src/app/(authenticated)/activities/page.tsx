@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { ActivitiesList } from '@/components/activities/activities-list';
-import { ActivityForm } from '@/components/activities/activity-form';
-import { GlassModal } from '@/components/ui/glass-modal';
+import { ActivityFormSheet } from '@/components/activities/activity-form-sheet';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -35,9 +34,8 @@ type ActivityFormData = {
 
 export default function ActivitiesPage() {
   const { data: session, status } = useSession();
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateSheet, setShowCreateSheet] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [permissions, setPermissions] = useState({
     canCreateGlobal: false,
@@ -80,92 +78,18 @@ export default function ActivitiesPage() {
   // Handle create activity
   const handleCreateClick = () => {
     setSelectedActivity(null);
-    setShowCreateModal(true);
+    setShowCreateSheet(true);
     setError(null);
   };
 
   // Handle edit activity
   const handleEditClick = (activity: Activity) => {
     setSelectedActivity(activity);
-    setShowCreateModal(true);
+    setShowCreateSheet(true);
     setError(null);
   };
 
-  // Handle form submission
-  const handleCreateActivity = async (data: ActivityFormData) => {
-    try {
-      setIsSubmitting(true);
-      setError(null);
-
-      // Convert date strings to Date objects or null
-      const processedData = {
-        ...data,
-        HieuLucTu: data.HieuLucTu ? new Date(data.HieuLucTu) : null,
-        HieuLucDen: data.HieuLucDen ? new Date(data.HieuLucDen) : null,
-      };
-
-      const response = await fetch('/api/activities', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(processedData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Không thể tạo hoạt động');
-      }
-
-      setShowCreateModal(false);
-      // Refresh the list by reloading the page or triggering a refetch
-      window.location.reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Handle update activity
-  const handleUpdateActivity = async (data: ActivityFormData) => {
-    if (!selectedActivity) return;
-
-    try {
-      setIsSubmitting(true);
-      setError(null);
-
-      // Convert date strings to Date objects or null
-      const processedData = {
-        ...data,
-        HieuLucTu: data.HieuLucTu ? new Date(data.HieuLucTu) : null,
-        HieuLucDen: data.HieuLucDen ? new Date(data.HieuLucDen) : null,
-      };
-
-      const response = await fetch(`/api/activities/${selectedActivity.MaDanhMuc}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(processedData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Không thể cập nhật hoạt động');
-      }
-
-      setShowCreateModal(false);
-      setSelectedActivity(null);
-      // Refresh the list
-      window.location.reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
+  
   // Handle delete activity (soft delete)
   const handleDeleteActivity = async (activityId: string) => {
     if (!confirm('Bạn có chắc chắn muốn xóa hoạt động này? Hoạt động sẽ được đánh dấu xóa mềm và có thể khôi phục sau.')) {
@@ -182,8 +106,7 @@ export default function ActivitiesPage() {
         throw new Error(errorData.error || 'Không thể xóa hoạt động');
       }
 
-      // Refresh the list
-      window.location.reload();
+      // Refresh would be handled by state management in future implementation
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
     }
@@ -209,8 +132,7 @@ export default function ActivitiesPage() {
         throw new Error(errorData.error || 'Không thể chuyển hoạt động');
       }
 
-      // Refresh the list
-      window.location.reload();
+      // Refresh would be handled by state management in future implementation
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
     }
@@ -232,16 +154,15 @@ export default function ActivitiesPage() {
         throw new Error(errorData.error || 'Không thể khôi phục hoạt động');
       }
 
-      // Refresh the list
-      window.location.reload();
+      // Refresh would be handled by state management in future implementation
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
     }
   };
 
-  // Handle modal close
-  const handleModalClose = () => {
-    setShowCreateModal(false);
+  // Handle sheet close
+  const handleSheetClose = () => {
+    setShowCreateSheet(false);
     setSelectedActivity(null);
     setError(null);
   };
@@ -267,26 +188,20 @@ export default function ActivitiesPage() {
           onPermissionsLoaded={setPermissions}
         />
 
-        {/* Create/Edit Modal */}
-        {showCreateModal && (
-          <GlassModal
-            isOpen={showCreateModal}
-            onClose={handleModalClose}
-            title={selectedActivity ? 'Chỉnh sửa hoạt động' : 'Thêm hoạt động mới'}
-            size="lg"
-          >
-            <ActivityForm
-              activity={selectedActivity}
-              mode={selectedActivity ? 'edit' : 'create'}
-              onSubmit={selectedActivity ? handleUpdateActivity : handleCreateActivity}
-              onCancel={handleModalClose}
-              isLoading={isSubmitting}
-              userRole={userRole}
-              unitId={session.user.unitId}
-              permissions={permissions}
-            />
-          </GlassModal>
-        )}
+        {/* Create/Edit Sheet */}
+        <ActivityFormSheet
+          activityId={selectedActivity?.MaDanhMuc}
+          open={showCreateSheet}
+          onOpenChange={setShowCreateSheet}
+          mode={selectedActivity ? 'edit' : 'create'}
+          userRole={userRole}
+          unitId={session.user.unitId}
+          permissions={permissions}
+          onUpdate={() => {
+            // Refresh would be handled by state management in future implementation
+            window.location.reload();
+          }}
+        />
       </div>
   );
 }

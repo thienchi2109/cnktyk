@@ -50,6 +50,7 @@ interface ActivityFormProps {
   isLoading?: boolean;
   userRole?: string;
   unitId?: string;
+  variant?: 'modal' | 'sheet';
   permissions?: {
     canCreateGlobal: boolean;
     canCreateUnit: boolean;
@@ -72,14 +73,15 @@ const unitOptions = [
   { value: 'tin_chi', label: 'Tín chỉ' },
 ];
 
-export function ActivityForm({ 
-  activity, 
-  mode, 
-  onSubmit, 
-  onCancel, 
+export function ActivityForm({
+  activity,
+  mode,
+  onSubmit,
+  onCancel,
   isLoading = false,
   userRole = 'DonVi',
   unitId,
+  variant = 'modal',
   permissions = {
     canCreateGlobal: false,
     canCreateUnit: false,
@@ -196,25 +198,8 @@ export function ActivityForm({
     );
   };
 
-  return (
-    <GlassCard className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <h2 className="text-xl font-semibold text-gray-800">
-            {mode === 'create' ? 'Thêm hoạt động mới' : 'Chỉnh sửa hoạt động'}
-          </h2>
-          {getScopeBadge()}
-        </div>
-        <GlassButton
-          variant="ghost"
-          size="sm"
-          onClick={onCancel}
-          className="text-gray-500 hover:text-gray-700"
-        >
-          <X className="h-4 w-4" />
-        </GlassButton>
-      </div>
-
+  const formContent = (
+    <>
       {/* Soft-delete warning */}
       {isSoftDeleted && (
         <Alert className="mb-4 border-orange-200 bg-orange-50">
@@ -246,7 +231,7 @@ export function ActivityForm({
               <SelectTrigger>
                 <SelectValue placeholder="Chọn phạm vi" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[100] bg-white border border-gray-200 shadow-lg">
                 <SelectItem value="global">
                   <div className="flex items-center">
                     <Globe className="h-4 w-4 mr-2" />
@@ -317,7 +302,7 @@ export function ActivityForm({
             <SelectTrigger>
               <SelectValue placeholder="Chọn loại hoạt động" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-[100] bg-white border border-gray-200 shadow-lg">
               {activityTypeOptions.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
@@ -341,7 +326,7 @@ export function ActivityForm({
             <SelectTrigger>
               <SelectValue placeholder="Chọn đơn vị tính" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-[100] bg-white border border-gray-200 shadow-lg">
               {unitOptions.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
@@ -477,6 +462,34 @@ export function ActivityForm({
           </p>
         )}
       </form>
+    </>
+  );
+
+  // Sheet variant - no wrapper, reduced padding
+  if (variant === 'sheet') {
+    return formContent;
+  }
+
+  // Modal variant - default behavior with GlassCard wrapper
+  return (
+    <GlassCard className="p-6">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-semibold text-gray-800">
+            {mode === 'create' ? 'Thêm hoạt động mới' : 'Chỉnh sửa hoạt động'}
+          </h2>
+          {getScopeBadge()}
+        </div>
+        <GlassButton
+          variant="ghost"
+          size="sm"
+          onClick={onCancel}
+          className="text-gray-500 hover:text-gray-700"
+        >
+          <X className="h-4 w-4" />
+        </GlassButton>
+      </div>
+      {formContent}
     </GlassCard>
   );
 }
