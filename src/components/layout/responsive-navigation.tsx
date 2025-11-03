@@ -84,7 +84,7 @@ const getNavigationItems = (
       },
       {
         id: 'submissions',
-        label: 'Hoạt động',
+        label: 'Ghi nhận hoạt động',
         icon: <Activity className="h-4 w-4" />,
         href: '/submissions'
       },
@@ -115,17 +115,24 @@ const getNavigationItems = (
         href: '/practitioners'
       },
       {
-        id: 'submissions',
-        label: 'Hoạt động',
+        id: 'activity-management',
+        label: 'Quản lý hoạt động',
         icon: <Activity className="h-4 w-4" />,
-        href: '/submissions',
-        badge: pending > 0 ? pending : undefined
-      },
-      {
-        id: 'activities',
-        label: 'Danh mục hoạt động',
-        icon: <FileText className="h-4 w-4" />,
-        href: '/activities'
+        children: [
+          {
+            id: 'submissions',
+            label: 'Ghi nhận hoạt động',
+            icon: <Activity className="h-4 w-4" />,
+            href: '/submissions',
+            badge: pending > 0 ? pending : undefined
+          },
+          {
+            id: 'activities',
+            label: 'Danh mục hoạt động',
+            icon: <FileText className="h-4 w-4" />,
+            href: '/activities'
+          }
+        ]
       },
       {
         id: 'reports',
