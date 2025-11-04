@@ -136,6 +136,9 @@ export const CreateDanhMucHoatDongSchema = DanhMucHoatDongSchema.omit({
   TaoLuc: true,
   CapNhatLuc: true,
   DaXoaMem: true,
+}).extend({
+  HieuLucTu: z.coerce.date().nullable(),
+  HieuLucDen: z.coerce.date().nullable(),
 });
 
 // Update schema: prevent changing unit scope and other protected fields

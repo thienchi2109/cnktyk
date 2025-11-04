@@ -39,6 +39,8 @@ interface ActivityCatalog {
   GioToiThieu: number | null;
   GioToiDa: number | null;
   YeuCauMinhChung: boolean;
+  MaDonVi?: string | null;
+  DaXoaMem?: boolean;
 }
 
 interface Practitioner {
@@ -134,9 +136,34 @@ export function ActivitySubmissionForm({
 
   // Load activity catalog via React Query
   useEffect(() => {
-    if (activitiesData?.activities) {
-      setActivityCatalog(activitiesData.activities);
+    if (!activitiesData) {
+      return;
     }
+
+    const fromFlat = (activitiesData as { activities?: ActivityCatalog[] }).activities;
+    if (Array.isArray(fromFlat)) {
+      setActivityCatalog(fromFlat.filter((activity) => !activity?.DaXoaMem));
+      return;
+    }
+
+    const maybeGlobal = (activitiesData as { global?: ActivityCatalog[] }).global;
+    const maybeUnit = (activitiesData as { unit?: ActivityCatalog[] }).unit;
+    const global = Array.isArray(maybeGlobal) ? maybeGlobal : [];
+    const unit = Array.isArray(maybeUnit) ? maybeUnit : [];
+
+    if (global.length === 0 && unit.length === 0) {
+      return;
+    }
+
+    const dedupedMap = new Map<string, ActivityCatalog>();
+    for (const activity of [...global, ...unit]) {
+      if (!activity || activity.DaXoaMem) {
+        continue;
+      }
+      dedupedMap.set(activity.MaDanhMuc, activity);
+    }
+
+    setActivityCatalog(Array.from(dedupedMap.values()));
   }, [activitiesData]);
 
   // Handle activity catalog selection
@@ -494,7 +521,8 @@ export function ActivitySubmissionForm({
           </div>
         ) : (
           /* Sheet variant - for modal */
-          <div className="fixed bottom-6 right-6 flex gap-3 z-50">
+          <div className="fixed bottom-0 left-0 right-0 flex justify-end gap-3 z-50 p-4 bg-white/95 backdrop-blur-sm border-t border-gray-200">
+            {/* Secondary Action Button - Cancel (only if onCancel provided) */}
             {onCancel && (
               <Button
                 type="button"
@@ -508,6 +536,8 @@ export function ActivitySubmissionForm({
                 Hủy
               </Button>
             )}
+
+            {/* Primary Action Button - Save/Update */}
             <Button
               type="submit"
               disabled={isLoading}
