@@ -218,9 +218,10 @@ export function ActivitiesList({
         {(permissions.canCreateGlobal || permissions.canCreateUnit) && onCreateActivity && (
           <GlassButton
             onClick={onCreateActivity}
-            className="bg-medical-blue hover:bg-medical-blue/90"
+            className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6"
+            size="lg"
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-5 w-5" />
             Thêm hoạt động
           </GlassButton>
         )}
