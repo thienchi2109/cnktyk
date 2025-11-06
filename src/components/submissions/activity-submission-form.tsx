@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { 
   Calendar,
@@ -112,6 +112,7 @@ export function ActivitySubmissionForm({
   });
 
   const {
+    control,
     register,
     handleSubmit,
     watch,
@@ -121,6 +122,7 @@ export function ActivitySubmissionForm({
   } = useForm<SubmissionFormData>({
     resolver: zodResolver(submissionSchema),
     defaultValues: {
+      MaNhanVien: initialPractitionerId ?? '',
       SoGioTinChiQuyDoi: 0,
     },
   });
@@ -130,7 +132,10 @@ export function ActivitySubmissionForm({
   // Prefill practitioner id for practitioner role
   useEffect(() => {
     if (userRole === 'NguoiHanhNghe' && initialPractitionerId) {
-      setValue('MaNhanVien', initialPractitionerId);
+      setValue('MaNhanVien', initialPractitionerId, {
+        shouldDirty: false,
+        shouldValidate: true,
+      });
     }
   }, [userRole, initialPractitionerId, setValue]);
 
@@ -286,13 +291,20 @@ export function ActivitySubmissionForm({
             <div className="space-y-4">
               <div>
                 <Label htmlFor="MaNhanVien">Chọn nhân viên *</Label>
-                <PractitionerSelector
-                  practitioners={cachedPractitioners || []}
-                  value={watchedValues.MaNhanVien}
-                  onValueChange={(value) => setValue('MaNhanVien', value)}
-                  placeholder="Chọn nhân viên..."
-                  error={errors.MaNhanVien?.message}
-                  isLoading={isPractitionersLoading}
+                <Controller
+                  name="MaNhanVien"
+                  control={control}
+                  rules={{ required: 'Vui lòng chọn nhân viên' }}
+                  render={({ field }) => (
+                    <PractitionerSelector
+                      practitioners={cachedPractitioners || []}
+                      value={field.value}
+                      onValueChange={(value) => field.onChange(value)}
+                      placeholder="Chọn nhân viên..."
+                      error={errors.MaNhanVien?.message}
+                      isLoading={isPractitionersLoading}
+                    />
+                  )}
                 />
               </div>
             </div>
