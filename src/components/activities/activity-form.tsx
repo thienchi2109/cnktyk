@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -432,28 +432,29 @@ export function ActivityForm({
 
         {/* Form Actions */}
         <div className="flex justify-end space-x-3 pt-4">
-          <GlassButton
+          <Button
             type="button"
             variant="outline"
             onClick={onCancel}
             disabled={isLoading}
           >
+            <X className="w-4 h-4 mr-2" />
             Hủy
-          </GlassButton>
-          <GlassButton
+          </Button>
+          <Button
             type="submit"
             disabled={isLoading || isSoftDeleted}
-            className="bg-medical-blue hover:bg-medical-blue/90"
+            className="border border-primary/30"
           >
             {isLoading ? (
               'Đang xử lý...'
             ) : (
               <>
-                {mode === 'create' ? <Plus className="h-4 w-4 mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                {mode === 'create' ? <Plus className="w-4 h-4 mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                 {mode === 'create' ? 'Thêm hoạt động' : 'Cập nhật'}
               </>
             )}
-          </GlassButton>
+          </Button>
         </div>
         
         {isSoftDeleted && (
@@ -480,14 +481,14 @@ export function ActivityForm({
           </h2>
           {getScopeBadge()}
         </div>
-        <GlassButton
+        <Button
           variant="ghost"
           size="sm"
           onClick={onCancel}
           className="text-gray-500 hover:text-gray-700"
         >
           <X className="h-4 w-4" />
-        </GlassButton>
+        </Button>
       </div>
       {formContent}
     </GlassCard>
