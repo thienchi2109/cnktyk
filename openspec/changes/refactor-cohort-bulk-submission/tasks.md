@@ -101,10 +101,10 @@
 ## 5. Navigation & Routes
 
 ### 5.1 Update Navigation
-- [ ] 5.1.1 Update sidebar/nav label: "Bulk Assignment" → "Bulk Enrollment"
-- [ ] 5.1.2 Add icon (Users or UserPlus)
-- [ ] 5.1.3 Restrict access to DonVi and SoYTe roles
-- [ ] 5.1.4 Update route metadata
+- [x] 5.1.1 Update sidebar/nav label: "Bulk Assignment" → "Bulk Enrollment"
+- [x] 5.1.2 Add icon (Users or UserPlus)
+- [x] 5.1.3 Restrict access to DonVi and SoYTe roles
+- [x] 5.1.4 Update route metadata
 
 ### 5.2 Links from Other Pages
 - [ ] 5.2.1 Add "Bulk Enroll" button to Activities page (DonVi only)
@@ -229,4 +229,5 @@
 - Add notes below tasks if blockers or decisions needed
 - Review this list daily during implementation
 - Update as new subtasks discovered
+
 
