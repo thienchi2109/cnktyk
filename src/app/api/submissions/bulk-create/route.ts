@@ -2,15 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { getCurrentUser } from '@/lib/auth/server';
-import { db } from '@/lib/db/client';
-import { danhMucHoatDongRepo, nhatKyHeThongRepo } from '@/lib/db/repositories';
 import { UUIDSchema, TrangThaiLamViecSchema } from '@/lib/db/schemas';
-import type {
-  BulkSubmissionRequest,
-  BulkSubmissionResponse,
-  BulkSubmissionResultError,
-  BulkCohortSelection,
-} from '@/types/bulk-submission';
+import { danhMucHoatDongRepo, ghiNhanHoatDongRepo, nhanVienRepo, nhatKyHeThongRepo } from '@/lib/db/repositories';
+import type { BulkSubmissionRequest, BulkSubmissionResponse } from '@/types/bulk-submission';
 
 const cohortFiltersSchema = z
   .object({
@@ -48,17 +42,6 @@ const bulkSubmissionSchema = z.object({
 });
 
 type AuthorizedRole = 'DonVi' | 'SoYTe';
-
-type PractitionerRow = {
-  MaNhanVien: string;
-  MaDonVi: string;
-};
-
-type CohortResolutionResult = {
-  practitioners: PractitionerRow[];
-  errors: BulkSubmissionResultError[];
-  normalizedSelection: BulkCohortSelection;
-};
 
 type ActivityRecord = {
   MaDanhMuc: string;
@@ -140,68 +123,92 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkSubmi
       return NextResponse.json({ error: 'Activity validity has expired' }, { status: 400 });
     }
 
-    const { practitioners, errors, normalizedSelection } = await resolveCohort(payload.cohort, user.role as AuthorizedRole, user.unitId);
+    const { practitioners, errors, normalizedSelection } = await nhanVienRepo.resolveBulkCohortSelection(
+      payload.cohort,
+      {
+        role: user.role as AuthorizedRole,
+        unitId: user.unitId ?? null,
+      },
+    );
 
-    if (user.role === 'DonVi') {
-      const outsideUnit = practitioners.filter((p) => p.MaDonVi !== user.unitId);
-      if (outsideUnit.length > 0) {
+    if (user.role === 'DonVi' && user.unitId) {
+      const mismatchedTenancy = await nhanVienRepo.validatePractitionersTenancy(
+        practitioners.map((p) => p.MaNhanVien),
+        user.unitId,
+      );
+
+      if (mismatchedTenancy.length > 0) {
         return NextResponse.json({ error: 'Cannot create submissions for other units' }, { status: 403 });
       }
     }
 
     const practitionerIds = practitioners.map((p) => p.MaNhanVien);
 
-    const duplicateRows = practitionerIds.length
-      ? await db.query<{ MaNhanVien: string }>(
-          `SELECT "MaNhanVien"
-           FROM "GhiNhanHoatDong"
-           WHERE "MaDanhMuc" = $1 AND "MaNhanVien" = ANY($2::uuid[])`,
-          [payload.MaDanhMuc, practitionerIds],
-        )
-      : [];
+    const duplicateIdsFromDb = await ghiNhanHoatDongRepo.findDuplicatePractitionerIds(
+      payload.MaDanhMuc,
+      practitionerIds,
+    );
 
-    const duplicateSet = new Set(duplicateRows.map((row) => row.MaNhanVien));
+    const duplicateSet = new Set(duplicateIdsFromDb);
     const candidates = practitioners.filter((row) => !duplicateSet.has(row.MaNhanVien));
 
     if (candidates.length === 0) {
-      const duplicateIds = Array.from(duplicateSet);
+      const duplicateIdList = Array.from(duplicateSet);
       return NextResponse.json({
         success: true,
         created: 0,
-        skipped: duplicateIds.length,
+        skipped: duplicateIdList.length,
         failed: errors.length,
         details: {
           submissionIds: [],
-          duplicates: duplicateIds,
+          duplicates: duplicateIdList,
           errors,
         },
-        message: `Đã tạo 0 bản ghi, bỏ qua ${duplicateIds.length} bản ghi trùng`,
+        message: `Đã tạo 0 bản ghi, bỏ qua ${duplicateIdList.length} bản ghi trùng`,
       });
     }
 
-    const insertResult = await insertBulkSubmissions({
-      candidates,
-      activity,
-      userId: user.id,
-      startDate,
-      endDate,
-      organizer: payload.DonViToChuc?.length ? payload.DonViToChuc : null,
-    });
+    const conversionRateRaw = activity.TyLeQuyDoi ?? 0;
+    const conversionRate =
+      typeof conversionRateRaw === 'number'
+        ? conversionRateRaw
+        : Number(conversionRateRaw || 0);
+
+    const initialStatus: 'ChoDuyet' | 'Nhap' = activity.YeuCauMinhChung ? 'Nhap' : 'ChoDuyet';
+    const organizer = payload.DonViToChuc?.length ? payload.DonViToChuc : null;
+
+    const submissionsToCreate = candidates.map((candidate) => ({
+      MaNhanVien: candidate.MaNhanVien,
+      MaDanhMuc: activity.MaDanhMuc,
+      TenHoatDong: activity.TenDanhMuc,
+      NguoiNhap: user.id,
+      TrangThaiDuyet: initialStatus,
+      DonViToChuc: organizer,
+      NgayBatDau: startDate,
+      NgayKetThuc: endDate,
+      SoTiet: null,
+      SoGioTinChiQuyDoi: conversionRate,
+      HinhThucCapNhatKienThucYKhoa: activity.LoaiHoatDong ?? null,
+      FileMinhChungUrl: null,
+      BangChungSoGiayChungNhan: null,
+    }));
+
+    const insertResult = await ghiNhanHoatDongRepo.bulkCreate(submissionsToCreate);
 
     insertResult.conflicts.forEach((id: string) => duplicateSet.add(id));
 
-    const duplicateIds = Array.from(duplicateSet);
+    const duplicateIdList = Array.from(duplicateSet);
     const responseBody: BulkSubmissionResponse = {
       success: true,
       created: insertResult.inserted.length,
-      skipped: duplicateIds.length,
+      skipped: duplicateIdList.length,
       failed: errors.length,
       details: {
         submissionIds: insertResult.inserted.map((row) => row.MaGhiNhan),
-        duplicates: duplicateIds,
+        duplicates: duplicateIdList,
         errors,
       },
-      message: buildSummaryMessage(insertResult.inserted.length, duplicateIds.length, errors.length),
+      message: buildSummaryMessage(insertResult.inserted.length, duplicateIdList.length, errors.length),
     };
 
     await nhatKyHeThongRepo.create({
@@ -218,7 +225,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkSubmi
         totalSelected: practitioners.length,
         totalExcluded: normalizedSelection.excludedIds.length,
         created: insertResult.inserted.length,
-        skipped: duplicateIds.length,
+        skipped: duplicateIdList.length,
         failed: errors.length,
         actorRole: user.role,
       },
@@ -234,192 +241,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkSubmi
   }
 }
 
-async function resolveCohort(
-  selection: BulkCohortSelection,
-  role: AuthorizedRole,
-  unitId?: string | null,
-): Promise<CohortResolutionResult> {
-  const normalizedSelection: BulkCohortSelection = {
-    mode: selection.mode,
-    selectedIds: Array.from(new Set(selection.selectedIds ?? [])),
-    excludedIds: Array.from(new Set(selection.excludedIds ?? [])),
-    filters: selection.filters ?? {},
-    totalFiltered: selection.totalFiltered,
-  };
-
-  const errors: BulkSubmissionResultError[] = [];
-  const excludedSet = new Set(normalizedSelection.excludedIds);
-
-  if (normalizedSelection.mode === 'manual') {
-    const selected = normalizedSelection.selectedIds.filter((id) => !excludedSet.has(id));
-    if (!selected.length) {
-      return {
-        practitioners: [],
-        errors: [{ practitionerId: 'manual_selection', error: 'No practitioners selected after exclusions' }],
-        normalizedSelection,
-      };
-    }
-
-    const rows = await db.query<PractitionerRow>(
-      `SELECT "MaNhanVien", "MaDonVi"
-       FROM "NhanVien"
-       WHERE "MaNhanVien" = ANY($1::uuid[])`,
-      [selected],
-    );
-
-    const foundSet = new Set(rows.map((row) => row.MaNhanVien));
-    selected.forEach((id) => {
-      if (!foundSet.has(id)) {
-        errors.push({ practitionerId: id, error: 'Practitioner not found' });
-      }
-    });
-
-    return { practitioners: rows, errors, normalizedSelection };
-  }
-
-  const clauses: string[] = ['1=1'];
-  const params: unknown[] = [];
-  let paramIndex = 1;
-
-  if (role === 'DonVi' && unitId) {
-    clauses.push(`nv."MaDonVi" = $${paramIndex}`);
-    params.push(unitId);
-    paramIndex += 1;
-  }
-
-  const { filters } = normalizedSelection;
-
-  if (filters.trangThai && filters.trangThai !== 'all') {
-    clauses.push(`nv."TrangThaiLamViec" = $${paramIndex}`);
-    params.push(filters.trangThai);
-    paramIndex += 1;
-  }
-
-  if (filters.chucDanh) {
-    clauses.push(`LOWER(nv."ChucDanh") = LOWER($${paramIndex})`);
-    params.push(filters.chucDanh);
-    paramIndex += 1;
-  }
-
-  if (filters.khoaPhong) {
-    clauses.push(`LOWER(nv."KhoaPhong") = LOWER($${paramIndex})`);
-    params.push(filters.khoaPhong);
-    paramIndex += 1;
-  }
-
-  if (filters.search) {
-    clauses.push(`LOWER(nv."HoVaTen") LIKE LOWER($${paramIndex})`);
-    params.push(`%${filters.search}%`);
-    paramIndex += 1;
-  }
-
-  const query = `
-    SELECT nv."MaNhanVien", nv."MaDonVi"
-    FROM "NhanVien" nv
-    WHERE ${clauses.join(' AND ')}
-  `;
-
-  const rows = await db.query<PractitionerRow>(query, params);
-  const filteredRows = rows.filter((row) => !excludedSet.has(row.MaNhanVien));
-
-  return {
-    practitioners: filteredRows,
-    errors,
-    normalizedSelection,
-  };
-}
-
 function buildSummaryMessage(created: number, skipped: number, failed: number): string {
   const parts = [`Đã tạo ${created} bản ghi`, `bỏ qua ${skipped} bản ghi trùng`];
   if (failed > 0) {
     parts.push(`${failed} bản ghi lỗi`);
   }
   return parts.join(', ');
-}
-
-type InsertCandidate = PractitionerRow;
-
-type InsertBulkParams = {
-  candidates: InsertCandidate[];
-  activity: ActivityRecord;
-  userId: string;
-  startDate: Date | null;
-  endDate: Date | null;
-  organizer: string | null;
-};
-
-type InsertBulkResult = {
-  inserted: Array<{ MaGhiNhan: string; MaNhanVien: string }>;
-  conflicts: string[];
-};
-
-async function insertBulkSubmissions(params: InsertBulkParams): Promise<InsertBulkResult> {
-  const { candidates, activity, userId, startDate, endDate, organizer } = params;
-
-  if (!candidates.length) {
-    return { inserted: [], conflicts: [] };
-  }
-
-  const conversionRateRaw = activity.TyLeQuyDoi ?? 0;
-  const conversionRate =
-    typeof conversionRateRaw === 'number'
-      ? conversionRateRaw
-      : Number(conversionRateRaw || 0);
-
-  const initialStatus = activity.YeuCauMinhChung ? 'Nhap' : 'ChoDuyet';
-
-  const columns = [
-    'MaNhanVien',
-    'MaDanhMuc',
-    'TenHoatDong',
-    'NguoiNhap',
-    'TrangThaiDuyet',
-    'DonViToChuc',
-    'NgayBatDau',
-    'NgayKetThuc',
-    'SoTiet',
-    'SoGioTinChiQuyDoi',
-    'HinhThucCapNhatKienThucYKhoa',
-    'FileMinhChungUrl',
-    'BangChungSoGiayChungNhan',
-  ];
-
-  const values: unknown[] = [];
-  const rowsSql = candidates
-    .map((candidate, index) => {
-      const offset = index * columns.length;
-      values.push(
-        candidate.MaNhanVien,
-        activity.MaDanhMuc,
-        activity.TenDanhMuc,
-        userId,
-        initialStatus,
-        organizer,
-        startDate,
-        endDate,
-        null,
-        conversionRate,
-        activity.LoaiHoatDong ?? null,
-        null,
-        null,
-      );
-      return `(${columns.map((_, colIndex) => `$${offset + colIndex + 1}`).join(', ')})`;
-    })
-    .join(', ');
-
-  const insertSql = `
-    INSERT INTO "GhiNhanHoatDong" (${columns.map((column) => `"${column}"`).join(', ')})
-    VALUES ${rowsSql}
-    ON CONFLICT ("MaNhanVien", "MaDanhMuc") WHERE "MaDanhMuc" IS NOT NULL
-    DO NOTHING
-    RETURNING "MaGhiNhan", "MaNhanVien"
-  `;
-
-  const inserted = await db.query<{ MaGhiNhan: string; MaNhanVien: string }>(insertSql, values);
-  const insertedSet = new Set(inserted.map((row) => row.MaNhanVien));
-  const conflicts = candidates
-    .map((candidate) => candidate.MaNhanVien)
-    .filter((id: string) => !insertedSet.has(id));
-
-  return { inserted, conflicts };
 }

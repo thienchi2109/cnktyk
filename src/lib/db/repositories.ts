@@ -22,6 +22,54 @@ import {
   CreateNhatKyHeThong,
 } from './schemas';
 import bcrypt from 'bcryptjs';
+import type {
+  BulkCohortSelection,
+  BulkSubmissionResultError,
+  CohortResolutionContext,
+  CohortResolutionResult,
+  PractitionerWithUnit,
+} from '@/types/bulk-submission';
+import { isAllCohortSelection, isManualCohortSelection } from '@/types/bulk-submission';
+
+type BulkSubmissionInsertInput = Omit<
+  Pick<
+    CreateGhiNhanHoatDong,
+    |
+      'MaNhanVien'
+    |
+      'MaDanhMuc'
+    |
+      'TenHoatDong'
+    |
+      'NguoiNhap'
+    |
+      'TrangThaiDuyet'
+    |
+      'DonViToChuc'
+    |
+      'NgayBatDau'
+    |
+      'NgayKetThuc'
+    |
+      'SoTiet'
+    |
+      'SoGioTinChiQuyDoi'
+    |
+      'HinhThucCapNhatKienThucYKhoa'
+    |
+      'FileMinhChungUrl'
+    |
+      'BangChungSoGiayChungNhan'
+  >,
+  'TrangThaiDuyet'
+> & {
+  TrangThaiDuyet: 'ChoDuyet' | 'Nhap';
+};
+
+type BulkCreateResult = {
+  inserted: GhiNhanHoatDong[];
+  conflicts: string[];
+};
 
 // Base repository class with common CRUD operations
 abstract class BaseRepository<T, CreateT, UpdateT> {
@@ -409,6 +457,164 @@ export class NhanVienRepository extends BaseRepository<NhanVien, CreateNhanVien,
       }
     };
   }
+
+  async findPractitionersByIds(ids: string[]): Promise<PractitionerWithUnit[]> {
+    if (!ids.length) {
+      return [];
+    }
+
+    return db.query<PractitionerWithUnit>(
+      `SELECT "MaNhanVien", "MaDonVi"
+       FROM "${this.tableName}"
+       WHERE "MaNhanVien" = ANY($1::uuid[])`,
+      [ids],
+    );
+  }
+
+  async resolveBulkCohortSelection(
+    selection: BulkCohortSelection,
+    context: CohortResolutionContext,
+  ): Promise<CohortResolutionResult> {
+    const normalizedSelection: BulkCohortSelection = {
+      mode: selection.mode,
+      selectedIds: Array.from(new Set(selection.selectedIds ?? [])),
+      excludedIds: Array.from(new Set(selection.excludedIds ?? [])),
+      filters: selection.filters ?? {},
+      totalFiltered: selection.totalFiltered,
+    };
+
+    const errors: BulkSubmissionResultError[] = [];
+    const excludedSet = new Set(normalizedSelection.excludedIds);
+
+    if (isManualCohortSelection(normalizedSelection)) {
+      const effectiveSelected = normalizedSelection.selectedIds.filter((id) => !excludedSet.has(id));
+
+      if (!effectiveSelected.length) {
+        return {
+          practitioners: [],
+          errors: [
+            {
+              practitionerId: 'manual_selection',
+              error: 'No practitioners selected after exclusions',
+            },
+          ],
+          normalizedSelection,
+        };
+      }
+
+      const rows = await this.findPractitionersByIds(effectiveSelected);
+      const foundSet = new Set(rows.map((row) => row.MaNhanVien));
+
+      effectiveSelected.forEach((id) => {
+        if (!foundSet.has(id)) {
+          errors.push({ practitionerId: id, error: 'Practitioner not found' });
+        }
+      });
+
+      return {
+        practitioners: rows,
+        errors,
+        normalizedSelection,
+      };
+    }
+
+    if (!isAllCohortSelection(normalizedSelection)) {
+      throw new Error(`Unsupported cohort selection mode: ${normalizedSelection.mode}`);
+    }
+
+    const pageSize = context.pageSize ?? 500;
+    const practitioners: PractitionerWithUnit[] = [];
+    const baseClauses: string[] = [];
+    const params: Array<string | number | null> = [];
+    let paramIndex = 1;
+
+    if (context.role === 'DonVi' && context.unitId) {
+      baseClauses.push(`nv."MaDonVi" = $${paramIndex}`);
+      params.push(context.unitId);
+      paramIndex += 1;
+    }
+
+    const filters = normalizedSelection.filters ?? {};
+
+    if (filters.trangThai && filters.trangThai !== 'all') {
+      baseClauses.push(`nv."TrangThaiLamViec" = $${paramIndex}`);
+      params.push(filters.trangThai);
+      paramIndex += 1;
+    }
+
+    if (filters.chucDanh) {
+      baseClauses.push(`LOWER(nv."ChucDanh") = LOWER($${paramIndex})`);
+      params.push(filters.chucDanh);
+      paramIndex += 1;
+    }
+
+    if (filters.khoaPhong) {
+      baseClauses.push(`LOWER(nv."KhoaPhong") = LOWER($${paramIndex})`);
+      params.push(filters.khoaPhong);
+      paramIndex += 1;
+    }
+
+    if (filters.search) {
+      baseClauses.push(`LOWER(nv."HoVaTen") LIKE LOWER($${paramIndex})`);
+      params.push(`%${filters.search}%`);
+      paramIndex += 1;
+    }
+
+    const whereClause = baseClauses.length > 0 ? baseClauses.join(' AND ') : '1=1';
+    const baseQuery = `
+      SELECT nv."MaNhanVien", nv."MaDonVi"
+      FROM "${this.tableName}" nv
+      WHERE ${whereClause}
+      ORDER BY nv."HoVaTen" ASC
+    `;
+
+    const limitParamIndex = params.length + 1;
+    const offsetParamIndex = params.length + 2;
+    const paginatedQuery = `${baseQuery} LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}`;
+
+    let offset = 0;
+    while (true) {
+      const rows = await db.query<PractitionerWithUnit>(paginatedQuery, [...params, pageSize, offset]);
+      if (!rows.length) {
+        break;
+      }
+
+      practitioners.push(...rows);
+
+      if (rows.length < pageSize) {
+        break;
+      }
+
+      offset += pageSize;
+    }
+
+    const filteredRows = practitioners.filter((row) => !excludedSet.has(row.MaNhanVien));
+
+    return {
+      practitioners: filteredRows,
+      errors,
+      normalizedSelection,
+    };
+  }
+
+  async validatePractitionersTenancy(
+    practitionerIds: string[],
+    unitId: string,
+  ): Promise<string[]> {
+    if (!practitionerIds.length) {
+      return [];
+    }
+
+    const rows = await db.query<{ MaNhanVien: string }>(
+      `SELECT "MaNhanVien"
+       FROM "${this.tableName}"
+       WHERE "MaNhanVien" = ANY($1::uuid[])
+         AND "MaDonVi" <> $2`,
+      [practitionerIds, unitId],
+    );
+
+    return rows.map((row) => row.MaNhanVien);
+  }
 }
 
 // GhiNhanHoatDong (Activity Record) Repository
@@ -439,6 +645,67 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
     }
 
     return db.query<GhiNhanHoatDong>(query, params);
+  }
+
+  async findDuplicatePractitionerIds(
+    activityId: string,
+    practitionerIds: string[],
+  ): Promise<string[]> {
+    if (!practitionerIds.length) {
+      return [];
+    }
+
+    const rows = await db.query<{ MaNhanVien: string }>(
+      `SELECT "MaNhanVien"
+       FROM "${this.tableName}"
+       WHERE "MaDanhMuc" = $1
+         AND "MaNhanVien" = ANY($2::uuid[])`,
+      [activityId, practitionerIds],
+    );
+
+    return rows.map((row) => row.MaNhanVien);
+  }
+
+  async bulkCreate(
+    submissions: BulkSubmissionInsertInput[],
+    options: { batchSize?: number } = {},
+  ): Promise<BulkCreateResult> {
+    if (!submissions.length) {
+      return { inserted: [], conflicts: [] };
+    }
+
+    const batchSize = options.batchSize ?? 500;
+    const inserted: GhiNhanHoatDong[] = [];
+    const conflictSet = new Set<string>();
+
+    await db.query('BEGIN');
+
+    try {
+      for (let index = 0; index < submissions.length; index += batchSize) {
+        const batch = submissions.slice(index, index + batchSize);
+        const { text, params, practitionerIds } = this.buildBulkInsertQuery(batch);
+        const rows = await db.query<GhiNhanHoatDong>(text, params);
+        inserted.push(...rows);
+
+        const insertedIds = new Set(rows.map((row) => row.MaNhanVien));
+        practitionerIds.forEach((id) => {
+          if (!insertedIds.has(id)) {
+            conflictSet.add(id);
+          }
+        });
+      }
+
+      await db.query('COMMIT');
+    } catch (error) {
+      await db.query('ROLLBACK');
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Bulk submission insert failed: ${message}`);
+    }
+
+    return {
+      inserted,
+      conflicts: Array.from(conflictSet),
+    };
   }
 
   async findPendingApprovals(unitId?: string): Promise<GhiNhanHoatDong[]> {
@@ -474,6 +741,71 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
       NgayDuyet: new Date(),
       GhiChuDuyet: reason,
     } as UpdateGhiNhanHoatDong);
+  }
+
+  private buildBulkInsertQuery(batch: BulkSubmissionInsertInput[]): {
+    text: string;
+    params: unknown[];
+    practitionerIds: string[];
+  } {
+    const columns = [
+      'MaNhanVien',
+      'MaDanhMuc',
+      'TenHoatDong',
+      'NguoiNhap',
+      'TrangThaiDuyet',
+      'DonViToChuc',
+      'NgayBatDau',
+      'NgayKetThuc',
+      'SoTiet',
+      'SoGioTinChiQuyDoi',
+      'HinhThucCapNhatKienThucYKhoa',
+      'FileMinhChungUrl',
+      'BangChungSoGiayChungNhan',
+    ] as const;
+
+    const values: unknown[] = [];
+
+    const rowsSql = batch
+      .map((submission, rowIndex) => {
+        const offset = rowIndex * columns.length;
+        values.push(
+          submission.MaNhanVien,
+          submission.MaDanhMuc,
+          submission.TenHoatDong,
+          submission.NguoiNhap,
+          submission.TrangThaiDuyet,
+          submission.DonViToChuc ?? null,
+          submission.NgayBatDau ?? null,
+          submission.NgayKetThuc ?? null,
+          submission.SoTiet ?? null,
+          submission.SoGioTinChiQuyDoi ?? 0,
+          submission.HinhThucCapNhatKienThucYKhoa ?? null,
+          submission.FileMinhChungUrl ?? null,
+          submission.BangChungSoGiayChungNhan ?? null,
+        );
+
+        const placeholders = columns
+          .map((_, columnIndex) => `$${offset + columnIndex + 1}`)
+          .join(', ');
+
+        return `(${placeholders})`;
+      })
+      .join(', ');
+
+    const text = `
+      INSERT INTO "${this.tableName}" (${columns.map((column) => `"${column}"`).join(', ')})
+      VALUES ${rowsSql}
+      ON CONFLICT ("MaNhanVien", "MaDanhMuc") WHERE "MaDanhMuc" IS NOT NULL
+      DO NOTHING
+      RETURNING *
+    `;
+
+    return {
+      text,
+      params: values,
+      practitionerIds: batch.map((submission) => submission.MaNhanVien),
+    };
   }
 
   /**
@@ -787,6 +1119,7 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
       },
     };
   }
+
 }
 
 // DonVi (Healthcare Unit) Repository

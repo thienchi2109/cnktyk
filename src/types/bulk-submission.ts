@@ -40,3 +40,32 @@ export interface BulkSubmissionResponse {
   };
   message: string;
 }
+
+export interface PractitionerWithUnit {
+  MaNhanVien: string;
+  MaDonVi: string;
+}
+
+export interface CohortResolutionContext {
+  role: 'DonVi' | 'SoYTe';
+  unitId?: string | null;
+  pageSize?: number;
+}
+
+export interface CohortResolutionResult {
+  practitioners: PractitionerWithUnit[];
+  normalizedSelection: BulkCohortSelection;
+  errors: BulkSubmissionResultError[];
+}
+
+export function isManualCohortSelection(
+  selection: BulkCohortSelection,
+): selection is BulkCohortSelection & { mode: 'manual' } {
+  return selection.mode === 'manual';
+}
+
+export function isAllCohortSelection(
+  selection: BulkCohortSelection,
+): selection is BulkCohortSelection & { mode: 'all' } {
+  return selection.mode === 'all';
+}

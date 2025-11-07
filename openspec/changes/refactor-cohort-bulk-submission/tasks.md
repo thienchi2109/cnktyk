@@ -13,6 +13,7 @@
 - [x] 1.1.8 Add activity catalog validation (Active status, validity period)
 - [x] 1.1.9 Determine initial status based on YeuCauMinhChung
 - [ ] 1.1.10 Call repository bulkCreate method
+- [x] 1.1.10 Call repository bulkCreate method
 - [x] 1.1.11 Add audit logging for bulk operation
 - [x] 1.1.12 Return structured response with created/skipped counts
 - [x] 1.1.13 Add error handling with proper HTTP status codes
@@ -34,12 +35,22 @@
 - [ ] 2.1.4 Wrap in transaction for atomicity
 - [ ] 2.1.5 Add batching logic for >500 submissions
 - [ ] 2.1.6 Add error handling for constraint violations
+- [x] 2.1.1 Add `bulkCreate()` method to `GhiNhanHoatDongRepository`
+- [x] 2.1.2 Implement parameterized bulk INSERT query
+- [x] 2.1.3 Use RETURNING clause to get created submission IDs
+- [x] 2.1.4 Wrap in transaction for atomicity
+- [x] 2.1.5 Add batching logic for >500 submissions
+- [x] 2.1.6 Add error handling for constraint violations
 
 ### 2.2 Helper Functions
 - [ ] 2.2.1 Implement `resolveCohort()` utility function
 - [ ] 2.2.2 Implement `validatePractitionersTenancy()` utility
 - [ ] 2.2.3 Add duplicate detection query helper
 - [ ] 2.2.4 Create type guards for cohort selection modes
+- [x] 2.2.1 Implement `resolveCohort()` utility function
+- [x] 2.2.2 Implement `validatePractitionersTenancy()` utility
+- [x] 2.2.3 Add duplicate detection query helper
+- [x] 2.2.4 Create type guards for cohort selection modes
 
 ## 3. Credit Calculation Logic
 
