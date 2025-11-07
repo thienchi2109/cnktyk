@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
   Clock, 
@@ -104,6 +104,8 @@ export function SubmissionsList({
   refreshKey,
 }: SubmissionsListProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
@@ -129,12 +131,32 @@ export function SubmissionsList({
     setPage(1);
   }, [statusFilter, searchTerm]);
 
+  useEffect(() => {
+    const activityName = searchParams.get('activityName');
+    const resolved = activityName ?? '';
+    if (resolved !== searchTerm) {
+      setSearchTerm(resolved);
+    }
+  }, [searchParams, searchTerm]);
+
   // Clear selection when data changes or page/filter changes
   useEffect(() => {
     setSelectedIds([]);
   }, [page, statusFilter, searchTerm, data?.data]);
 
   const filteredSubmissions = ((data?.data as Submission[]) ?? []);
+
+  const handleSearchTermChange = (value: string) => {
+    setSearchTerm(value);
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) {
+      params.set('activityName', value);
+    } else {
+      params.delete('activityName');
+    }
+    const queryString = params.toString();
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
+  };
 
   const handleViewSubmission = (submissionId: string) => {
     if (onViewSubmission) {
@@ -311,7 +333,7 @@ export function SubmissionsList({
                 id="search"
                 placeholder="Nhập tên hoạt động, người hành nghề..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearchTermChange(e.target.value)}
                 className="pl-10"
               />
             </div>

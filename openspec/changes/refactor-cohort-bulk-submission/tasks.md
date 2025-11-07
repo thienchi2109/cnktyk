@@ -77,18 +77,18 @@
 - [x] 4.3.7 Disable continue if no practitioners selected
 
 ### 4.4 Step 3: Preview & Confirm
-- [ ] 4.4.1 Create `PreviewAndConfirm` component
-- [ ] 4.4.2 Display activity summary
-- [ ] 4.4.3 Display cohort selection summary (count, mode, filters)
-- [ ] 4.4.4 Call preview API endpoint (optional dry-run)
-- [ ] 4.4.5 Show will-create count, duplicates count
-- [ ] 4.4.6 Display sample practitioner names (first 10)
-- [ ] 4.4.7 Add optional event date inputs (NgayBatDau, NgayKetThuc)
-- [ ] 4.4.8 Add "Back" and "Confirm" buttons
-- [ ] 4.4.9 Handle bulk create API call
-- [ ] 4.4.10 Show loading state during creation
-- [ ] 4.4.11 Display success/error results
-- [ ] 4.4.12 Add navigation to submissions list (filtered by activity)
+- [x] 4.4.1 Create `PreviewAndConfirm` component
+- [x] 4.4.2 Display activity summary
+- [x] 4.4.3 Display cohort selection summary (count, mode, filters)
+- [x] 4.4.4 Call preview API endpoint (optional dry-run)
+- [x] 4.4.5 Show will-create count, duplicates count
+- [x] 4.4.6 Display sample practitioner names (first 10)
+- [x] 4.4.7 Add optional event date inputs (NgayBatDau, NgayKetThuc)
+- [x] 4.4.8 Add "Back" and "Confirm" buttons
+- [x] 4.4.9 Handle bulk create API call
+- [x] 4.4.10 Show loading state during creation
+- [x] 4.4.11 Display success/error results
+- [x] 4.4.12 Add navigation to submissions list (filtered by activity)
 
 ### 4.5 Component Styling
 - [ ] 4.5.1 Apply glassmorphism design system

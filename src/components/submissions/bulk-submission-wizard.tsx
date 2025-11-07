@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Check } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
@@ -12,6 +12,7 @@ import { CohortBuilder, CohortSelection } from '@/components/cohorts/cohort-buil
 import { cn } from '@/lib/utils';
 import { ActivitySelector } from '@/components/submissions/activity-selector';
 import { ActivityCatalogItem } from '@/hooks/use-activities';
+import { PreviewAndConfirm } from '@/components/submissions/preview-and-confirm';
 
 type WizardStep = 1 | 2 | 3;
 
@@ -48,9 +49,12 @@ export function BulkSubmissionWizard() {
   const [applyError, setApplyError] = useState<string | null>(null);
   const [applyResult, setApplyResult] = useState<null | { created: number; skipped: number; total: number }>(null);
   const [activityValidationError, setActivityValidationError] = useState<string | null>(null);
+  const [eventStart, setEventStart] = useState('');
+  const [eventEnd, setEventEnd] = useState('');
 
   const selectedActivityId = selectedActivity?.MaDanhMuc ?? '';
   const selectedActivityScope = selectedActivity ? (selectedActivity.MaDonVi ? 'unit' : 'global') : null;
+  const scopeLabel = selectedActivityScope === 'global' ? 'Hệ thống' : selectedActivityScope === 'unit' ? 'Đơn vị' : null;
 
   const selectedCount = useMemo(() => {
     if (!selection) return 0;
@@ -59,6 +63,19 @@ export function BulkSubmissionWizard() {
     }
     return selection.selectedIds.length;
   }, [selection]);
+
+  const eventValidationMessage = useMemo(() => {
+    if (!eventStart || !eventEnd) return null;
+    const start = new Date(eventStart);
+    const end = new Date(eventEnd);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return null;
+    }
+    if (end < start) {
+      return 'Ngày kết thúc phải sau ngày bắt đầu.';
+    }
+    return null;
+  }, [eventStart, eventEnd]);
 
   const handleContinueFromActivity = () => {
     if (!selectedActivity) {
@@ -86,6 +103,8 @@ export function BulkSubmissionWizard() {
 
   useEffect(() => {
     setSelection(null);
+    setEventStart('');
+    setEventEnd('');
   }, [selectedActivityId]);
 
   useEffect(() => {
@@ -94,77 +113,30 @@ export function BulkSubmissionWizard() {
     }
   }, [step, selectedActivity]);
 
-  useEffect(() => {
-    if (step !== 3) {
+  const fetchPreview = useCallback(async () => {
+    if (!selection || !selectedActivity) {
       setPreview(null);
       setPreviewError(null);
       return;
     }
-
-    const runPreview = async () => {
-      if (!selection || !selectedActivity) return;
-      setLoadingPreview(true);
-      setPreviewError(null);
-      try {
-        const res = await fetch('/api/cohorts/preview', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            filters: {
-              search: selection.filters?.search,
-              trangThai: selection.filters?.trangThai,
-              chucDanh: selection.filters?.chucDanh,
-              khoaPhong: selection.filters?.khoaPhong,
-            },
-            selection: {
-              mode: selection.mode,
-              selectedIds: selection.selectedIds,
-              excludedIds: selection.excludedIds,
-              totalFiltered: selection.totalFiltered,
-              filters: selection.filters,
-            },
-            activity: {
-              MaDanhMuc: selectedActivity.MaDanhMuc,
-              TenHoatDong: selectedActivity.TenDanhMuc,
-              LoaiHoatDong: selectedActivity.LoaiHoatDong,
-              YeuCauMinhChung: selectedActivity.YeuCauMinhChung,
-            },
-          }),
-        });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json?.error || 'Không thể xem trước');
-        setPreview(json);
-      } catch (e) {
-        setPreviewError(e instanceof Error ? e.message : 'Có lỗi xảy ra');
-      } finally {
-        setLoadingPreview(false);
-      }
-    };
-
-    runPreview();
-  }, [step, selection, selectedActivity]);
-
-  useEffect(() => {
-    setApplyResult(null);
-    setApplyError(null);
-  }, [selection, selectedActivity]);
-
-  const applyNow = async () => {
-    if (!selection || !selectedActivity) return;
-    setApplyLoading(true);
-    setApplyError(null);
-    setApplyResult(null);
+    setLoadingPreview(true);
+    setPreviewError(null);
     try {
-      const res = await fetch('/api/cohorts/apply', {
+      const res = await fetch('/api/cohorts/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          filters: {
+            search: selection.filters?.search,
+            trangThai: selection.filters?.trangThai,
+            chucDanh: selection.filters?.chucDanh,
+            khoaPhong: selection.filters?.khoaPhong,
+          },
           selection: {
             mode: selection.mode,
             selectedIds: selection.selectedIds,
             excludedIds: selection.excludedIds,
             totalFiltered: selection.totalFiltered,
-            filters: selection.filters,
           },
           activity: {
             MaDanhMuc: selectedActivity.MaDanhMuc,
@@ -172,6 +144,62 @@ export function BulkSubmissionWizard() {
             LoaiHoatDong: selectedActivity.LoaiHoatDong,
             YeuCauMinhChung: selectedActivity.YeuCauMinhChung,
           },
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || 'Không thể xem trước');
+      setPreview(json);
+    } catch (e) {
+      setPreviewError(e instanceof Error ? e.message : 'Có lỗi xảy ra');
+    } finally {
+      setLoadingPreview(false);
+    }
+  }, [selection, selectedActivity]);
+
+  useEffect(() => {
+    if (step !== 3) {
+      setPreview(null);
+      setPreviewError(null);
+      return;
+    }
+    void fetchPreview();
+  }, [step, fetchPreview]);
+
+  useEffect(() => {
+    setApplyResult(null);
+    setApplyError(null);
+  }, [selection, selectedActivity, eventStart, eventEnd]);
+
+  const applyNow = async () => {
+    if (!selection || !selectedActivity) return;
+    if (eventValidationMessage) return;
+    setApplyLoading(true);
+    setApplyError(null);
+    setApplyResult(null);
+    try {
+      const selectionPayload = {
+        mode: selection.mode,
+        selectedIds: selection.selectedIds,
+        excludedIds: selection.excludedIds,
+        totalFiltered: selection.totalFiltered,
+        filters: selection.filters,
+      };
+      const activityPayload = {
+        MaDanhMuc: selectedActivity.MaDanhMuc,
+        TenHoatDong: selectedActivity.TenDanhMuc,
+        LoaiHoatDong: selectedActivity.LoaiHoatDong,
+        YeuCauMinhChung: selectedActivity.YeuCauMinhChung,
+        NgayBatDau: eventStart ? new Date(eventStart).toISOString() : null,
+        NgayKetThuc: eventEnd ? new Date(eventEnd).toISOString() : null,
+        SoGioTinChiQuyDoi: selectedActivity.TyLeQuyDoi ?? 0,
+      };
+
+      const res = await fetch('/api/cohorts/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          selection: selectionPayload,
+          activity: activityPayload,
         }),
       });
       const json = await res.json();
@@ -183,6 +211,14 @@ export function BulkSubmissionWizard() {
       setApplyLoading(false);
     }
   };
+
+  const handleNavigateToSubmissions = useCallback(() => {
+    if (!selectedActivity) return;
+    const params = new URLSearchParams();
+    params.set('activityId', selectedActivity.MaDanhMuc);
+    params.set('activityName', selectedActivity.TenDanhMuc);
+    router.push(`/submissions?${params.toString()}`);
+  }, [router, selectedActivity]);
 
   const currentStepIndex = wizardSteps.findIndex(item => item.id === step);
   const progressValue = ((currentStepIndex + 1) / wizardSteps.length) * 100;
@@ -357,83 +393,32 @@ export function BulkSubmissionWizard() {
       )}
 
       {step === 3 && (
-        <div className="space-y-4">
-          <GlassCard className="space-y-5 p-6">
-            <div className="flex flex-col gap-1">
-              <h2 className="text-xl font-semibold text-gray-900">Bước 3 · Xem trước & xác nhận</h2>
-              <p className="text-sm text-gray-600">Kiểm tra số lượng bản ghi sẽ tạo và các bản ghi bị bỏ qua.</p>
-            </div>
-
-            {selectedActivity && (
-              <GlassCard className="space-y-2 border border-medical-blue/20 bg-medical-blue/5 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-semibold text-medical-blue">{selectedActivity.TenDanhMuc}</p>
-                    <p className="text-xs text-gray-600">Loại: {activityTypeLabels[selectedActivity.LoaiHoatDong]}</p>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <span>{selectedActivity.YeuCauMinhChung ? 'Cần minh chứng' : 'Không cần minh chứng'}</span>
-                    <span>•</span>
-                    <span>{selectedActivityScope === 'global' ? 'Phạm vi: Hệ thống' : 'Phạm vi: Đơn vị'}</span>
-                  </div>
-                </div>
-              </GlassCard>
-            )}
-
-            <GlassCard className="p-5">
-              {!selection ? (
-                <p className="text-sm text-gray-600">Chưa có dữ liệu cohort.</p>
-              ) : loadingPreview ? (
-                <p className="text-sm text-gray-600">Đang tính toán xem trước…</p>
-              ) : previewError ? (
-                <Alert className="border-red-200 bg-red-50">
-                  <AlertDescription className="text-red-700">{previewError}</AlertDescription>
-                </Alert>
-              ) : preview ? (
-                <div className="space-y-3 text-sm text-gray-800">
-                  <p>
-                    Tổng mục tiêu: <strong>{preview.totalCandidates}</strong>
-                  </p>
-                  <p>
-                    Sẽ tạo mới: <strong className="text-green-700">{preview.createCount}</strong>
-                  </p>
-                  <p>
-                    Bỏ qua (trùng): <strong className="text-yellow-700">{preview.skipCount}</strong>
-                  </p>
-                  <p>
-                    Mẫu ID (tối đa 10):{' '}
-                    <span className="text-gray-600">{preview.sampleIds.join(', ') || '—'}</span>
-                  </p>
-                </div>
-              ) : (
-                <p className="text-sm text-gray-600">Không có dữ liệu xem trước.</p>
-              )}
-            </GlassCard>
-
-            {applyError && (
-              <Alert className="border-red-200 bg-red-50">
-                <AlertDescription className="text-red-700">{applyError}</AlertDescription>
-              </Alert>
-            )}
-
-            {applyResult && (
-              <Alert className="border-green-200 bg-green-50">
-                <AlertDescription className="text-green-800">
-                  Đã tạo: <strong>{applyResult.created}</strong> · Bỏ qua: <strong>{applyResult.skipped}</strong> · Tổng: <strong>{applyResult.total}</strong>
-                </AlertDescription>
-              </Alert>
-            )}
-          </GlassCard>
-
-          <div className="flex items-center justify-between">
-            <GlassButton variant="secondary" onClick={() => setStep(2)}>
-              ← Quay lại
-            </GlassButton>
-            <GlassButton onClick={applyNow} disabled={!hasCohortSelection || !selectedActivity || applyLoading}>
-              {applyLoading ? 'Đang tạo bản ghi…' : 'Xác nhận & tạo bản ghi'}
-            </GlassButton>
-          </div>
-        </div>
+        <PreviewAndConfirm
+          activity={selectedActivity}
+          selection={selection}
+          selectedCount={selectedCount}
+          loadingPreview={loadingPreview}
+          preview={preview}
+          previewError={previewError}
+          onRefreshPreview={() => {
+            void fetchPreview();
+          }}
+          onBack={() => setStep(2)}
+          onConfirm={() => {
+            void applyNow();
+          }}
+          confirmDisabled={!selectedActivity || !hasCohortSelection || !!eventValidationMessage || applyLoading}
+          applyLoading={applyLoading}
+          applyError={applyError}
+          applyResult={applyResult}
+          onNavigateToSubmissions={handleNavigateToSubmissions}
+          eventStart={eventStart}
+          eventEnd={eventEnd}
+          onChangeEventStart={setEventStart}
+          onChangeEventEnd={setEventEnd}
+          scopeLabel={scopeLabel}
+          eventValidationMessage={eventValidationMessage}
+        />
       )}
     </div>
   );
