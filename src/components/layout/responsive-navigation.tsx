@@ -18,7 +18,8 @@ import {
   Menu,
   X,
   FileArchive,
-  FolderOpen
+  FolderOpen,
+  UserPlus
 } from "lucide-react";
 import { GlassHeader } from "./glass-header";
 import { GlassFooter } from "./glass-footer";
@@ -127,6 +128,13 @@ const getNavigationItems = (
             badge: pending > 0 ? pending : undefined
           },
           {
+            id: 'bulk-enrollment',
+            label: 'Ghi nhận hàng loạt',
+            icon: <UserPlus className="h-4 w-4" />,
+            href: '/submissions/bulk',
+            roles: ['DonVi', 'SoYTe']
+          },
+          {
             id: 'activities',
             label: 'Danh mục hoạt động',
             icon: <FileText className="h-4 w-4" />,
@@ -201,6 +209,13 @@ const getNavigationItems = (
         label: 'Danh mục hoạt động',
         icon: <FileText className="h-4 w-4" />,
         href: '/activities'
+      },
+      {
+        id: 'bulk-enrollment',
+        label: 'Ghi nhận hàng loạt',
+        icon: <UserPlus className="h-4 w-4" />,
+        href: '/submissions/bulk',
+        roles: ['DonVi', 'SoYTe']
       },
       {
         id: 'credit-rules',
