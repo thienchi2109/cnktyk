@@ -23,6 +23,11 @@ The Cohort Builder workflow SHALL provide activity catalog selection before prac
 - **THEN** global activities (MaDonVi = null) display a "Hệ thống" badge
 - **AND** unit activities (MaDonVi = user.unitId) display a "Đơn vị" badge
 
+#### Scenario: DonVi cannot select other-unit activities
+- **WHEN** a DonVi admin attempts to select an activity where MaDonVi ≠ user.unitId and MaDonVi is not null
+- **THEN** the selector disables that activity with tooltip "Hoạt động không thuộc đơn vị của bạn"
+- **AND** the Next button remains disabled until a permitted activity is chosen
+
 #### Scenario: Search activities by name
 - **WHEN** a DonVi admin types into the activity search input
 - **THEN** the activity list filters to show only activities whose names contain the search term (case-insensitive)
@@ -51,6 +56,16 @@ The system SHALL enable DonVi and SoYTe users to bulk-create activity submission
 - **THEN** the system resolves the cohort to 47 practitioner IDs
 - **AND** creates 47 GhiNhanHoatDong records
 
+#### Scenario: Server resolves cohort without trusting client totals
+- **WHEN** a malicious client tampers with the `totalFiltered` property or removes excluded IDs before calling the bulk-create API
+- **THEN** the API recomputes the practitioner list on the server using saved filters and unit scoping
+- **AND** excluded IDs remain excluded even if the request omits them
+
+#### Scenario: Server normalizes missing cohort properties
+- **WHEN** the client omits optional cohort fields such as `excludedIds`, `selectedIds`, or `filters`
+- **THEN** the API coerces missing arrays to empty arrays and missing filter objects to safe defaults before executing repository queries
+- **AND** every filter value is parameterized to avoid undefined handling defects and mitigate SQL injection risks
+
 #### Scenario: Initial status for activities requiring evidence
 - **WHEN** bulk creating submissions for an activity where YeuCauMinhChung = true
 - **THEN** all created submissions have TrangThaiDuyet = 'Nhap' (draft status)
@@ -66,13 +81,21 @@ The system SHALL enable DonVi and SoYTe users to bulk-create activity submission
 - **WHEN** a DonVi admin attempts to bulk create submissions for practitioners who already have submissions for the same activity (MaDanhMuc)
 - **THEN** the system skips creation for duplicate practitioners
 - **AND** returns a response with skipped count and list of duplicate practitioner IDs
+- **AND** relies on a database `ON CONFLICT (MaNhanVien, MaDanhMuc)` safeguard so duplicates are prevented even under concurrent requests
 - **AND** creates submissions only for practitioners without existing submissions
+
+#### Scenario: Database unique constraint enforces duplicate prevention
+- **WHEN** the bulk submission capability is deployed to any environment
+- **THEN** a partial unique index on (MaNhanVien, MaDanhMuc) WHERE MaDanhMuc IS NOT NULL exists in the database schema
+- **AND** the application fails fast with an operational diagnostic if the index creation migration has not been applied
+- **AND** operators receive rollout instructions to apply the migration before the UI or API entry points are exposed
 
 #### Scenario: Bulk creation success response
 - **WHEN** bulk submission creation completes successfully
 - **THEN** the system returns a response with created count, skipped (duplicate) count, and failed count
 - **AND** includes submission IDs for created records
 - **AND** includes practitioner IDs for skipped duplicates
+- **AND** includes a localized summary message string that matches the API's established response pattern
 
 #### Scenario: Preview before bulk creation
 - **WHEN** a DonVi admin reaches the preview/confirmation step
@@ -91,6 +114,11 @@ The system SHALL enable DonVi and SoYTe users to bulk-create activity submission
 - **THEN** the system allows creation for any unit
 - **AND** each submission inherits the practitioner's MaDonVi for proper tenancy scoping
 
+#### Scenario: Submissions persist practitioner tenancy
+- **WHEN** any submission is created through the bulk enrollment workflow
+- **THEN** the persisted record stores the practitioner's MaDonVi (or equivalent tenancy field) captured during cohort evaluation
+- **AND** repository-level validation rejects or repairs attempts to persist a null or mismatched MaDonVi so downstream isolation rules continue to function
+
 #### Scenario: Bulk creation performance baseline
 - **WHEN** bulk creating 500 submissions
 - **THEN** the operation completes in less than 3 seconds (p95 latency)
@@ -107,6 +135,7 @@ The system SHALL enable DonVi and SoYTe users to bulk-create activity submission
 - **WHEN** a DonVi admin provides optional NgayBatDau and NgayKetThuc in the bulk creation request
 - **THEN** all created submissions use these values for event dates
 - **AND** if not provided, NgayBatDau and NgayKetThuc are set to null
+- **AND** invalid or non-ISO date strings trigger a 400 response with a validation error message
 
 #### Scenario: Navigation to created submissions
 - **WHEN** bulk submission creation completes successfully
