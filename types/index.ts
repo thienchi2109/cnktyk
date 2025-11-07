@@ -1,3 +1,4 @@
+
 // Core database types based on existing schema
 
 export interface TaiKhoan {

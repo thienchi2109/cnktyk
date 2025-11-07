@@ -31,6 +31,7 @@ export type CohortSelection = {
   excludedIds: string[]; // used in all mode
   totalFiltered: number;
   filters: CohortFilters;
+  nameMap?: Record<string, string>;
 };
 
 interface CohortBuilderProps {
@@ -165,6 +166,7 @@ export function CohortBuilder({ initialStatus = 'DangLamViec', onChange }: Cohor
         chucDanh: chucDanh || undefined,
         khoaPhong: khoaPhong || undefined,
       },
+      nameMap: Object.fromEntries(idToNameRef.current),
     });
   }, [selectAllFiltered, selectedIds, excludedIds, total, onChange, searchTerm, statusFilter, chucDanh, khoaPhong]);
 
