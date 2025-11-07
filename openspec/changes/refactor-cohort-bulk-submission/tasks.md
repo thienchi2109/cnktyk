@@ -54,10 +54,10 @@
 ## 4. Frontend Components
 
 ### 4.1 Rename and Refactor Wizard
-- [ ] 4.1.1 Rename `bulk-assignment-wizard.tsx` to `bulk-submission-wizard.tsx`
-- [ ] 4.1.2 Update all imports in parent components
-- [ ] 4.1.3 Add step state management (1: Activity, 2: Cohort, 3: Preview)
-- [ ] 4.1.4 Create progress indicator component/section
+- [x] 4.1.1 Rename `bulk-assignment-wizard.tsx` to `bulk-submission-wizard.tsx`
+- [x] 4.1.2 Update all imports in parent components
+- [x] 4.1.3 Add step state management (1: Activity, 2: Cohort, 3: Preview)
+- [x] 4.1.4 Create progress indicator component/section
 
 ### 4.2 Step 1: Activity Selection
 - [ ] 4.2.1 Create `ActivitySelector` component
