@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useActivitiesCatalog, ActivityCatalogItem, ActivityPermissions } from '@/hooks/use-activities';
 import { GlassCard } from '@/components/ui/glass-card';
 import { GlassButton } from '@/components/ui/glass-button';
@@ -13,11 +14,11 @@ import { LoadingNotice } from '@/components/ui/loading-notice';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ActivityDetailSheet } from './activity-detail-sheet';
-import { 
-  Search, 
-  Plus, 
-  Edit, 
-  Trash2, 
+import {
+  Search,
+  Plus,
+  Edit,
+  Trash2,
   Filter,
   BookOpen,
   Users,
@@ -29,7 +30,8 @@ import {
   Globe,
   Building2,
   ArchiveRestore,
-  Upload
+  Upload,
+  UserPlus
 } from 'lucide-react';
 
 interface ActivitiesListProps {
@@ -404,6 +406,21 @@ export function ActivitiesList({
                       {(permissions.canEditGlobal || permissions.canEditUnit) && (
                         <TableCell>
                           <div className="flex items-center space-x-2">
+                            {['DonVi', 'SoYTe'].includes(userRole) && (
+                              <Link
+                                href={`/submissions/bulk?activityId=${activity.MaDanhMuc}`}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <GlassButton
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-gray-600 hover:text-blue-600"
+                                  title="Ghi nhận hàng loạt"
+                                >
+                                  <UserPlus className="h-4 w-4" />
+                                </GlassButton>
+                              </Link>
+                            )}
                             {canEditActivity(activity) && onEditActivity && (
                               <GlassButton
                                 variant="ghost"
