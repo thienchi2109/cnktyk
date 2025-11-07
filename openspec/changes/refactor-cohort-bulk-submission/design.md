@@ -64,9 +64,10 @@ CREATE TABLE "GhiNhanHoatDong" (
 
 ### Duplicate Prevention Strategy
 
-**Option 1: Application-Level Check** (Chosen)
+**Hybrid Approach (Chosen)**
+
+1. **Pre-flight query** to surface duplicates for the response payload
 ```typescript
-// Before bulk insert, query existing submissions
 const existing = await db.query(`
   SELECT "MaNhanVien"
   FROM "GhiNhanHoatDong"
@@ -74,26 +75,23 @@ const existing = await db.query(`
     AND "MaNhanVien" = ANY($2)
 `, [catalogId, practitionerIds]);
 
-// Filter out duplicates
-const newPractitionerIds = practitionerIds.filter(
-  id => !existing.includes(id)
-);
+const duplicateIds = new Set(existing.map(row => row.MaNhanVien));
+const candidates = practitionerIds.filter(id => !duplicateIds.has(id));
 ```
 
-**Pros:** Flexible, provides duplicate practitioner IDs for reporting
-**Cons:** Race condition window (mitigated by transaction)
-
-**Option 2: Database Constraint**
+2. **Database enforcement** using `ON CONFLICT DO NOTHING` (paired with a partial unique index) to guarantee idempotency even under concurrent requests
 ```sql
-CREATE UNIQUE INDEX idx_unique_submission_per_activity
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_submission_per_activity
   ON "GhiNhanHoatDong" ("MaNhanVien", "MaDanhMuc")
   WHERE "MaDanhMuc" IS NOT NULL;
 ```
 
-**Pros:** Guaranteed uniqueness
-**Cons:** Requires migration, can't distinguish between voluntary and bulk submissions
+**Why:**
+- ✅ Guarantees we never create duplicate submissions even if a second request races past the pre-flight query
+- ✅ Still returns meaningful duplicate reporting via the pre-flight query
+- ⚠️ Requires migration + repository update to apply `ON CONFLICT DO NOTHING RETURNING *`
 
-**Decision:** Use Option 1 (application-level) for Phase 1. Option 2 can be added later if needed.
+**Fallback:** If the migration cannot land immediately, keep the partial unique index on the backlog but still run `ON CONFLICT DO NOTHING` which protects against duplicates within the same deployment window.
 
 ---
 
@@ -171,6 +169,12 @@ export async function POST(request: NextRequest) {
   if (activity.TrangThai !== 'Active') {
     return NextResponse.json({ error: 'Activity not active' }, { status: 400 });
   }
+  if (user.role === 'DonVi') {
+    const isGlobal = activity.MaDonVi === null;
+    if (!isGlobal && activity.MaDonVi !== user.unitId) {
+      return NextResponse.json({ error: 'Activity not owned by unit' }, { status: 403 });
+    }
+  }
 
   // 4. Resolve Cohort to Practitioner IDs
   const practitionerIds = await resolveCohort(cohort, user);
@@ -196,16 +200,14 @@ export async function POST(request: NextRequest) {
     WHERE "MaDanhMuc" = $1 AND "MaNhanVien" = ANY($2)
   `, [MaDanhMuc, practitionerIds]);
 
-  const duplicateIds = existingSubmissions.map(r => r.MaNhanVien);
-  const newPractitionerIds = practitionerIds.filter(
-    id => !duplicateIds.includes(id)
-  );
+  const duplicateIds = new Set(existingSubmissions.map(r => r.MaNhanVien));
+  const candidateIds = practitionerIds.filter(id => !duplicateIds.has(id));
 
   // 7. Determine Initial Status
   const initialStatus = activity.YeuCauMinhChung ? 'Nhap' : 'ChoDuyet';
 
   // 8. Bulk Insert
-  const submissions = newPractitionerIds.map(practitionerId => ({
+  const submissions = candidateIds.map(practitionerId => ({
     MaNhanVien: practitionerId,
     MaDanhMuc: MaDanhMuc,
     TenHoatDong: activity.TenDanhMuc,
@@ -214,40 +216,43 @@ export async function POST(request: NextRequest) {
     NgayBatDau: NgayBatDau ? new Date(NgayBatDau) : null,
     NgayKetThuc: NgayKetThuc ? new Date(NgayKetThuc) : null,
     DonViToChuc: DonViToChuc || null,
-    SoGioTinChiQuyDoi: 0, // Not calculated yet
+    SoGioTinChiQuyDoi: activity.TyLeQuyDoi ?? 0,
+    HinhThucCapNhatKienThucYKhoa: activity.LoaiHoatDong, // align with catalog defaults
     FileMinhChungUrl: null, // Evidence uploaded later
   }));
 
-  const result = await ghiNhanHoatDongRepo.bulkCreate(submissions);
+  const { inserted, conflicts } = await ghiNhanHoatDongRepo.bulkCreate(submissions);
+  conflicts.forEach(id => duplicateIds.add(id));
 
   // 9. Audit Log
-  await nhatKyHeThongRepo.log({
-    MaTaiKhoan: user.id,
-    HanhDong: 'BULK_SUBMISSION_CREATE',
-    ChiTiet: {
-      MaDanhMuc,
+  await nhatKyHeThongRepo.logAction(
+    user.id,
+    'BULK_SUBMISSION_CREATE',
+    MaDanhMuc,
+    {
       activityName: activity.TenDanhMuc,
       cohortMode: cohort.mode,
       cohortFilters: cohort.filters,
       totalSelected: practitionerIds.length,
       totalExcluded: cohort.excludedIds?.length || 0,
-      created: result.length,
-      skipped: duplicateIds.length,
-    },
-  });
+      created: inserted.length,
+      skipped: duplicateIds.size,
+      actorRole: user.role,
+    }
+  );
 
   // 10. Response
   return NextResponse.json({
     success: true,
-    created: result.length,
-    skipped: duplicateIds.length,
+    created: inserted.length,
+    skipped: duplicateIds.size,
     failed: 0,
     details: {
-      submissionIds: result.map(s => s.MaGhiNhan),
-      duplicates: duplicateIds,
+      submissionIds: inserted.map(s => s.MaGhiNhan),
+      duplicates: Array.from(duplicateIds),
       errors: [],
     },
-    message: `Đã tạo ${result.length} bản ghi, bỏ qua ${duplicateIds.length} bản ghi trùng`,
+    message: `Đã tạo ${inserted.length} bản ghi, bỏ qua ${duplicateIds.size} bản ghi trùng`,
   });
 }
 ```
@@ -261,22 +266,29 @@ async function resolveCohort(
   cohort: CohortSelection,
   user: User
 ): Promise<string[]> {
-  const { mode, selectedIds, excludedIds, filters, totalFiltered } = cohort;
+  const { mode, selectedIds, excludedIds, filters } = cohort;
 
   if (mode === 'manual') {
-    // Manual selection: use selectedIds directly
     return selectedIds;
   }
 
-  // All mode: fetch all practitioners matching filters, exclude exclusions
-  const practitioners = await nhanVienRepo.search({
-    unitId: user.role === 'DonVi' ? user.unitId : undefined,
-    ...filters,
-    page: 1,
-    limit: totalFiltered, // Fetch all
-  });
+  // All mode: server-driven pagination to avoid trusting client-supplied totals
+  const pageSize = 500;
+  const allIds: string[] = [];
+  let page = 1;
+  while (true) {
+    const batch = await nhanVienRepo.listIdsByFilters({
+      unitId: user.role === 'DonVi' ? user.unitId : undefined,
+      ...filters,
+      page,
+      limit: pageSize,
+    });
+    if (batch.length === 0) break;
+    allIds.push(...batch.map((record) => record.MaNhanVien));
+    if (batch.length < pageSize) break;
+    page += 1;
+  }
 
-  const allIds = practitioners.map(p => p.MaNhanVien);
   return allIds.filter(id => !excludedIds.includes(id));
 }
 ```
@@ -316,14 +328,32 @@ class GhiNhanHoatDongRepository {
    */
   async bulkCreate(
     submissions: Array<Omit<CreateGhiNhanHoatDong, 'MaGhiNhan' | 'NgayGhiNhan'>>
-  ): Promise<GhiNhanHoatDong[]> {
-    if (submissions.length === 0) return [];
+  ): Promise<{ inserted: GhiNhanHoatDong[]; conflicts: string[] }> {
+    if (submissions.length === 0) {
+      return { inserted: [], conflicts: [] };
+    }
 
-    // Build bulk INSERT statement
+    const columns = [
+      'MaNhanVien',
+      'MaDanhMuc',
+      'TenHoatDong',
+      'TrangThaiDuyet',
+      'NguoiNhap',
+      'NgayBatDau',
+      'NgayKetThuc',
+      'DonViToChuc',
+      'SoGioTinChiQuyDoi',
+      'FileMinhChungUrl',
+      'HinhThucCapNhatKienThucYKhoa',
+    ];
+
     const placeholders = submissions
       .map((_, i) => {
-        const offset = i * 10; // 10 fields per row
-        return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10})`;
+        const offset = i * columns.length;
+        const row = columns
+          .map((__, colIndex) => `$${offset + colIndex + 1}`)
+          .join(', ');
+        return `(${row})`;
       })
       .join(', ');
 
@@ -338,19 +368,73 @@ class GhiNhanHoatDongRepository {
       s.DonViToChuc,
       s.SoGioTinChiQuyDoi,
       s.FileMinhChungUrl,
+      s.HinhThucCapNhatKienThucYKhoa,
     ]);
 
     const result = await this.db.query<GhiNhanHoatDong>(`
       INSERT INTO "GhiNhanHoatDong" (
-        "MaNhanVien", "MaDanhMuc", "TenHoatDong", "TrangThaiDuyet",
-        "NguoiNhap", "NgayBatDau", "NgayKetThuc", "DonViToChuc",
-        "SoGioTinChiQuyDoi", "FileMinhChungUrl"
+        ${columns.map(c => `"${c}"`).join(', ')}
       )
       VALUES ${placeholders}
+      ON CONFLICT ("MaNhanVien", "MaDanhMuc")
+        WHERE "MaDanhMuc" IS NOT NULL
+        DO NOTHING
       RETURNING *
     `, values);
 
-    return result.rows;
+    const inserted = result.rows;
+    const insertedIds = new Set(inserted.map(row => row.MaNhanVien));
+    const conflicts = [...new Set(
+      submissions
+        .map(s => s.MaNhanVien)
+        .filter(id => !insertedIds.has(id))
+    )];
+
+    return { inserted, conflicts };
+  }
+}
+```
+
+### Add `listIdsByFilters` Helper
+
+**File:** `src/lib/db/repositories.ts`
+
+```typescript
+class NhanVienRepository {
+  async listIdsByFilters({
+    unitId,
+    search,
+    trangThai,
+    chucDanh,
+    khoaPhong,
+    page,
+    limit,
+  }: {
+    unitId?: string;
+    search?: string;
+    trangThai?: string;
+    chucDanh?: string;
+    khoaPhong?: string;
+    page: number;
+    limit: number;
+  }): Promise<Array<Pick<NhanVien, 'MaNhanVien'>>> {
+    const offset = (page - 1) * limit;
+    const filters = [
+      unitId ? 'nv."MaDonVi" = $1' : 'TRUE',
+      trangThai && trangThai !== 'all' ? 'nv."TrangThaiLamViec" = $2' : 'TRUE',
+      chucDanh ? 'nv."ChucDanh" = $3' : 'TRUE',
+      khoaPhong ? 'nv."KhoaPhong" = $4' : 'TRUE',
+      search ? 'UNACCENT(LOWER(nv."HoVaTen")) LIKE UNACCENT(LOWER($5))' : 'TRUE',
+    ].filter(Boolean).join(' AND ');
+
+    return this.db.query(
+      `SELECT nv."MaNhanVien"
+       FROM "NhanVien" nv
+       WHERE ${filters}
+       ORDER BY nv."HoVaTen" ASC
+       LIMIT $6 OFFSET $7`,
+      [unitId ?? null, trangThai ?? null, chucDanh ?? null, khoaPhong ?? null, `%${search ?? ''}%`, limit, offset]
+    );
   }
 }
 ```

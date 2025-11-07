@@ -103,12 +103,14 @@ Cohort Builder → Select Activity → Select Practitioners → Preview → Bulk
 ```
 
 **Business Rules:**
-- **Duplicate Prevention**: Skip if `(MaNhanVien, MaDanhMuc)` already has submission
+- **Duplicate Prevention**: Enforce database-level uniqueness when possible (e.g. partial unique index or ON CONFLICT DO NOTHING) and report skipped practitioners for any existing (MaNhanVien, MaDanhMuc) submissions
 - **Status Assignment**:
-  - If `YeuCauMinhChung = false`: Create as `ChoDuyet` (ready for approval)
-  - If `YeuCauMinhChung = true`: Create as `Nhap` (draft - evidence required)
+  - If YeuCauMinhChung = false: Create as ChoDuyet (ready for approval)
+  - If YeuCauMinhChung = true: Create as Nhap (draft - evidence required)
 - **Tenancy**: Validate all practitioners belong to admin's unit (DonVi) or any unit (SoYTe)
+- **Activity Ownership**: Require that DonVi admins can only bulk enroll into catalog entries owned by their unit (or global). SoYTe may target any active catalog entry but must specify the resulting submission unit via practitioner membership.
 - **Catalog Validation**: Activity must be Active, within validity period
+- **Catalog Defaults**: Carry catalog-derived defaults (TenHoatDong, LoaiHoatDong, SoGioTinChiQuyDoi, HinhThucCapNhatKienThucYKhoa) into created submissions to keep downstream flows consistent.
 
 ### 3. Submission Schema Changes
 
