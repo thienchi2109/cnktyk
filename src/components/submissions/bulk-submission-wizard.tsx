@@ -1,26 +1,19 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Check } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
 import { GlassButton } from '@/components/ui/glass-button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Select } from '@/components/ui/glass-select';
 import { GlassProgress } from '@/components/ui/glass-progress';
 import { CohortBuilder, CohortSelection } from '@/components/cohorts/cohort-builder';
 import { cn } from '@/lib/utils';
+import { ActivitySelector } from '@/components/submissions/activity-selector';
+import { ActivityCatalogItem } from '@/hooks/use-activities';
 
 type WizardStep = 1 | 2 | 3;
-
-interface ActivityOption {
-  id: string;
-  name: string;
-  type: string;
-  scope: 'unit' | 'global';
-  requiresEvidence: boolean;
-}
 
 interface PreviewResponse {
   createCount: number;
@@ -30,22 +23,23 @@ interface PreviewResponse {
   sampleIds: string[];
 }
 
+const activityTypeLabels: Record<ActivityCatalogItem['LoaiHoatDong'], string> = {
+  KhoaHoc: 'Khóa học',
+  HoiThao: 'Hội thảo',
+  NghienCuu: 'Nghiên cứu',
+  BaoCao: 'Báo cáo',
+};
+
 const wizardSteps: Array<{ id: WizardStep; title: string; subtitle: string }> = [
   { id: 1, title: 'Hoạt động', subtitle: 'Chọn hoạt động cần ghi nhận' },
   { id: 2, title: 'Nhóm đối tượng', subtitle: 'Xác định cohort áp dụng' },
   { id: 3, title: 'Xem trước & xác nhận', subtitle: 'Kiểm tra kết quả trước khi tạo' },
 ];
 
-const fallbackActivities: ActivityOption[] = [
-  { id: 'activity-001', name: 'Đào tạo kiểm soát nhiễm khuẩn', type: 'Khóa học', scope: 'unit', requiresEvidence: true },
-  { id: 'activity-002', name: 'Hội thảo chuyên môn toàn tỉnh', type: 'Hội thảo', scope: 'global', requiresEvidence: false },
-  { id: 'activity-003', name: 'Báo cáo NCKH định kỳ', type: 'Nghiên cứu', scope: 'unit', requiresEvidence: true },
-];
-
 export function BulkSubmissionWizard() {
   const router = useRouter();
   const [step, setStep] = useState<WizardStep>(1);
-  const [selectedActivityId, setSelectedActivityId] = useState('');
+  const [selectedActivity, setSelectedActivity] = useState<ActivityCatalogItem | null>(null);
   const [selection, setSelection] = useState<CohortSelection | null>(null);
   const [preview, setPreview] = useState<PreviewResponse | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
@@ -53,16 +47,35 @@ export function BulkSubmissionWizard() {
   const [applyLoading, setApplyLoading] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
   const [applyResult, setApplyResult] = useState<null | { created: number; skipped: number; total: number }>(null);
+  const [activityValidationError, setActivityValidationError] = useState<string | null>(null);
 
-  const selectedActivity = useMemo<ActivityOption | null>(() => {
-    return fallbackActivities.find(activity => activity.id === selectedActivityId) ?? null;
-  }, [selectedActivityId]);
+  const selectedActivityId = selectedActivity?.MaDanhMuc ?? '';
+  const selectedActivityScope = selectedActivity ? (selectedActivity.MaDonVi ? 'unit' : 'global') : null;
 
-  const hasCohortSelection = !!selection && (
+  const handleContinueFromActivity = () => {
+    if (!selectedActivity) {
+      setActivityValidationError('Vui lòng chọn hoạt động trước khi tiếp tục.');
+      return;
+    }
+    setActivityValidationError(null);
+    setStep(2);
+  };
+
+  const hasCohortSelection = !!selectedActivity && !!selection && (
     selection.mode === 'all'
       ? selection.totalFiltered - selection.excludedIds.length > 0
       : selection.selectedIds.length > 0
   );
+
+  useEffect(() => {
+    setSelection(null);
+  }, [selectedActivityId]);
+
+  useEffect(() => {
+    if ((step === 2 || step === 3) && !selectedActivity) {
+      setStep(1);
+    }
+  }, [step, selectedActivity]);
 
   useEffect(() => {
     if (step !== 3) {
@@ -94,10 +107,10 @@ export function BulkSubmissionWizard() {
               filters: selection.filters,
             },
             activity: {
-              MaDanhMuc: selectedActivity.id,
-              TenHoatDong: selectedActivity.name,
-              LoaiHoatDong: selectedActivity.type,
-              YeuCauMinhChung: selectedActivity.requiresEvidence,
+              MaDanhMuc: selectedActivity.MaDanhMuc,
+              TenHoatDong: selectedActivity.TenDanhMuc,
+              LoaiHoatDong: selectedActivity.LoaiHoatDong,
+              YeuCauMinhChung: selectedActivity.YeuCauMinhChung,
             },
           }),
         });
@@ -137,10 +150,10 @@ export function BulkSubmissionWizard() {
             filters: selection.filters,
           },
           activity: {
-            MaDanhMuc: selectedActivity.id,
-            TenHoatDong: selectedActivity.name,
-            LoaiHoatDong: selectedActivity.type,
-            YeuCauMinhChung: selectedActivity.requiresEvidence,
+            MaDanhMuc: selectedActivity.MaDanhMuc,
+            TenHoatDong: selectedActivity.TenDanhMuc,
+            LoaiHoatDong: selectedActivity.LoaiHoatDong,
+            YeuCauMinhChung: selectedActivity.YeuCauMinhChung,
           },
         }),
       });
@@ -218,47 +231,46 @@ export function BulkSubmissionWizard() {
         <GlassCard className="space-y-6 p-6">
           <div className="flex flex-col gap-2">
             <h2 className="text-xl font-semibold text-gray-900">Bước 1 · Chọn hoạt động</h2>
-            <p className="text-sm text-gray-600">Chọn hoạt động cần ghi nhận. Danh sách mặc định dưới đây sẽ được thay thế bằng dữ liệu thực tế.</p>
+            <p className="text-sm text-gray-600">Tìm kiếm trong danh mục hoạt động được phân quyền cho đơn vị của bạn và chọn hoạt động cần ghi nhận.</p>
           </div>
 
-          <div className="space-y-3">
-            <label className="text-sm font-medium text-gray-700">Hoạt động</label>
-            <Select
-              value={selectedActivityId}
-              onChange={event => setSelectedActivityId(event.target.value)}
-            >
-              <option value="" disabled>
-                -- Chọn hoạt động từ danh sách --
-              </option>
-              {fallbackActivities.map(activity => (
-                <option key={activity.id} value={activity.id}>
-                  {activity.name}
-                </option>
-              ))}
-            </Select>
+          <ActivitySelector
+            selectedActivityId={selectedActivityId}
+            onSelect={activity => {
+              setSelectedActivity(activity);
+              setActivityValidationError(null);
+            }}
+          />
 
-            {selectedActivity && (
-              <GlassCard className="p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{selectedActivity.name}</p>
-                    <p className="text-xs text-gray-600">Loại hoạt động: {selectedActivity.type}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={selectedActivity.scope === 'global' ? 'secondary' : 'outline'}>
-                      {selectedActivity.scope === 'global' ? 'Hệ thống' : 'Đơn vị'}
-                    </Badge>
-                    <Badge variant={selectedActivity.requiresEvidence ? 'default' : 'outline'}>
-                      {selectedActivity.requiresEvidence ? 'Yêu cầu minh chứng' : 'Không yêu cầu minh chứng'}
-                    </Badge>
-                  </div>
+          {selectedActivity && (
+            <GlassCard className="p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">{selectedActivity.TenDanhMuc}</p>
+                  <p className="text-xs text-gray-600">
+                    Loại hoạt động: {activityTypeLabels[selectedActivity.LoaiHoatDong]}
+                  </p>
                 </div>
-              </GlassCard>
-            )}
-          </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant={selectedActivityScope === 'global' ? 'secondary' : 'outline'}>
+                    {selectedActivityScope === 'global' ? 'Hệ thống' : 'Đơn vị'}
+                  </Badge>
+                  <Badge variant={selectedActivity.YeuCauMinhChung ? 'default' : 'outline'}>
+                    {selectedActivity.YeuCauMinhChung ? 'Yêu cầu minh chứng' : 'Không yêu cầu minh chứng'}
+                  </Badge>
+                </div>
+              </div>
+            </GlassCard>
+          )}
+
+          {activityValidationError && (
+            <Alert className="border-red-200 bg-red-50">
+              <AlertDescription className="text-sm text-red-700">{activityValidationError}</AlertDescription>
+            </Alert>
+          )}
 
           <div className="flex justify-end gap-3">
-            <GlassButton onClick={() => setStep(2)} disabled={!selectedActivity}>
+            <GlassButton onClick={handleContinueFromActivity}>
               Tiếp tục · Chọn cohort
             </GlassButton>
           </div>
@@ -299,13 +311,13 @@ export function BulkSubmissionWizard() {
               <GlassCard className="space-y-2 border border-medical-blue/20 bg-medical-blue/5 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <p className="text-sm font-semibold text-medical-blue">{selectedActivity.name}</p>
-                    <p className="text-xs text-gray-600">Loại: {selectedActivity.type}</p>
+                    <p className="text-sm font-semibold text-medical-blue">{selectedActivity.TenDanhMuc}</p>
+                    <p className="text-xs text-gray-600">Loại: {activityTypeLabels[selectedActivity.LoaiHoatDong]}</p>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <span>{selectedActivity.requiresEvidence ? 'Cần minh chứng' : 'Không cần minh chứng'}</span>
+                    <span>{selectedActivity.YeuCauMinhChung ? 'Cần minh chứng' : 'Không cần minh chứng'}</span>
                     <span>•</span>
-                    <span>{selectedActivity.scope === 'global' ? 'Phạm vi: Hệ thống' : 'Phạm vi: Đơn vị'}</span>
+                    <span>{selectedActivityScope === 'global' ? 'Phạm vi: Hệ thống' : 'Phạm vi: Đơn vị'}</span>
                   </div>
                 </div>
               </GlassCard>

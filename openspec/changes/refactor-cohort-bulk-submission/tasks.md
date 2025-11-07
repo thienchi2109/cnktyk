@@ -59,13 +59,13 @@
 - [x] 4.1.4 Create progress indicator component/section
 
 ### 4.2 Step 1: Activity Selection
-- [ ] 4.2.1 Create `ActivitySelector` component
-- [ ] 4.2.2 Fetch unit activities + global activities (TanStack Query)
-- [ ] 4.2.3 Filter by status (Active only)
-- [ ] 4.2.4 Display activity info: name, type, evidence requirement
-- [ ] 4.2.5 Add search/filter for activity list
-- [ ] 4.2.6 Handle selection and transition to Step 2
-- [ ] 4.2.7 Add validation (activity required)
+- [x] 4.2.1 Create `ActivitySelector` component
+- [x] 4.2.2 Fetch unit activities + global activities (TanStack Query)
+- [x] 4.2.3 Filter by status (Active only)
+- [x] 4.2.4 Display activity info: name, type, evidence requirement
+- [x] 4.2.5 Add search/filter for activity list
+- [x] 4.2.6 Handle selection and transition to Step 2
+- [x] 4.2.7 Add validation (activity required)
 
 ### 4.3 Step 2: Cohort Selection
 - [ ] 4.3.1 Display selected activity summary card
