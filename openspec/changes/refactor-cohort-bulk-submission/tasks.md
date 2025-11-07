@@ -68,13 +68,13 @@
 - [x] 4.2.7 Add validation (activity required)
 
 ### 4.3 Step 2: Cohort Selection
-- [ ] 4.3.1 Display selected activity summary card
-- [ ] 4.3.2 Add "Change Activity" button to return to Step 1
-- [ ] 4.3.3 Integrate existing CohortBuilder component
-- [ ] 4.3.4 Handle cohort selection state
-- [ ] 4.3.5 Show selected count badge
-- [ ] 4.3.6 Add "Continue" button with validation
-- [ ] 4.3.7 Disable continue if no practitioners selected
+- [x] 4.3.1 Display selected activity summary card
+- [x] 4.3.2 Add "Change Activity" button to return to Step 1
+- [x] 4.3.3 Integrate existing CohortBuilder component
+- [x] 4.3.4 Handle cohort selection state
+- [x] 4.3.5 Show selected count badge
+- [x] 4.3.6 Add "Continue" button with validation
+- [x] 4.3.7 Disable continue if no practitioners selected
 
 ### 4.4 Step 3: Preview & Confirm
 - [ ] 4.4.1 Create `PreviewAndConfirm` component

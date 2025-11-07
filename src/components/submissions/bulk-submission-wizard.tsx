@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Check } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
@@ -52,6 +52,14 @@ export function BulkSubmissionWizard() {
   const selectedActivityId = selectedActivity?.MaDanhMuc ?? '';
   const selectedActivityScope = selectedActivity ? (selectedActivity.MaDonVi ? 'unit' : 'global') : null;
 
+  const selectedCount = useMemo(() => {
+    if (!selection) return 0;
+    if (selection.mode === 'all') {
+      return Math.max(0, selection.totalFiltered - selection.excludedIds.length);
+    }
+    return selection.selectedIds.length;
+  }, [selection]);
+
   const handleContinueFromActivity = () => {
     if (!selectedActivity) {
       setActivityValidationError('Vui lòng chọn hoạt động trước khi tiếp tục.');
@@ -66,6 +74,15 @@ export function BulkSubmissionWizard() {
       ? selection.totalFiltered - selection.excludedIds.length > 0
       : selection.selectedIds.length > 0
   );
+
+  const cohortValidationMessage = !hasCohortSelection && selection ? 'Vui lòng chọn ít nhất một nhân sự để tiếp tục.' : null;
+
+  const handleContinueFromCohort = () => {
+    if (!hasCohortSelection) {
+      return;
+    }
+    setStep(3);
+  };
 
   useEffect(() => {
     setSelection(null);
@@ -279,23 +296,63 @@ export function BulkSubmissionWizard() {
 
       {step === 2 && (
         <div className="space-y-4">
-          <GlassCard className="p-6">
+          {selectedActivity && (
+            <GlassCard className="flex flex-col gap-4 border border-medical-blue/30 bg-medical-blue/5 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-medical-blue">Hoạt động đã chọn</p>
+                <p className="text-base font-semibold text-gray-900">{selectedActivity.TenDanhMuc}</p>
+                <p className="text-xs text-gray-600">
+                  Loại: {activityTypeLabels[selectedActivity.LoaiHoatDong]} · {selectedActivity.YeuCauMinhChung ? 'Yêu cầu minh chứng' : 'Không yêu cầu minh chứng'} · Phạm vi: {selectedActivityScope === 'global' ? 'Hệ thống' : 'Đơn vị'}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={selectedActivityScope === 'global' ? 'secondary' : 'outline'}>
+                  {selectedActivityScope === 'global' ? 'Hệ thống' : 'Đơn vị'}
+                </Badge>
+                <Badge variant={selectedActivity.YeuCauMinhChung ? 'default' : 'outline'}>
+                  {selectedActivity.YeuCauMinhChung ? 'Cần minh chứng' : 'Không cần minh chứng'}
+                </Badge>
+                <GlassButton size="sm" variant="outline" onClick={() => setStep(1)}>
+                  Thay đổi hoạt động
+                </GlassButton>
+              </div>
+            </GlassCard>
+          )}
+
+          <GlassCard className="space-y-6 p-6">
             <div className="flex flex-col gap-2">
               <h2 className="text-xl font-semibold text-gray-900">Bước 2 · Xây dựng cohort</h2>
-              <p className="text-sm text-gray-600">Sử dụng bộ lọc để xác định đối tượng cần áp dụng.</p>
+              <p className="text-sm text-gray-600">Sử dụng bộ lọc để xác định đối tượng cần áp dụng. Bạn có thể chọn thủ công từng người hoặc áp dụng cho toàn bộ kết quả lọc.</p>
             </div>
-            <div className="mt-4">
-              <CohortBuilder onChange={setSelection} />
-            </div>
+            <CohortBuilder onChange={setSelection} />
           </GlassCard>
-          <div className="flex items-center justify-between">
-            <GlassButton variant="secondary" onClick={() => setStep(1)}>
-              ← Quay lại
-            </GlassButton>
-            <GlassButton disabled={!hasCohortSelection} onClick={() => setStep(3)}>
-              Tiếp tục · Xem trước
-            </GlassButton>
+
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={selectedCount > 0 ? 'secondary' : 'outline'}>
+                Đã chọn: <span className="ml-1 font-semibold">{selectedCount}</span>
+              </Badge>
+              {selection && (
+                <Badge variant="outline">
+                  Chế độ: {selection.mode === 'all' ? 'Toàn bộ theo bộ lọc' : 'Chọn thủ công'}
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <GlassButton variant="secondary" onClick={() => setStep(1)}>
+                ← Quay lại
+              </GlassButton>
+              <GlassButton disabled={!hasCohortSelection} onClick={handleContinueFromCohort}>
+                Tiếp tục · Xem trước
+              </GlassButton>
+            </div>
           </div>
+
+          {cohortValidationMessage && (
+            <Alert className="border-red-200 bg-red-50">
+              <AlertDescription className="text-sm text-red-700">{cohortValidationMessage}</AlertDescription>
+            </Alert>
+          )}
         </div>
       )}
 
