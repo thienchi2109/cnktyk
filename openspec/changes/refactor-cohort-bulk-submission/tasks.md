@@ -12,7 +12,6 @@
 - [x] 1.1.7 Implement duplicate detection query
 - [x] 1.1.8 Add activity catalog validation (Active status, validity period)
 - [x] 1.1.9 Determine initial status based on YeuCauMinhChung
-- [ ] 1.1.10 Call repository bulkCreate method
 - [x] 1.1.10 Call repository bulkCreate method
 - [x] 1.1.11 Add audit logging for bulk operation
 - [x] 1.1.12 Return structured response with created/skipped counts
