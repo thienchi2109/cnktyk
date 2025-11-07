@@ -91,12 +91,12 @@
 - [x] 4.4.12 Add navigation to submissions list (filtered by activity)
 
 ### 4.5 Component Styling
-- [ ] 4.5.1 Apply glassmorphism design system
-- [ ] 4.5.2 Match form control styling
-- [ ] 4.5.3 Add responsive layout (mobile-friendly)
-- [ ] 4.5.4 Add loading skeletons
-- [ ] 4.5.5 Add error states
-- [ ] 4.5.6 Add accessibility attributes (ARIA labels, roles)
+- [x] 4.5.1 Apply glassmorphism design system
+- [x] 4.5.2 Match form control styling
+- [x] 4.5.3 Add responsive layout (mobile-friendly)
+- [x] 4.5.4 Add loading skeletons
+- [x] 4.5.5 Add error states
+- [x] 4.5.6 Add accessibility attributes (ARIA labels, roles)
 
 ## 5. Navigation & Routes
 
@@ -229,3 +229,4 @@
 - Add notes below tasks if blockers or decisions needed
 - Review this list daily during implementation
 - Update as new subtasks discovered
+
