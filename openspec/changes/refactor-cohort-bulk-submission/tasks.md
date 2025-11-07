@@ -3,24 +3,27 @@
 ## 1. API Layer
 
 ### 1.1 Create Bulk Submission Endpoint
-- [ ] 1.1.1 Create `src/app/api/submissions/bulk-create/route.ts`
-- [ ] 1.1.2 Implement POST handler with Zod validation
-- [ ] 1.1.3 Add authentication check (DonVi, SoYTe only)
-- [ ] 1.1.4 Implement cohort resolution logic (mode: all/manual)
-- [ ] 1.1.5 Add tenant validation (DonVi cannot cross units)
-- [ ] 1.1.6 Implement duplicate detection query
-- [ ] 1.1.7 Add activity catalog validation (Active status, validity period)
-- [ ] 1.1.8 Determine initial status based on YeuCauMinhChung
-- [ ] 1.1.9 Call repository bulkCreate method
-- [ ] 1.1.10 Add audit logging for bulk operation
-- [ ] 1.1.11 Return structured response with created/skipped counts
-- [ ] 1.1.12 Add error handling with proper HTTP status codes
+- [x] 1.1.1 Create `src/app/api/submissions/bulk-create/route.ts`
+- [x] 1.1.2 Implement POST handler with Zod validation
+- [x] 1.1.3 Add authentication check (DonVi, SoYTe only)
+- [x] 1.1.4 Implement cohort resolution logic (mode: all/manual)
+- [x] 1.1.5 Add tenant validation (DonVi cannot cross units)
+- [x] 1.1.6 Enforce activity ownership check for DonVi users (unit-owned or global only)
+- [x] 1.1.7 Implement duplicate detection query
+- [x] 1.1.8 Add activity catalog validation (Active status, validity period)
+- [x] 1.1.9 Determine initial status based on YeuCauMinhChung
+- [ ] 1.1.10 Call repository bulkCreate method
+- [x] 1.1.11 Add audit logging for bulk operation
+- [x] 1.1.12 Return structured response with created/skipped counts
+- [x] 1.1.13 Add error handling with proper HTTP status codes
+- [x] 1.1.14 Recompute cohort server-side (ignore client-provided totals/exclusions tampering)
+- [x] 1.1.15 Merge repository conflicts into duplicate set so skipped count reflects DB `ON CONFLICT`
 
 ### 1.2 Request/Response Types
-- [ ] 1.2.1 Define `BulkSubmissionRequest` interface in types file
-- [ ] 1.2.2 Define `BulkSubmissionResponse` interface
-- [ ] 1.2.3 Create Zod schema for request validation
-- [ ] 1.2.4 Export types for frontend consumption
+- [x] 1.2.1 Define `BulkSubmissionRequest` interface in types file
+- [x] 1.2.2 Define `BulkSubmissionResponse` interface
+- [x] 1.2.3 Create Zod schema for request validation
+- [x] 1.2.4 Export types for frontend consumption
 
 ## 2. Repository Layer
 
@@ -118,6 +121,7 @@
 - [ ] 6.1.4 Store sample practitioner IDs (first 10)
 - [ ] 6.1.5 Add timestamp and actor information
 - [ ] 6.1.6 Test audit log retrieval
+- [ ] 6.1.7 Use `nhatKyHeThongRepo.logAction` helper instead of ad-hoc writes
 
 ## 7. Database Optimization
 
