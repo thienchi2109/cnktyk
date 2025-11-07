@@ -1,4 +1,5 @@
 import { db } from './client';
+import { calculateEffectiveCredits } from './credit-utils';
 import {
   TaiKhoan,
   CreateTaiKhoan,
@@ -299,9 +300,25 @@ export class NhanVienRepository extends BaseRepository<NhanVien, CreateNhanVien,
     const result = await db.queryOne<{
       total_credits: string;
     }>(`
-      SELECT COALESCE(SUM("SoGioTinChiQuyDoi"), 0) as total_credits
-      FROM "GhiNhanHoatDong"
-      WHERE "MaNhanVien" = $1 AND "TrangThaiDuyet" = 'DaDuyet'
+      SELECT COALESCE(SUM(
+        CASE
+          WHEN g."TrangThaiDuyet" = 'DaDuyet'
+            AND (
+              g."MaDanhMuc" IS NULL
+              OR dm."YeuCauMinhChung" IS DISTINCT FROM TRUE
+              OR (
+                dm."YeuCauMinhChung" = TRUE
+                AND g."FileMinhChungUrl" IS NOT NULL
+                AND BTRIM(g."FileMinhChungUrl") <> ''
+              )
+            )
+          THEN g."SoGioTinChiQuyDoi"
+          ELSE 0
+        END
+      ), 0) as total_credits
+      FROM "GhiNhanHoatDong" g
+      LEFT JOIN "DanhMucHoatDong" dm ON dm."MaDanhMuc" = g."MaDanhMuc"
+      WHERE g."MaNhanVien" = $1 AND g."TrangThaiDuyet" = 'DaDuyet'
     `, [practitionerId]);
 
     const totalCredits = parseFloat(result?.total_credits || '0');
@@ -353,19 +370,39 @@ export class NhanVienRepository extends BaseRepository<NhanVien, CreateNhanVien,
 
     // Build optimized query with CTE for compliance calculation
     let sql = `
-      WITH compliance_data AS (
+      WITH credit_source AS (
+        SELECT
+          g."MaNhanVien",
+          CASE
+            WHEN g."TrangThaiDuyet" = 'DaDuyet'
+              AND (
+                g."MaDanhMuc" IS NULL
+                OR dm."YeuCauMinhChung" IS DISTINCT FROM TRUE
+                OR (
+                  dm."YeuCauMinhChung" = TRUE
+                  AND g."FileMinhChungUrl" IS NOT NULL
+                  AND BTRIM(g."FileMinhChungUrl") <> ''
+                )
+              )
+            THEN g."SoGioTinChiQuyDoi"
+            ELSE 0
+          END AS effective_credits
+        FROM "GhiNhanHoatDong" g
+        LEFT JOIN "DanhMucHoatDong" dm ON dm."MaDanhMuc" = g."MaDanhMuc"
+        WHERE g."TrangThaiDuyet" = 'DaDuyet'
+      ),
+      compliance_data AS (
         SELECT 
           "MaNhanVien",
-          COALESCE(SUM("SoGioTinChiQuyDoi"), 0) as total_credits,
+          COALESCE(SUM(effective_credits), 0) as total_credits,
           120 as required_credits,
-          ROUND((COALESCE(SUM("SoGioTinChiQuyDoi"), 0) / 120.0) * 100, 2) as compliance_percentage,
+          ROUND((COALESCE(SUM(effective_credits), 0) / 120.0) * 100, 2) as compliance_percentage,
           CASE
-            WHEN (COALESCE(SUM("SoGioTinChiQuyDoi"), 0) / 120.0) * 100 >= 90 THEN 'compliant'
-            WHEN (COALESCE(SUM("SoGioTinChiQuyDoi"), 0) / 120.0) * 100 >= 70 THEN 'at_risk'
+            WHEN (COALESCE(SUM(effective_credits), 0) / 120.0) * 100 >= 90 THEN 'compliant'
+            WHEN (COALESCE(SUM(effective_credits), 0) / 120.0) * 100 >= 70 THEN 'at_risk'
             ELSE 'non_compliant'
           END as compliance_status
-        FROM "GhiNhanHoatDong"
-        WHERE "TrangThaiDuyet" = 'DaDuyet'
+        FROM credit_source
         GROUP BY "MaNhanVien"
       ),
       filtered_practitioners AS (
@@ -1046,6 +1083,10 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
         -- Activity catalog data (nullable)
         dm."TenDanhMuc" AS "activityCatalog_TenDanhMuc",
         dm."LoaiHoatDong" AS "activityCatalog_LoaiHoatDong",
+        dm."YeuCauMinhChung" AS "activityCatalog_YeuCauMinhChung",
+        dm."GioToiThieu" AS "activityCatalog_GioToiThieu",
+        dm."GioToiDa" AS "activityCatalog_GioToiDa",
+        dm."TyLeQuyDoi" AS "activityCatalog_TyLeQuyDoi",
         -- Unit data (nullable)
         dv."TenDonVi" AS "unit_TenDonVi"
       FROM "${this.tableName}" g
@@ -1077,37 +1118,65 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
     const totalPages = Math.max(1, Math.ceil(total / limit));
 
     // Map database rows to SubmissionListItem format
-    const data: import('./schemas').SubmissionListItem[] = rows.map(row => ({
-      MaGhiNhan: row.MaGhiNhan,
-      MaNhanVien: row.MaNhanVien,
-      TenHoatDong: row.TenHoatDong,
-      NgayGhiNhan: row.NgayGhiNhan?.toISOString() || '',
-      TrangThaiDuyet: row.TrangThaiDuyet,
-      SoGioTinChiQuyDoi: parseFloat(row.SoGioTinChiQuyDoi) || 0,
-      NgayBatDau: row.NgayBatDau?.toISOString() || null,
-      NgayKetThuc: row.NgayKetThuc?.toISOString() || null,
-      SoTiet: row.SoTiet ? parseFloat(row.SoTiet) : null,
-      HinhThucCapNhatKienThucYKhoa: row.HinhThucCapNhatKienThucYKhoa,
-      ChiTietVaiTro: row.ChiTietVaiTro,
-      DonViToChuc: row.DonViToChuc,
-      BangChungSoGiayChungNhan: row.BangChungSoGiayChungNhan,
-      FileMinhChungUrl: row.FileMinhChungUrl,
-      NgayDuyet: row.NgayDuyet?.toISOString() || null,
-      NguoiDuyet: null, // Not fetched in this query (would require another JOIN with TaiKhoan)
-      GhiChuDuyet: row.GhiChuDuyet,
-      practitioner: {
-        HoVaTen: row.practitioner_HoVaTen,
-        SoCCHN: row.practitioner_SoCCHN,
-        ChucDanh: row.practitioner_ChucDanh,
-      },
-      activityCatalog: row.activityCatalog_TenDanhMuc ? {
-        TenDanhMuc: row.activityCatalog_TenDanhMuc,
-        LoaiHoatDong: row.activityCatalog_LoaiHoatDong,
-      } : null,
-      unit: row.unit_TenDonVi ? {
-        TenDonVi: row.unit_TenDonVi,
-      } : null,
-    }));
+    const data: import('./schemas').SubmissionListItem[] = rows.map(row => {
+      const soTietValue = row.SoTiet ? parseFloat(row.SoTiet) : null;
+      const rawCredits = parseFloat(row.SoGioTinChiQuyDoi) || 0;
+
+      const activityInfo = row.activityCatalog_TenDanhMuc
+        ? {
+            YeuCauMinhChung: row.activityCatalog_YeuCauMinhChung ?? false,
+            TyLeQuyDoi: row.activityCatalog_TyLeQuyDoi !== null ? Number(row.activityCatalog_TyLeQuyDoi) : undefined,
+            GioToiThieu: row.activityCatalog_GioToiThieu !== null ? Number(row.activityCatalog_GioToiThieu) : null,
+            GioToiDa: row.activityCatalog_GioToiDa !== null ? Number(row.activityCatalog_GioToiDa) : null,
+          }
+        : undefined;
+
+      const effectiveCredits = calculateEffectiveCredits({
+        submission: {
+          TrangThaiDuyet: row.TrangThaiDuyet,
+          SoTiet: soTietValue,
+          SoGioTinChiQuyDoi: rawCredits,
+          FileMinhChungUrl: row.FileMinhChungUrl,
+        },
+        activity: activityInfo,
+      });
+
+      return {
+        MaGhiNhan: row.MaGhiNhan,
+        MaNhanVien: row.MaNhanVien,
+        TenHoatDong: row.TenHoatDong,
+        NgayGhiNhan: row.NgayGhiNhan?.toISOString() || '',
+        TrangThaiDuyet: row.TrangThaiDuyet,
+        SoGioTinChiQuyDoi: effectiveCredits,
+        NgayBatDau: row.NgayBatDau?.toISOString() || null,
+        NgayKetThuc: row.NgayKetThuc?.toISOString() || null,
+        SoTiet: soTietValue,
+        HinhThucCapNhatKienThucYKhoa: row.HinhThucCapNhatKienThucYKhoa,
+        ChiTietVaiTro: row.ChiTietVaiTro,
+        DonViToChuc: row.DonViToChuc,
+        BangChungSoGiayChungNhan: row.BangChungSoGiayChungNhan,
+        FileMinhChungUrl: row.FileMinhChungUrl,
+        NgayDuyet: row.NgayDuyet?.toISOString() || null,
+        NguoiDuyet: null,
+        GhiChuDuyet: row.GhiChuDuyet,
+        practitioner: {
+          HoVaTen: row.practitioner_HoVaTen,
+          SoCCHN: row.practitioner_SoCCHN,
+          ChucDanh: row.practitioner_ChucDanh,
+        },
+        activityCatalog: row.activityCatalog_TenDanhMuc
+          ? {
+              TenDanhMuc: row.activityCatalog_TenDanhMuc,
+              LoaiHoatDong: row.activityCatalog_LoaiHoatDong,
+            }
+          : null,
+        unit: row.unit_TenDonVi
+          ? {
+              TenDonVi: row.unit_TenDonVi,
+            }
+          : null,
+      };
+    });
 
     return {
       data,
@@ -2131,13 +2200,37 @@ export async function getDohUnitComparisonPage({
       SELECT
         nv."MaDonVi",
         nv."MaNhanVien",
-        SUM(CASE WHEN g."TrangThaiDuyet" = 'DaDuyet' THEN g."SoGioTinChiQuyDoi" ELSE 0 END) AS approved_credits,
+        SUM(
+          CASE
+            WHEN g."TrangThaiDuyet" = 'DaDuyet'
+              AND (
+                g."MaDanhMuc" IS NULL
+                OR dm."YeuCauMinhChung" IS DISTINCT FROM TRUE
+                OR (
+                  dm."YeuCauMinhChung" = TRUE
+                  AND g."FileMinhChungUrl" IS NOT NULL
+                  AND BTRIM(g."FileMinhChungUrl") <> ''
+                )
+              )
+            THEN g."SoGioTinChiQuyDoi"
+            ELSE 0
+          END
+        ) AS approved_credits,
         SUM(CASE WHEN g."TrangThaiDuyet" = 'ChoDuyet' THEN 1 ELSE 0 END) AS pending_approvals,
         SUM(
           CASE
             WHEN g."TrangThaiDuyet" = 'DaDuyet'
               AND ac."MaNhanVien" IS NOT NULL
               AND g."NgayGhiNhan" BETWEEN ac."NgayBatDau" AND ac."NgayKetThuc"
+              AND (
+                g."MaDanhMuc" IS NULL
+                OR dm."YeuCauMinhChung" IS DISTINCT FROM TRUE
+                OR (
+                  dm."YeuCauMinhChung" = TRUE
+                  AND g."FileMinhChungUrl" IS NOT NULL
+                  AND BTRIM(g."FileMinhChungUrl") <> ''
+                )
+              )
             THEN g."SoGioTinChiQuyDoi"
             ELSE 0
           END
@@ -2145,6 +2238,7 @@ export async function getDohUnitComparisonPage({
         MAX(ac."SoTinChiYeuCau") AS required_credits
       FROM "NhanVien" nv
       LEFT JOIN "GhiNhanHoatDong" g ON g."MaNhanVien" = nv."MaNhanVien"
+      LEFT JOIN "DanhMucHoatDong" dm ON dm."MaDanhMuc" = g."MaDanhMuc"
       LEFT JOIN active_cycles ac ON ac."MaNhanVien" = nv."MaNhanVien"
       WHERE nv."MaDonVi" IN (SELECT "MaDonVi" FROM filtered_units)
       GROUP BY nv."MaDonVi", nv."MaNhanVien"
@@ -2280,13 +2374,37 @@ export async function getDohUnitComparisonSummary(unitId: string): Promise<DohUn
       SELECT
         nv."MaDonVi",
         nv."MaNhanVien",
-        SUM(CASE WHEN g."TrangThaiDuyet" = 'DaDuyet' THEN g."SoGioTinChiQuyDoi" ELSE 0 END) AS approved_credits,
+        SUM(
+          CASE
+            WHEN g."TrangThaiDuyet" = 'DaDuyet'
+              AND (
+                g."MaDanhMuc" IS NULL
+                OR dm."YeuCauMinhChung" IS DISTINCT FROM TRUE
+                OR (
+                  dm."YeuCauMinhChung" = TRUE
+                  AND g."FileMinhChungUrl" IS NOT NULL
+                  AND BTRIM(g."FileMinhChungUrl") <> ''
+                )
+              )
+            THEN g."SoGioTinChiQuyDoi"
+            ELSE 0
+          END
+        ) AS approved_credits,
         SUM(CASE WHEN g."TrangThaiDuyet" = 'ChoDuyet' THEN 1 ELSE 0 END) AS pending_approvals,
         SUM(
           CASE
             WHEN g."TrangThaiDuyet" = 'DaDuyet'
               AND ac."MaNhanVien" IS NOT NULL
               AND g."NgayGhiNhan" BETWEEN ac."NgayBatDau" AND ac."NgayKetThuc"
+              AND (
+                g."MaDanhMuc" IS NULL
+                OR dm."YeuCauMinhChung" IS DISTINCT FROM TRUE
+                OR (
+                  dm."YeuCauMinhChung" = TRUE
+                  AND g."FileMinhChungUrl" IS NOT NULL
+                  AND BTRIM(g."FileMinhChungUrl") <> ''
+                )
+              )
             THEN g."SoGioTinChiQuyDoi"
             ELSE 0
           END
@@ -2294,6 +2412,7 @@ export async function getDohUnitComparisonSummary(unitId: string): Promise<DohUn
         MAX(ac."SoTinChiYeuCau") AS required_credits
       FROM "NhanVien" nv
       LEFT JOIN "GhiNhanHoatDong" g ON g."MaNhanVien" = nv."MaNhanVien"
+      LEFT JOIN "DanhMucHoatDong" dm ON dm."MaDanhMuc" = g."MaDanhMuc"
       LEFT JOIN active_cycles ac ON ac."MaNhanVien" = nv."MaNhanVien"
       WHERE nv."MaDonVi" IN (SELECT "MaDonVi" FROM filtered_units)
       GROUP BY nv."MaDonVi", nv."MaNhanVien"

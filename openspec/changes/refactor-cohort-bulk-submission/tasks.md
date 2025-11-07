@@ -29,12 +29,6 @@
 ## 2. Repository Layer
 
 ### 2.1 Add Bulk Create Method
-- [ ] 2.1.1 Add `bulkCreate()` method to `GhiNhanHoatDongRepository`
-- [ ] 2.1.2 Implement parameterized bulk INSERT query
-- [ ] 2.1.3 Use RETURNING clause to get created submission IDs
-- [ ] 2.1.4 Wrap in transaction for atomicity
-- [ ] 2.1.5 Add batching logic for >500 submissions
-- [ ] 2.1.6 Add error handling for constraint violations
 - [x] 2.1.1 Add `bulkCreate()` method to `GhiNhanHoatDongRepository`
 - [x] 2.1.2 Implement parameterized bulk INSERT query
 - [x] 2.1.3 Use RETURNING clause to get created submission IDs
@@ -43,10 +37,6 @@
 - [x] 2.1.6 Add error handling for constraint violations
 
 ### 2.2 Helper Functions
-- [ ] 2.2.1 Implement `resolveCohort()` utility function
-- [ ] 2.2.2 Implement `validatePractitionersTenancy()` utility
-- [ ] 2.2.3 Add duplicate detection query helper
-- [ ] 2.2.4 Create type guards for cohort selection modes
 - [x] 2.2.1 Implement `resolveCohort()` utility function
 - [x] 2.2.2 Implement `validatePractitionersTenancy()` utility
 - [x] 2.2.3 Add duplicate detection query helper
@@ -55,10 +45,10 @@
 ## 3. Credit Calculation Logic
 
 ### 3.1 Update Calculation Logic
-- [ ] 3.1.1 Locate existing credit calculation function
-- [ ] 3.1.2 Add evidence validation check (YeuCauMinhChung + FileMinhChungUrl)
-- [ ] 3.1.3 Return 0 credits if evidence required but missing
-- [ ] 3.1.4 Update unit tests for evidence-dependent logic
+- [x] 3.1.1 Locate existing credit calculation function
+- [x] 3.1.2 Add evidence validation check (YeuCauMinhChung + FileMinhChungUrl)
+- [x] 3.1.3 Return 0 credits if evidence required but missing
+- [x] 3.1.4 Update unit tests for evidence-dependent logic
 - [ ] 3.1.5 Add integration test for approval workflow
 
 ## 4. Frontend Components

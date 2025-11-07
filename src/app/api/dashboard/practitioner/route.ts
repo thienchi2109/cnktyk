@@ -223,7 +223,22 @@ export async function GET(request: NextRequest) {
           kc."NgayKetThuc",
           kc."SoTinChiYeuCau",
           kc."TrangThai",
-          COALESCE(SUM(g."SoGioTinChiQuyDoi") FILTER (WHERE g."TrangThaiDuyet" = 'DaDuyet'), 0) as earned_credits,
+          COALESCE(SUM(
+            CASE
+              WHEN g."TrangThaiDuyet" = 'DaDuyet'
+                AND (
+                  g."MaDanhMuc" IS NULL
+                  OR dm."YeuCauMinhChung" IS DISTINCT FROM TRUE
+                  OR (
+                    dm."YeuCauMinhChung" = TRUE
+                    AND g."FileMinhChungUrl" IS NOT NULL
+                    AND BTRIM(g."FileMinhChungUrl") <> ''
+                  )
+                )
+              THEN g."SoGioTinChiQuyDoi"
+              ELSE 0
+            END
+          ), 0) as earned_credits,
           COUNT(DISTINCT g."MaGhiNhan") FILTER (WHERE g."TrangThaiDuyet" = 'ChoDuyet') as pending_count,
           COUNT(DISTINCT g."MaGhiNhan") FILTER (WHERE g."TrangThaiDuyet" = 'DaDuyet') as approved_count
         FROM practitioner_info pi
@@ -231,6 +246,7 @@ export async function GET(request: NextRequest) {
           AND kc."TrangThai" = 'DangDienRa'
         LEFT JOIN "GhiNhanHoatDong" g ON pi."MaNhanVien" = g."MaNhanVien"
           AND g."NgayGhiNhan" BETWEEN kc."NgayBatDau" AND kc."NgayKetThuc"
+        LEFT JOIN "DanhMucHoatDong" dm ON dm."MaDanhMuc" = g."MaDanhMuc"
         GROUP BY kc."MaKy", kc."NgayBatDau", kc."NgayKetThuc", kc."SoTinChiYeuCau", kc."TrangThai"
         LIMIT 1
       ),
@@ -240,12 +256,26 @@ export async function GET(request: NextRequest) {
           g."MaGhiNhan" as id,
           g."TenHoatDong" as title,
           g."HinhThucCapNhatKienThucYKhoa" as type,
-          g."SoGioTinChiQuyDoi" as credits,
+          CASE
+            WHEN g."TrangThaiDuyet" = 'DaDuyet'
+              AND (
+                g."MaDanhMuc" IS NULL
+                OR dm_recent."YeuCauMinhChung" IS DISTINCT FROM TRUE
+                OR (
+                  dm_recent."YeuCauMinhChung" = TRUE
+                  AND g."FileMinhChungUrl" IS NOT NULL
+                  AND BTRIM(g."FileMinhChungUrl") <> ''
+                )
+              )
+            THEN g."SoGioTinChiQuyDoi"
+            ELSE 0
+          END as credits,
           g."TrangThaiDuyet" as status,
           g."NgayGhiNhan" as date,
           g."GhiChuDuyet" as reviewer_comment
         FROM practitioner_info pi
         LEFT JOIN "GhiNhanHoatDong" g ON pi."MaNhanVien" = g."MaNhanVien"
+        LEFT JOIN "DanhMucHoatDong" dm_recent ON dm_recent."MaDanhMuc" = g."MaDanhMuc"
         ORDER BY g."NgayGhiNhan" DESC
         LIMIT 10
       ),
@@ -270,13 +300,29 @@ export async function GET(request: NextRequest) {
       credit_summary AS (
         SELECT 
           g."HinhThucCapNhatKienThucYKhoa" as "LoaiHoatDong",
-          COALESCE(SUM(g."SoGioTinChiQuyDoi"), 0) as "TongTinChi",
+          COALESCE(SUM(
+            CASE
+              WHEN g."TrangThaiDuyet" = 'DaDuyet'
+                AND (
+                  g."MaDanhMuc" IS NULL
+                  OR dm_summary."YeuCauMinhChung" IS DISTINCT FROM TRUE
+                  OR (
+                    dm_summary."YeuCauMinhChung" = TRUE
+                    AND g."FileMinhChungUrl" IS NOT NULL
+                    AND BTRIM(g."FileMinhChungUrl") <> ''
+                  )
+                )
+              THEN g."SoGioTinChiQuyDoi"
+              ELSE 0
+            END
+          ), 0) as "TongTinChi",
           COUNT(*)::integer as "SoHoatDong"
         FROM practitioner_info pi
         LEFT JOIN active_cycle ac ON 1=1
         LEFT JOIN "GhiNhanHoatDong" g ON pi."MaNhanVien" = g."MaNhanVien"
           AND g."TrangThaiDuyet" = 'DaDuyet'
           AND g."NgayGhiNhan" BETWEEN ac."NgayBatDau" AND ac."NgayKetThuc"
+        LEFT JOIN "DanhMucHoatDong" dm_summary ON dm_summary."MaDanhMuc" = g."MaDanhMuc"
         WHERE g."HinhThucCapNhatKienThucYKhoa" IS NOT NULL
         GROUP BY g."HinhThucCapNhatKienThucYKhoa"
       )

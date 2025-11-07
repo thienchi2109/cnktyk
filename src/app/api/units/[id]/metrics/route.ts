@@ -61,10 +61,25 @@ export async function GET(
       practitioner_credits AS (
         SELECT 
           n."MaNhanVien",
-          COALESCE(SUM(g."SoGioTinChiQuyDoi"), 0) as total_credits
+          COALESCE(SUM(
+            CASE
+              WHEN (
+                g."MaDanhMuc" IS NULL
+                OR dm."YeuCauMinhChung" IS DISTINCT FROM TRUE
+                OR (
+                  dm."YeuCauMinhChung" = TRUE
+                  AND g."FileMinhChungUrl" IS NOT NULL
+                  AND BTRIM(g."FileMinhChungUrl") <> ''
+                )
+              )
+              THEN g."SoGioTinChiQuyDoi"
+              ELSE 0
+            END
+          ), 0) as total_credits
         FROM "NhanVien" n
         LEFT JOIN "GhiNhanHoatDong" g ON n."MaNhanVien" = g."MaNhanVien" 
           AND g."TrangThaiDuyet" = 'DaDuyet'
+        LEFT JOIN "DanhMucHoatDong" dm ON dm."MaDanhMuc" = g."MaDanhMuc"
         WHERE n."MaDonVi" = $1 AND n."TrangThaiLamViec" = 'DangLamViec'
         GROUP BY n."MaNhanVien"
       ),

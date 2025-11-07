@@ -59,8 +59,29 @@ export async function GET(request: NextRequest) {
         AND "NgayDuyet" >= date_trunc('month', CURRENT_DATE)
       `, ['TuChoi']),
       
-      // Total credits awarded
-      db.query('SELECT COALESCE(SUM("SoGioTinChiQuyDoi"), 0) as total FROM "GhiNhanHoatDong" WHERE "TrangThaiDuyet" = $1', ['DaDuyet'])
+      // Total credits awarded (evidence-aware)
+      db.query(
+        `SELECT COALESCE(SUM(
+            CASE
+              WHEN g."TrangThaiDuyet" = 'DaDuyet'
+                AND (
+                  g."MaDanhMuc" IS NULL
+                  OR dm."YeuCauMinhChung" IS DISTINCT FROM TRUE
+                  OR (
+                    dm."YeuCauMinhChung" = TRUE
+                    AND g."FileMinhChungUrl" IS NOT NULL
+                    AND BTRIM(g."FileMinhChungUrl") <> ''
+                  )
+                )
+              THEN g."SoGioTinChiQuyDoi"
+              ELSE 0
+            END
+          ), 0) as total
+         FROM "GhiNhanHoatDong" g
+         LEFT JOIN "DanhMucHoatDong" dm ON dm."MaDanhMuc" = g."MaDanhMuc"
+         WHERE g."TrangThaiDuyet" = $1`,
+        ['DaDuyet']
+      )
     ]);
 
     // Calculate compliance rate
@@ -71,8 +92,24 @@ export async function GET(request: NextRequest) {
       INNER JOIN "KyCNKT" kc ON nv."MaNhanVien" = kc."MaNhanVien"
       WHERE kc."TrangThai" = 'DangDienRa'
       AND (
-        SELECT COALESCE(SUM(g."SoGioTinChiQuyDoi"), 0)
+        SELECT COALESCE(SUM(
+          CASE
+            WHEN g."TrangThaiDuyet" = 'DaDuyet'
+              AND (
+                g."MaDanhMuc" IS NULL
+                OR dm."YeuCauMinhChung" IS DISTINCT FROM TRUE
+                OR (
+                  dm."YeuCauMinhChung" = TRUE
+                  AND g."FileMinhChungUrl" IS NOT NULL
+                  AND BTRIM(g."FileMinhChungUrl") <> ''
+                )
+              )
+            THEN g."SoGioTinChiQuyDoi"
+            ELSE 0
+          END
+        ), 0)
         FROM "GhiNhanHoatDong" g
+        LEFT JOIN "DanhMucHoatDong" dm ON dm."MaDanhMuc" = g."MaDanhMuc"
         WHERE g."MaNhanVien" = nv."MaNhanVien"
         AND g."TrangThaiDuyet" = 'DaDuyet'
         AND g."NgayGhiNhan" BETWEEN kc."NgayBatDau" AND kc."NgayKetThuc"
@@ -91,8 +128,24 @@ export async function GET(request: NextRequest) {
       WHERE kc."TrangThai" = 'DangDienRa'
       AND kc."NgayKetThuc" <= CURRENT_DATE + INTERVAL '6 months'
       AND (
-        SELECT COALESCE(SUM(g."SoGioTinChiQuyDoi"), 0)
+        SELECT COALESCE(SUM(
+          CASE
+            WHEN g."TrangThaiDuyet" = 'DaDuyet'
+              AND (
+                g."MaDanhMuc" IS NULL
+                OR dm."YeuCauMinhChung" IS DISTINCT FROM TRUE
+                OR (
+                  dm."YeuCauMinhChung" = TRUE
+                  AND g."FileMinhChungUrl" IS NOT NULL
+                  AND BTRIM(g."FileMinhChungUrl") <> ''
+                )
+              )
+            THEN g."SoGioTinChiQuyDoi"
+            ELSE 0
+          END
+        ), 0)
         FROM "GhiNhanHoatDong" g
+        LEFT JOIN "DanhMucHoatDong" dm ON dm."MaDanhMuc" = g."MaDanhMuc"
         WHERE g."MaNhanVien" = nv."MaNhanVien"
         AND g."TrangThaiDuyet" = 'DaDuyet'
         AND g."NgayGhiNhan" BETWEEN kc."NgayBatDau" AND kc."NgayKetThuc"
