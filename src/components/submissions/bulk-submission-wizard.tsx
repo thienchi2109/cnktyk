@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Check } from 'lucide-react';
+import { ArrowLeft, Check, AlertCircle } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
 import { GlassButton } from '@/components/ui/glass-button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -224,27 +224,37 @@ export function BulkSubmissionWizard() {
   const progressValue = ((currentStepIndex + 1) / wizardSteps.length) * 100;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center gap-3">
+    <div className="space-y-4 sm:space-y-6" role="main" aria-labelledby="wizard-title">
+      <div className="flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
           <GlassButton
             variant="outline"
             size="sm"
             onClick={() => router.push('/submissions')}
-            className="flex items-center gap-2"
+            className="flex w-fit items-center gap-2"
+            aria-label="Quay lại danh sách ghi nhận"
           >
-            <ArrowLeft className="h-4 w-4" />
-            Quay lại danh sách
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            <span>Quay lại danh sách</span>
           </GlassButton>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Ghi nhận hoạt động cho nhóm</h1>
-            <p className="text-sm text-gray-600">Hoàn tất 3 bước để tạo bản ghi hàng loạt cho cohort đã chọn.</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900" id="wizard-title">
+              Ghi nhận hoạt động cho nhóm
+            </h1>
+            <p className="text-sm text-gray-600 mt-1">
+              Hoàn tất 3 bước để tạo bản ghi hàng loạt cho cohort đã chọn.
+            </p>
           </div>
         </div>
       </div>
 
-      <div className="space-y-3">
-        <GlassProgress value={progressValue} max={100} size="sm" />
+      <div className="space-y-3" role="navigation" aria-label="Tiến trình wizard">
+        <GlassProgress
+          value={progressValue}
+          max={100}
+          size="sm"
+          aria-label={`Tiến trình: ${Math.round(progressValue)}%`}
+        />
         <div className="grid gap-2 sm:grid-cols-3">
           {wizardSteps.map((item, index) => {
             const isCompleted = index < currentStepIndex;
@@ -253,25 +263,31 @@ export function BulkSubmissionWizard() {
               <GlassCard
                 key={item.id}
                 className={cn(
-                  'p-4 transition-colors',
+                  'p-3 sm:p-4 transition-colors',
                   isActive && 'border-medical-blue/60 bg-medical-blue/10 shadow-sm shadow-medical-blue/10',
                   isCompleted && 'border-green-500/40 bg-green-500/10'
                 )}
+                role="status"
+                aria-current={isActive ? 'step' : undefined}
+                aria-label={`Bước ${item.id}: ${item.title}. ${isCompleted ? 'Đã hoàn thành' : isActive ? 'Đang thực hiện' : 'Chưa hoàn thành'}`}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <div
                     className={cn(
-                      'flex h-8 w-8 items-center justify-center rounded-full border text-sm font-semibold',
+                      'flex h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0 items-center justify-center rounded-full border text-sm font-semibold',
                       isCompleted && 'border-green-500 bg-green-500 text-white',
                       isActive && !isCompleted && 'border-medical-blue bg-medical-blue text-white',
                       !isCompleted && !isActive && 'border-white/50 bg-white/20 text-gray-600'
                     )}
+                    aria-hidden="true"
                   >
                     {isCompleted ? <Check className="h-4 w-4" /> : item.id}
                   </div>
-                  <div>
-                    <p className={cn('text-sm font-semibold', isActive ? 'text-medical-blue' : 'text-gray-700')}>{item.title}</p>
-                    <p className="text-xs text-gray-500">{item.subtitle}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className={cn('text-sm font-semibold truncate', isActive ? 'text-medical-blue' : 'text-gray-700')}>
+                      {item.title}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">{item.subtitle}</p>
                   </div>
                 </div>
               </GlassCard>
@@ -281,10 +297,14 @@ export function BulkSubmissionWizard() {
       </div>
 
       {step === 1 && (
-        <GlassCard className="space-y-6 p-6">
+        <GlassCard className="space-y-4 sm:space-y-6 p-4 sm:p-6" role="region" aria-labelledby="step1-title">
           <div className="flex flex-col gap-2">
-            <h2 className="text-xl font-semibold text-gray-900">Bước 1 · Chọn hoạt động</h2>
-            <p className="text-sm text-gray-600">Tìm kiếm trong danh mục hoạt động được phân quyền cho đơn vị của bạn và chọn hoạt động cần ghi nhận.</p>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900" id="step1-title">
+              Bước 1 · Chọn hoạt động
+            </h2>
+            <p className="text-sm text-gray-600">
+              Tìm kiếm trong danh mục hoạt động được phân quyền cho đơn vị của bạn và chọn hoạt động cần ghi nhận.
+            </p>
           </div>
 
           <ActivitySelector
@@ -296,15 +316,15 @@ export function BulkSubmissionWizard() {
           />
 
           {selectedActivity && (
-            <GlassCard className="p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
+            <GlassCard className="p-3 sm:p-4" role="status" aria-label="Hoạt động đã chọn">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex-1">
                   <p className="text-sm font-semibold text-gray-900">{selectedActivity.TenDanhMuc}</p>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-xs text-gray-600 mt-0.5">
                     Loại hoạt động: {activityTypeLabels[selectedActivity.LoaiHoatDong]}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Badge variant={selectedActivityScope === 'global' ? 'secondary' : 'outline'}>
                     {selectedActivityScope === 'global' ? 'Hệ thống' : 'Đơn vị'}
                   </Badge>
@@ -317,13 +337,18 @@ export function BulkSubmissionWizard() {
           )}
 
           {activityValidationError && (
-            <Alert className="border-red-200 bg-red-50">
+            <Alert className="border-red-200 bg-red-50" role="alert">
+              <AlertCircle className="h-4 w-4 text-red-600" aria-hidden="true" />
               <AlertDescription className="text-sm text-red-700">{activityValidationError}</AlertDescription>
             </Alert>
           )}
 
           <div className="flex justify-end gap-3">
-            <GlassButton onClick={handleContinueFromActivity}>
+            <GlassButton
+              onClick={handleContinueFromActivity}
+              disabled={!selectedActivity}
+              aria-label="Tiếp tục đến bước chọn cohort"
+            >
               Tiếp tục · Chọn cohort
             </GlassButton>
           </div>
@@ -331,14 +356,22 @@ export function BulkSubmissionWizard() {
       )}
 
       {step === 2 && (
-        <div className="space-y-4">
+        <div className="space-y-4" role="region" aria-labelledby="step2-title">
           {selectedActivity && (
-            <GlassCard className="flex flex-col gap-4 border border-medical-blue/30 bg-medical-blue/5 p-5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-1">
+            <GlassCard
+              className="flex flex-col gap-3 sm:gap-4 border border-medical-blue/30 bg-medical-blue/5 p-4 sm:p-5 sm:flex-row sm:items-center sm:justify-between"
+              role="status"
+              aria-label="Hoạt động đã chọn"
+            >
+              <div className="space-y-1 flex-1">
                 <p className="text-sm font-semibold text-medical-blue">Hoạt động đã chọn</p>
                 <p className="text-base font-semibold text-gray-900">{selectedActivity.TenDanhMuc}</p>
                 <p className="text-xs text-gray-600">
-                  Loại: {activityTypeLabels[selectedActivity.LoaiHoatDong]} · {selectedActivity.YeuCauMinhChung ? 'Yêu cầu minh chứng' : 'Không yêu cầu minh chứng'} · Phạm vi: {selectedActivityScope === 'global' ? 'Hệ thống' : 'Đơn vị'}
+                  <span className="inline-block">Loại: {activityTypeLabels[selectedActivity.LoaiHoatDong]}</span>
+                  <span className="mx-1 hidden sm:inline">·</span>
+                  <span className="inline-block">{selectedActivity.YeuCauMinhChung ? 'Yêu cầu minh chứng' : 'Không yêu cầu minh chứng'}</span>
+                  <span className="mx-1 hidden sm:inline">·</span>
+                  <span className="inline-block">Phạm vi: {selectedActivityScope === 'global' ? 'Hệ thống' : 'Đơn vị'}</span>
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -348,44 +381,62 @@ export function BulkSubmissionWizard() {
                 <Badge variant={selectedActivity.YeuCauMinhChung ? 'default' : 'outline'}>
                   {selectedActivity.YeuCauMinhChung ? 'Cần minh chứng' : 'Không cần minh chứng'}
                 </Badge>
-                <GlassButton size="sm" variant="outline" onClick={() => setStep(1)}>
+                <GlassButton
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setStep(1)}
+                  aria-label="Quay lại thay đổi hoạt động"
+                >
                   Thay đổi hoạt động
                 </GlassButton>
               </div>
             </GlassCard>
           )}
 
-          <GlassCard className="space-y-6 p-6">
+          <GlassCard className="space-y-4 sm:space-y-6 p-4 sm:p-6">
             <div className="flex flex-col gap-2">
-              <h2 className="text-xl font-semibold text-gray-900">Bước 2 · Xây dựng cohort</h2>
-              <p className="text-sm text-gray-600">Sử dụng bộ lọc để xác định đối tượng cần áp dụng. Bạn có thể chọn thủ công từng người hoặc áp dụng cho toàn bộ kết quả lọc.</p>
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900" id="step2-title">
+                Bước 2 · Xây dựng cohort
+              </h2>
+              <p className="text-sm text-gray-600">
+                Sử dụng bộ lọc để xác định đối tượng cần áp dụng. Bạn có thể chọn thủ công từng người hoặc áp dụng cho toàn bộ kết quả lọc.
+              </p>
             </div>
             <CohortBuilder onChange={setSelection} />
           </GlassCard>
 
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={selectedCount > 0 ? 'secondary' : 'outline'}>
+            <div className="flex flex-wrap items-center gap-2" role="status" aria-label="Tóm tắt lựa chọn cohort">
+              <Badge variant={selectedCount > 0 ? 'secondary' : 'outline'} aria-label={`Số lượng đã chọn: ${selectedCount}`}>
                 Đã chọn: <span className="ml-1 font-semibold">{selectedCount}</span>
               </Badge>
               {selection && (
-                <Badge variant="outline">
+                <Badge variant="outline" aria-label={`Chế độ: ${selection.mode === 'all' ? 'Toàn bộ theo bộ lọc' : 'Chọn thủ công'}`}>
                   Chế độ: {selection.mode === 'all' ? 'Toàn bộ theo bộ lọc' : 'Chọn thủ công'}
                 </Badge>
               )}
             </div>
-            <div className="flex items-center gap-3">
-              <GlassButton variant="secondary" onClick={() => setStep(1)}>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3" role="group" aria-label="Điều hướng">
+              <GlassButton
+                variant="secondary"
+                onClick={() => setStep(1)}
+                aria-label="Quay lại bước chọn hoạt động"
+              >
                 ← Quay lại
               </GlassButton>
-              <GlassButton disabled={!hasCohortSelection} onClick={handleContinueFromCohort}>
+              <GlassButton
+                disabled={!hasCohortSelection}
+                onClick={handleContinueFromCohort}
+                aria-label={hasCohortSelection ? 'Tiếp tục đến xem trước' : 'Vui lòng chọn ít nhất một nhân sự'}
+              >
                 Tiếp tục · Xem trước
               </GlassButton>
             </div>
           </div>
 
           {cohortValidationMessage && (
-            <Alert className="border-red-200 bg-red-50">
+            <Alert className="border-red-200 bg-red-50" role="alert">
+              <AlertCircle className="h-4 w-4 text-red-600" aria-hidden="true" />
               <AlertDescription className="text-sm text-red-700">{cohortValidationMessage}</AlertDescription>
             </Alert>
           )}
