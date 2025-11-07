@@ -8,7 +8,7 @@ import { GlassButton } from '@/components/ui/glass-button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CohortBuilder, CohortSelection } from '@/components/cohorts/cohort-builder';
 
-export function BulkAssignmentWizard() {
+export function BulkSubmissionWizard() {
   const router = useRouter();
   const [step, setStep] = useState<1 | 2>(1);
   const [selection, setSelection] = useState<CohortSelection | null>(null);
