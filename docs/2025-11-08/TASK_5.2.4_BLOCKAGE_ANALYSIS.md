@@ -291,6 +291,10 @@ const submissions = candidateIds.map(practitionerId => ({
 const submissions = candidateIds.map(practitionerId => ({
   // ... existing fields ...
   CreationMethod: 'bulk',  // ✅ Explicitly mark as bulk-created
+
+### Historical Backfill Gap
+
+The current analysis does not cover how existing submissions should be retroactively tagged once a creation-method field is introduced. We already log every bulk enrollment via the `BULK_SUBMISSION_CREATE` action in `NhatKyHeThong`, which can be correlated with historical submissions to populate `CreationMethod = 'bulk'` (or an equivalent flag) during migration. Without a backfill plan leveraging these audit entries, legacy bulk-created records will remain indistinguishable even after the schema change.
   // Or: IsBulkCreated: true,
   // Or: BulkOperationId: bulkOperationId,
 }));

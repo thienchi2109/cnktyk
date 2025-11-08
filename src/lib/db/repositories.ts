@@ -1845,7 +1845,7 @@ export class NhatKyHeThongRepository extends BaseRepository<NhatKyHeThong, Creat
     userId: string | null,
     action: string,
     table: string,
-    primaryKey: string,
+    primaryKey: string | null,
     content: Record<string, any>,
     ipAddress?: string | null
   ): Promise<NhatKyHeThong> {
@@ -1853,7 +1853,7 @@ export class NhatKyHeThongRepository extends BaseRepository<NhatKyHeThong, Creat
       MaTaiKhoan: userId,
       HanhDong: action,
       Bang: table,
-      KhoaChinh: primaryKey,
+      KhoaChinh: primaryKey ?? null,
       NoiDung: content,
       DiaChiIP: ipAddress ?? null,
     });
