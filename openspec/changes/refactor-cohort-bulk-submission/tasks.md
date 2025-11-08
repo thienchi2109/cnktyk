@@ -107,10 +107,10 @@
 - [x] 5.1.4 Update route metadata
 
 ### 5.2 Links from Other Pages
-- [ ] 5.2.1 Add "Bulk Enroll" button to Activities page (DonVi only)
-- [ ] 5.2.2 Pre-select activity when navigating from Activities
-- [ ] 5.2.3 Add query param support for pre-selection
-- [ ] 5.2.4 Update submissions list to show bulk-created indicator
+- [x] 5.2.1 Add "Bulk Enroll" button to Activities page (DonVi and SoYTe users)
+- [x] 5.2.2 Pre-select activity when navigating from Activities
+- [x] 5.2.3 Add query param support for pre-selection
+- [ ] 5.2.4 Update submissions list to show bulk-created indicator (blocked: no database field exists)
 
 ## 6. Audit Logging
 

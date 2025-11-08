@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Check, AlertCircle } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
 import { GlassButton } from '@/components/ui/glass-button';
@@ -39,6 +39,9 @@ const wizardSteps: Array<{ id: WizardStep; title: string; subtitle: string }> = 
 
 export function BulkSubmissionWizard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const preselectedActivityId = searchParams.get('activityId');
+
   const [step, setStep] = useState<WizardStep>(1);
   const [selectedActivity, setSelectedActivity] = useState<ActivityCatalogItem | null>(null);
   const [selection, setSelection] = useState<CohortSelection | null>(null);
@@ -309,6 +312,7 @@ export function BulkSubmissionWizard() {
 
           <ActivitySelector
             selectedActivityId={selectedActivityId}
+            preselectedActivityId={preselectedActivityId || undefined}
             onSelect={activity => {
               setSelectedActivity(activity);
               setActivityValidationError(null);

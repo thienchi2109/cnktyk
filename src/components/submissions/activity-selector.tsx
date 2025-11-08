@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useActivitiesCatalog, ActivityCatalogItem } from "@/hooks/use-activities";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,7 @@ type ScopeFilter = "all" | "global" | "unit";
 
 interface ActivitySelectorProps {
   selectedActivityId?: string;
+  preselectedActivityId?: string;
   onSelect: (activity: ActivityCatalogItem | null) => void;
 }
 
@@ -111,7 +112,7 @@ function ActivityRow({
   );
 }
 
-export function ActivitySelector({ selectedActivityId, onSelect }: ActivitySelectorProps) {
+export function ActivitySelector({ selectedActivityId, preselectedActivityId, onSelect }: ActivitySelectorProps) {
   const { data, isLoading, isFetching, isError, error, refetch } = useActivitiesCatalog();
   const [searchTerm, setSearchTerm] = useState("");
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>("all");
@@ -120,6 +121,18 @@ export function ActivitySelector({ selectedActivityId, onSelect }: ActivitySelec
     if (!data) return [] as ActivityCatalogItem[];
     return [...(data.global ?? []), ...(data.unit ?? [])];
   }, [data]);
+
+  // Auto-select preselected activity when data is loaded
+  useEffect(() => {
+    if (preselectedActivityId && accessibleActivities.length > 0 && !selectedActivityId) {
+      const preselectedActivity = accessibleActivities.find(
+        activity => activity.MaDanhMuc === preselectedActivityId
+      );
+      if (preselectedActivity) {
+        onSelect(preselectedActivity);
+      }
+    }
+  }, [preselectedActivityId, accessibleActivities, selectedActivityId, onSelect]);
 
   const filteredActivities = useMemo(() => {
     const normalizedSearch = searchTerm.toLowerCase().trim();
