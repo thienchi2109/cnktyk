@@ -15,6 +15,7 @@ export interface ActivityCatalogItem {
   HieuLucDen: string | null;
   MaDonVi: string | null;
   DaXoaMem?: boolean;
+  TrangThai?: string;
 }
 
 export interface ActivityPermissions {

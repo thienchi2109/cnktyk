@@ -1,4 +1,5 @@
 import { db } from './client';
+import { calculateEffectiveCredits } from './credit-utils';
 import {
   TaiKhoan,
   CreateTaiKhoan,
@@ -22,6 +23,54 @@ import {
   CreateNhatKyHeThong,
 } from './schemas';
 import bcrypt from 'bcryptjs';
+import type {
+  BulkCohortSelection,
+  BulkSubmissionResultError,
+  CohortResolutionContext,
+  CohortResolutionResult,
+  PractitionerWithUnit,
+} from '@/types/bulk-submission';
+import { isAllCohortSelection, isManualCohortSelection } from '@/types/bulk-submission';
+
+type BulkSubmissionInsertInput = Omit<
+  Pick<
+    CreateGhiNhanHoatDong,
+    |
+      'MaNhanVien'
+    |
+      'MaDanhMuc'
+    |
+      'TenHoatDong'
+    |
+      'NguoiNhap'
+    |
+      'TrangThaiDuyet'
+    |
+      'DonViToChuc'
+    |
+      'NgayBatDau'
+    |
+      'NgayKetThuc'
+    |
+      'SoTiet'
+    |
+      'SoGioTinChiQuyDoi'
+    |
+      'HinhThucCapNhatKienThucYKhoa'
+    |
+      'FileMinhChungUrl'
+    |
+      'BangChungSoGiayChungNhan'
+  >,
+  'TrangThaiDuyet'
+> & {
+  TrangThaiDuyet: 'ChoDuyet' | 'Nhap';
+};
+
+type BulkCreateResult = {
+  inserted: GhiNhanHoatDong[];
+  conflicts: string[];
+};
 
 // Base repository class with common CRUD operations
 abstract class BaseRepository<T, CreateT, UpdateT> {
@@ -251,9 +300,25 @@ export class NhanVienRepository extends BaseRepository<NhanVien, CreateNhanVien,
     const result = await db.queryOne<{
       total_credits: string;
     }>(`
-      SELECT COALESCE(SUM("SoGioTinChiQuyDoi"), 0) as total_credits
-      FROM "GhiNhanHoatDong"
-      WHERE "MaNhanVien" = $1 AND "TrangThaiDuyet" = 'DaDuyet'
+      SELECT COALESCE(SUM(
+        CASE
+          WHEN g."TrangThaiDuyet" = 'DaDuyet'
+            AND (
+              g."MaDanhMuc" IS NULL
+              OR dm."YeuCauMinhChung" IS DISTINCT FROM TRUE
+              OR (
+                dm."YeuCauMinhChung" = TRUE
+                AND g."FileMinhChungUrl" IS NOT NULL
+                AND BTRIM(g."FileMinhChungUrl") <> ''
+              )
+            )
+          THEN g."SoGioTinChiQuyDoi"
+          ELSE 0
+        END
+      ), 0) as total_credits
+      FROM "GhiNhanHoatDong" g
+      LEFT JOIN "DanhMucHoatDong" dm ON dm."MaDanhMuc" = g."MaDanhMuc"
+      WHERE g."MaNhanVien" = $1 AND g."TrangThaiDuyet" = 'DaDuyet'
     `, [practitionerId]);
 
     const totalCredits = parseFloat(result?.total_credits || '0');
@@ -305,19 +370,39 @@ export class NhanVienRepository extends BaseRepository<NhanVien, CreateNhanVien,
 
     // Build optimized query with CTE for compliance calculation
     let sql = `
-      WITH compliance_data AS (
+      WITH credit_source AS (
+        SELECT
+          g."MaNhanVien",
+          CASE
+            WHEN g."TrangThaiDuyet" = 'DaDuyet'
+              AND (
+                g."MaDanhMuc" IS NULL
+                OR dm."YeuCauMinhChung" IS DISTINCT FROM TRUE
+                OR (
+                  dm."YeuCauMinhChung" = TRUE
+                  AND g."FileMinhChungUrl" IS NOT NULL
+                  AND BTRIM(g."FileMinhChungUrl") <> ''
+                )
+              )
+            THEN g."SoGioTinChiQuyDoi"
+            ELSE 0
+          END AS effective_credits
+        FROM "GhiNhanHoatDong" g
+        LEFT JOIN "DanhMucHoatDong" dm ON dm."MaDanhMuc" = g."MaDanhMuc"
+        WHERE g."TrangThaiDuyet" = 'DaDuyet'
+      ),
+      compliance_data AS (
         SELECT 
           "MaNhanVien",
-          COALESCE(SUM("SoGioTinChiQuyDoi"), 0) as total_credits,
+          COALESCE(SUM(effective_credits), 0) as total_credits,
           120 as required_credits,
-          ROUND((COALESCE(SUM("SoGioTinChiQuyDoi"), 0) / 120.0) * 100, 2) as compliance_percentage,
+          ROUND((COALESCE(SUM(effective_credits), 0) / 120.0) * 100, 2) as compliance_percentage,
           CASE
-            WHEN (COALESCE(SUM("SoGioTinChiQuyDoi"), 0) / 120.0) * 100 >= 90 THEN 'compliant'
-            WHEN (COALESCE(SUM("SoGioTinChiQuyDoi"), 0) / 120.0) * 100 >= 70 THEN 'at_risk'
+            WHEN (COALESCE(SUM(effective_credits), 0) / 120.0) * 100 >= 90 THEN 'compliant'
+            WHEN (COALESCE(SUM(effective_credits), 0) / 120.0) * 100 >= 70 THEN 'at_risk'
             ELSE 'non_compliant'
           END as compliance_status
-        FROM "GhiNhanHoatDong"
-        WHERE "TrangThaiDuyet" = 'DaDuyet'
+        FROM credit_source
         GROUP BY "MaNhanVien"
       ),
       filtered_practitioners AS (
@@ -409,6 +494,164 @@ export class NhanVienRepository extends BaseRepository<NhanVien, CreateNhanVien,
       }
     };
   }
+
+  async findPractitionersByIds(ids: string[]): Promise<PractitionerWithUnit[]> {
+    if (!ids.length) {
+      return [];
+    }
+
+    return db.query<PractitionerWithUnit>(
+      `SELECT "MaNhanVien", "MaDonVi"
+       FROM "${this.tableName}"
+       WHERE "MaNhanVien" = ANY($1::uuid[])`,
+      [ids],
+    );
+  }
+
+  async resolveBulkCohortSelection(
+    selection: BulkCohortSelection,
+    context: CohortResolutionContext,
+  ): Promise<CohortResolutionResult> {
+    const normalizedSelection: BulkCohortSelection = {
+      mode: selection.mode,
+      selectedIds: Array.from(new Set(selection.selectedIds ?? [])),
+      excludedIds: Array.from(new Set(selection.excludedIds ?? [])),
+      filters: selection.filters ?? {},
+      totalFiltered: selection.totalFiltered,
+    };
+
+    const errors: BulkSubmissionResultError[] = [];
+    const excludedSet = new Set(normalizedSelection.excludedIds);
+
+    if (isManualCohortSelection(normalizedSelection)) {
+      const effectiveSelected = normalizedSelection.selectedIds.filter((id) => !excludedSet.has(id));
+
+      if (!effectiveSelected.length) {
+        return {
+          practitioners: [],
+          errors: [
+            {
+              practitionerId: 'manual_selection',
+              error: 'No practitioners selected after exclusions',
+            },
+          ],
+          normalizedSelection,
+        };
+      }
+
+      const rows = await this.findPractitionersByIds(effectiveSelected);
+      const foundSet = new Set(rows.map((row) => row.MaNhanVien));
+
+      effectiveSelected.forEach((id) => {
+        if (!foundSet.has(id)) {
+          errors.push({ practitionerId: id, error: 'Practitioner not found' });
+        }
+      });
+
+      return {
+        practitioners: rows,
+        errors,
+        normalizedSelection,
+      };
+    }
+
+    if (!isAllCohortSelection(normalizedSelection)) {
+      throw new Error(`Unsupported cohort selection mode: ${normalizedSelection.mode}`);
+    }
+
+    const pageSize = context.pageSize ?? 500;
+    const practitioners: PractitionerWithUnit[] = [];
+    const baseClauses: string[] = [];
+    const params: Array<string | number | null> = [];
+    let paramIndex = 1;
+
+    if (context.role === 'DonVi' && context.unitId) {
+      baseClauses.push(`nv."MaDonVi" = $${paramIndex}`);
+      params.push(context.unitId);
+      paramIndex += 1;
+    }
+
+    const filters = normalizedSelection.filters ?? {};
+
+    if (filters.trangThai && filters.trangThai !== 'all') {
+      baseClauses.push(`nv."TrangThaiLamViec" = $${paramIndex}`);
+      params.push(filters.trangThai);
+      paramIndex += 1;
+    }
+
+    if (filters.chucDanh) {
+      baseClauses.push(`LOWER(nv."ChucDanh") = LOWER($${paramIndex})`);
+      params.push(filters.chucDanh);
+      paramIndex += 1;
+    }
+
+    if (filters.khoaPhong) {
+      baseClauses.push(`LOWER(nv."KhoaPhong") = LOWER($${paramIndex})`);
+      params.push(filters.khoaPhong);
+      paramIndex += 1;
+    }
+
+    if (filters.search) {
+      baseClauses.push(`LOWER(nv."HoVaTen") LIKE LOWER($${paramIndex})`);
+      params.push(`%${filters.search}%`);
+      paramIndex += 1;
+    }
+
+    const whereClause = baseClauses.length > 0 ? baseClauses.join(' AND ') : '1=1';
+    const baseQuery = `
+      SELECT nv."MaNhanVien", nv."MaDonVi"
+      FROM "${this.tableName}" nv
+      WHERE ${whereClause}
+      ORDER BY nv."HoVaTen" ASC
+    `;
+
+    const limitParamIndex = params.length + 1;
+    const offsetParamIndex = params.length + 2;
+    const paginatedQuery = `${baseQuery} LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}`;
+
+    let offset = 0;
+    while (true) {
+      const rows = await db.query<PractitionerWithUnit>(paginatedQuery, [...params, pageSize, offset]);
+      if (!rows.length) {
+        break;
+      }
+
+      practitioners.push(...rows);
+
+      if (rows.length < pageSize) {
+        break;
+      }
+
+      offset += pageSize;
+    }
+
+    const filteredRows = practitioners.filter((row) => !excludedSet.has(row.MaNhanVien));
+
+    return {
+      practitioners: filteredRows,
+      errors,
+      normalizedSelection,
+    };
+  }
+
+  async validatePractitionersTenancy(
+    practitionerIds: string[],
+    unitId: string,
+  ): Promise<string[]> {
+    if (!practitionerIds.length) {
+      return [];
+    }
+
+    const rows = await db.query<{ MaNhanVien: string }>(
+      `SELECT "MaNhanVien"
+       FROM "${this.tableName}"
+       WHERE "MaNhanVien" = ANY($1::uuid[])
+         AND "MaDonVi" <> $2`,
+      [practitionerIds, unitId],
+    );
+
+    return rows.map((row) => row.MaNhanVien);
+  }
 }
 
 // GhiNhanHoatDong (Activity Record) Repository
@@ -439,6 +682,67 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
     }
 
     return db.query<GhiNhanHoatDong>(query, params);
+  }
+
+  async findDuplicatePractitionerIds(
+    activityId: string,
+    practitionerIds: string[],
+  ): Promise<string[]> {
+    if (!practitionerIds.length) {
+      return [];
+    }
+
+    const rows = await db.query<{ MaNhanVien: string }>(
+      `SELECT "MaNhanVien"
+       FROM "${this.tableName}"
+       WHERE "MaDanhMuc" = $1
+         AND "MaNhanVien" = ANY($2::uuid[])`,
+      [activityId, practitionerIds],
+    );
+
+    return rows.map((row) => row.MaNhanVien);
+  }
+
+  async bulkCreate(
+    submissions: BulkSubmissionInsertInput[],
+    options: { batchSize?: number } = {},
+  ): Promise<BulkCreateResult> {
+    if (!submissions.length) {
+      return { inserted: [], conflicts: [] };
+    }
+
+    const batchSize = options.batchSize ?? 500;
+    const inserted: GhiNhanHoatDong[] = [];
+    const conflictSet = new Set<string>();
+
+    await db.query('BEGIN');
+
+    try {
+      for (let index = 0; index < submissions.length; index += batchSize) {
+        const batch = submissions.slice(index, index + batchSize);
+        const { text, params, practitionerIds } = this.buildBulkInsertQuery(batch);
+        const rows = await db.query<GhiNhanHoatDong>(text, params);
+        inserted.push(...rows);
+
+        const insertedIds = new Set(rows.map((row) => row.MaNhanVien));
+        practitionerIds.forEach((id) => {
+          if (!insertedIds.has(id)) {
+            conflictSet.add(id);
+          }
+        });
+      }
+
+      await db.query('COMMIT');
+    } catch (error) {
+      await db.query('ROLLBACK');
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Bulk submission insert failed: ${message}`);
+    }
+
+    return {
+      inserted,
+      conflicts: Array.from(conflictSet),
+    };
   }
 
   async findPendingApprovals(unitId?: string): Promise<GhiNhanHoatDong[]> {
@@ -474,6 +778,71 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
       NgayDuyet: new Date(),
       GhiChuDuyet: reason,
     } as UpdateGhiNhanHoatDong);
+  }
+
+  private buildBulkInsertQuery(batch: BulkSubmissionInsertInput[]): {
+    text: string;
+    params: unknown[];
+    practitionerIds: string[];
+  } {
+    const columns = [
+      'MaNhanVien',
+      'MaDanhMuc',
+      'TenHoatDong',
+      'NguoiNhap',
+      'TrangThaiDuyet',
+      'DonViToChuc',
+      'NgayBatDau',
+      'NgayKetThuc',
+      'SoTiet',
+      'SoGioTinChiQuyDoi',
+      'HinhThucCapNhatKienThucYKhoa',
+      'FileMinhChungUrl',
+      'BangChungSoGiayChungNhan',
+    ] as const;
+
+    const values: unknown[] = [];
+
+    const rowsSql = batch
+      .map((submission, rowIndex) => {
+        const offset = rowIndex * columns.length;
+        values.push(
+          submission.MaNhanVien,
+          submission.MaDanhMuc,
+          submission.TenHoatDong,
+          submission.NguoiNhap,
+          submission.TrangThaiDuyet,
+          submission.DonViToChuc ?? null,
+          submission.NgayBatDau ?? null,
+          submission.NgayKetThuc ?? null,
+          submission.SoTiet ?? null,
+          submission.SoGioTinChiQuyDoi ?? 0,
+          submission.HinhThucCapNhatKienThucYKhoa ?? null,
+          submission.FileMinhChungUrl ?? null,
+          submission.BangChungSoGiayChungNhan ?? null,
+        );
+
+        const placeholders = columns
+          .map((_, columnIndex) => `$${offset + columnIndex + 1}`)
+          .join(', ');
+
+        return `(${placeholders})`;
+      })
+      .join(', ');
+
+    const text = `
+      INSERT INTO "${this.tableName}" (${columns.map((column) => `"${column}"`).join(', ')})
+      VALUES ${rowsSql}
+      ON CONFLICT ("MaNhanVien", "MaDanhMuc") WHERE "MaDanhMuc" IS NOT NULL
+      DO NOTHING
+      RETURNING *
+    `;
+
+    return {
+      text,
+      params: values,
+      practitionerIds: batch.map((submission) => submission.MaNhanVien),
+    };
   }
 
   /**
@@ -714,6 +1083,10 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
         -- Activity catalog data (nullable)
         dm."TenDanhMuc" AS "activityCatalog_TenDanhMuc",
         dm."LoaiHoatDong" AS "activityCatalog_LoaiHoatDong",
+        dm."YeuCauMinhChung" AS "activityCatalog_YeuCauMinhChung",
+        dm."GioToiThieu" AS "activityCatalog_GioToiThieu",
+        dm."GioToiDa" AS "activityCatalog_GioToiDa",
+        dm."TyLeQuyDoi" AS "activityCatalog_TyLeQuyDoi",
         -- Unit data (nullable)
         dv."TenDonVi" AS "unit_TenDonVi"
       FROM "${this.tableName}" g
@@ -745,37 +1118,65 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
     const totalPages = Math.max(1, Math.ceil(total / limit));
 
     // Map database rows to SubmissionListItem format
-    const data: import('./schemas').SubmissionListItem[] = rows.map(row => ({
-      MaGhiNhan: row.MaGhiNhan,
-      MaNhanVien: row.MaNhanVien,
-      TenHoatDong: row.TenHoatDong,
-      NgayGhiNhan: row.NgayGhiNhan?.toISOString() || '',
-      TrangThaiDuyet: row.TrangThaiDuyet,
-      SoGioTinChiQuyDoi: parseFloat(row.SoGioTinChiQuyDoi) || 0,
-      NgayBatDau: row.NgayBatDau?.toISOString() || null,
-      NgayKetThuc: row.NgayKetThuc?.toISOString() || null,
-      SoTiet: row.SoTiet ? parseFloat(row.SoTiet) : null,
-      HinhThucCapNhatKienThucYKhoa: row.HinhThucCapNhatKienThucYKhoa,
-      ChiTietVaiTro: row.ChiTietVaiTro,
-      DonViToChuc: row.DonViToChuc,
-      BangChungSoGiayChungNhan: row.BangChungSoGiayChungNhan,
-      FileMinhChungUrl: row.FileMinhChungUrl,
-      NgayDuyet: row.NgayDuyet?.toISOString() || null,
-      NguoiDuyet: null, // Not fetched in this query (would require another JOIN with TaiKhoan)
-      GhiChuDuyet: row.GhiChuDuyet,
-      practitioner: {
-        HoVaTen: row.practitioner_HoVaTen,
-        SoCCHN: row.practitioner_SoCCHN,
-        ChucDanh: row.practitioner_ChucDanh,
-      },
-      activityCatalog: row.activityCatalog_TenDanhMuc ? {
-        TenDanhMuc: row.activityCatalog_TenDanhMuc,
-        LoaiHoatDong: row.activityCatalog_LoaiHoatDong,
-      } : null,
-      unit: row.unit_TenDonVi ? {
-        TenDonVi: row.unit_TenDonVi,
-      } : null,
-    }));
+    const data: import('./schemas').SubmissionListItem[] = rows.map(row => {
+      const soTietValue = row.SoTiet ? parseFloat(row.SoTiet) : null;
+      const rawCredits = parseFloat(row.SoGioTinChiQuyDoi) || 0;
+
+      const activityInfo = row.activityCatalog_TenDanhMuc
+        ? {
+            YeuCauMinhChung: row.activityCatalog_YeuCauMinhChung ?? false,
+            TyLeQuyDoi: row.activityCatalog_TyLeQuyDoi !== null ? Number(row.activityCatalog_TyLeQuyDoi) : undefined,
+            GioToiThieu: row.activityCatalog_GioToiThieu !== null ? Number(row.activityCatalog_GioToiThieu) : null,
+            GioToiDa: row.activityCatalog_GioToiDa !== null ? Number(row.activityCatalog_GioToiDa) : null,
+          }
+        : undefined;
+
+      const effectiveCredits = calculateEffectiveCredits({
+        submission: {
+          TrangThaiDuyet: row.TrangThaiDuyet,
+          SoTiet: soTietValue,
+          SoGioTinChiQuyDoi: rawCredits,
+          FileMinhChungUrl: row.FileMinhChungUrl,
+        },
+        activity: activityInfo,
+      });
+
+      return {
+        MaGhiNhan: row.MaGhiNhan,
+        MaNhanVien: row.MaNhanVien,
+        TenHoatDong: row.TenHoatDong,
+        NgayGhiNhan: row.NgayGhiNhan?.toISOString() || '',
+        TrangThaiDuyet: row.TrangThaiDuyet,
+        SoGioTinChiQuyDoi: effectiveCredits,
+        NgayBatDau: row.NgayBatDau?.toISOString() || null,
+        NgayKetThuc: row.NgayKetThuc?.toISOString() || null,
+        SoTiet: soTietValue,
+        HinhThucCapNhatKienThucYKhoa: row.HinhThucCapNhatKienThucYKhoa,
+        ChiTietVaiTro: row.ChiTietVaiTro,
+        DonViToChuc: row.DonViToChuc,
+        BangChungSoGiayChungNhan: row.BangChungSoGiayChungNhan,
+        FileMinhChungUrl: row.FileMinhChungUrl,
+        NgayDuyet: row.NgayDuyet?.toISOString() || null,
+        NguoiDuyet: null,
+        GhiChuDuyet: row.GhiChuDuyet,
+        practitioner: {
+          HoVaTen: row.practitioner_HoVaTen,
+          SoCCHN: row.practitioner_SoCCHN,
+          ChucDanh: row.practitioner_ChucDanh,
+        },
+        activityCatalog: row.activityCatalog_TenDanhMuc
+          ? {
+              TenDanhMuc: row.activityCatalog_TenDanhMuc,
+              LoaiHoatDong: row.activityCatalog_LoaiHoatDong,
+            }
+          : null,
+        unit: row.unit_TenDonVi
+          ? {
+              TenDonVi: row.unit_TenDonVi,
+            }
+          : null,
+      };
+    });
 
     return {
       data,
@@ -787,6 +1188,7 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
       },
     };
   }
+
 }
 
 // DonVi (Healthcare Unit) Repository
@@ -1798,13 +2200,37 @@ export async function getDohUnitComparisonPage({
       SELECT
         nv."MaDonVi",
         nv."MaNhanVien",
-        SUM(CASE WHEN g."TrangThaiDuyet" = 'DaDuyet' THEN g."SoGioTinChiQuyDoi" ELSE 0 END) AS approved_credits,
+        SUM(
+          CASE
+            WHEN g."TrangThaiDuyet" = 'DaDuyet'
+              AND (
+                g."MaDanhMuc" IS NULL
+                OR dm."YeuCauMinhChung" IS DISTINCT FROM TRUE
+                OR (
+                  dm."YeuCauMinhChung" = TRUE
+                  AND g."FileMinhChungUrl" IS NOT NULL
+                  AND BTRIM(g."FileMinhChungUrl") <> ''
+                )
+              )
+            THEN g."SoGioTinChiQuyDoi"
+            ELSE 0
+          END
+        ) AS approved_credits,
         SUM(CASE WHEN g."TrangThaiDuyet" = 'ChoDuyet' THEN 1 ELSE 0 END) AS pending_approvals,
         SUM(
           CASE
             WHEN g."TrangThaiDuyet" = 'DaDuyet'
               AND ac."MaNhanVien" IS NOT NULL
               AND g."NgayGhiNhan" BETWEEN ac."NgayBatDau" AND ac."NgayKetThuc"
+              AND (
+                g."MaDanhMuc" IS NULL
+                OR dm."YeuCauMinhChung" IS DISTINCT FROM TRUE
+                OR (
+                  dm."YeuCauMinhChung" = TRUE
+                  AND g."FileMinhChungUrl" IS NOT NULL
+                  AND BTRIM(g."FileMinhChungUrl") <> ''
+                )
+              )
             THEN g."SoGioTinChiQuyDoi"
             ELSE 0
           END
@@ -1812,6 +2238,7 @@ export async function getDohUnitComparisonPage({
         MAX(ac."SoTinChiYeuCau") AS required_credits
       FROM "NhanVien" nv
       LEFT JOIN "GhiNhanHoatDong" g ON g."MaNhanVien" = nv."MaNhanVien"
+      LEFT JOIN "DanhMucHoatDong" dm ON dm."MaDanhMuc" = g."MaDanhMuc"
       LEFT JOIN active_cycles ac ON ac."MaNhanVien" = nv."MaNhanVien"
       WHERE nv."MaDonVi" IN (SELECT "MaDonVi" FROM filtered_units)
       GROUP BY nv."MaDonVi", nv."MaNhanVien"
@@ -1947,13 +2374,37 @@ export async function getDohUnitComparisonSummary(unitId: string): Promise<DohUn
       SELECT
         nv."MaDonVi",
         nv."MaNhanVien",
-        SUM(CASE WHEN g."TrangThaiDuyet" = 'DaDuyet' THEN g."SoGioTinChiQuyDoi" ELSE 0 END) AS approved_credits,
+        SUM(
+          CASE
+            WHEN g."TrangThaiDuyet" = 'DaDuyet'
+              AND (
+                g."MaDanhMuc" IS NULL
+                OR dm."YeuCauMinhChung" IS DISTINCT FROM TRUE
+                OR (
+                  dm."YeuCauMinhChung" = TRUE
+                  AND g."FileMinhChungUrl" IS NOT NULL
+                  AND BTRIM(g."FileMinhChungUrl") <> ''
+                )
+              )
+            THEN g."SoGioTinChiQuyDoi"
+            ELSE 0
+          END
+        ) AS approved_credits,
         SUM(CASE WHEN g."TrangThaiDuyet" = 'ChoDuyet' THEN 1 ELSE 0 END) AS pending_approvals,
         SUM(
           CASE
             WHEN g."TrangThaiDuyet" = 'DaDuyet'
               AND ac."MaNhanVien" IS NOT NULL
               AND g."NgayGhiNhan" BETWEEN ac."NgayBatDau" AND ac."NgayKetThuc"
+              AND (
+                g."MaDanhMuc" IS NULL
+                OR dm."YeuCauMinhChung" IS DISTINCT FROM TRUE
+                OR (
+                  dm."YeuCauMinhChung" = TRUE
+                  AND g."FileMinhChungUrl" IS NOT NULL
+                  AND BTRIM(g."FileMinhChungUrl") <> ''
+                )
+              )
             THEN g."SoGioTinChiQuyDoi"
             ELSE 0
           END
@@ -1961,6 +2412,7 @@ export async function getDohUnitComparisonSummary(unitId: string): Promise<DohUn
         MAX(ac."SoTinChiYeuCau") AS required_credits
       FROM "NhanVien" nv
       LEFT JOIN "GhiNhanHoatDong" g ON g."MaNhanVien" = nv."MaNhanVien"
+      LEFT JOIN "DanhMucHoatDong" dm ON dm."MaDanhMuc" = g."MaDanhMuc"
       LEFT JOIN active_cycles ac ON ac."MaNhanVien" = nv."MaNhanVien"
       WHERE nv."MaDonVi" IN (SELECT "MaDonVi" FROM filtered_units)
       GROUP BY nv."MaDonVi", nv."MaNhanVien"
