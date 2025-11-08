@@ -135,13 +135,13 @@
 ## 8. Testing
 
 ### 8.1 Unit Tests
-- [ ] 8.1.1 Test `bulkCreate()` repository method
-- [ ] 8.1.2 Test cohort resolution logic (all/manual modes)
-- [ ] 8.1.3 Test duplicate detection
-- [ ] 8.1.4 Test tenancy validation (DonVi cannot cross units)
-- [ ] 8.1.5 Test status assignment (YeuCauMinhChung logic)
-- [ ] 8.1.6 Test credit calculation with/without evidence
-- [ ] 8.1.7 Test batch processing (>500 submissions)
+- [x] 8.1.1 Test `bulkCreate()` repository method
+- [x] 8.1.2 Test cohort resolution logic (all/manual modes)
+- [x] 8.1.3 Test duplicate detection
+- [x] 8.1.4 Test tenancy validation (DonVi cannot cross units)
+- [x] 8.1.5 Test status assignment (YeuCauMinhChung logic)
+- [x] 8.1.6 Test credit calculation with/without evidence
+- [x] 8.1.7 Test batch processing (>500 submissions)
 
 ### 8.2 Integration Tests
 - [x] 8.2.1 Test full bulk create API endpoint (happy path)
