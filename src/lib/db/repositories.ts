@@ -44,6 +44,8 @@ type BulkSubmissionInsertInput = Omit<
     |
       'NguoiNhap'
     |
+      'CreationMethod'
+    |
       'TrangThaiDuyet'
     |
       'DonViToChuc'
@@ -790,6 +792,7 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
       'MaDanhMuc',
       'TenHoatDong',
       'NguoiNhap',
+      'CreationMethod',
       'TrangThaiDuyet',
       'DonViToChuc',
       'NgayBatDau',
@@ -811,6 +814,7 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
           submission.MaDanhMuc,
           submission.TenHoatDong,
           submission.NguoiNhap,
+          submission.CreationMethod,
           submission.TrangThaiDuyet,
           submission.DonViToChuc ?? null,
           submission.NgayBatDau ?? null,
@@ -1065,6 +1069,8 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
         g."TenHoatDong",
         g."NgayGhiNhan",
         g."TrangThaiDuyet",
+        g."CreationMethod" AS "CreationMethod",
+        g."NguoiNhap" AS "creator_MaTaiKhoan",
         g."SoGioTinChiQuyDoi",
         g."NgayBatDau",
         g."NgayKetThuc",
@@ -1088,11 +1094,14 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
         dm."GioToiDa" AS "activityCatalog_GioToiDa",
         dm."TyLeQuyDoi" AS "activityCatalog_TyLeQuyDoi",
         -- Unit data (nullable)
-        dv."TenDonVi" AS "unit_TenDonVi"
+        dv."TenDonVi" AS "unit_TenDonVi",
+        tk."TenDangNhap" AS "creator_TenDangNhap",
+        tk."QuyenHan" AS "creator_QuyenHan"
       FROM "${this.tableName}" g
       INNER JOIN "NhanVien" n ON n."MaNhanVien" = g."MaNhanVien"
       LEFT JOIN "DanhMucHoatDong" dm ON dm."MaDanhMuc" = g."MaDanhMuc"
       LEFT JOIN "DonVi" dv ON dv."MaDonVi" = n."MaDonVi"
+      LEFT JOIN "TaiKhoan" tk ON tk."MaTaiKhoan" = g."NguoiNhap"
       ${whereClause}
       ORDER BY g."NgayGhiNhan" DESC
       LIMIT $${paramCount} OFFSET $${paramCount + 1}
@@ -1147,6 +1156,14 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
         TenHoatDong: row.TenHoatDong,
         NgayGhiNhan: row.NgayGhiNhan?.toISOString() || '',
         TrangThaiDuyet: row.TrangThaiDuyet,
+        CreationMethod: row.CreationMethod,
+        creatorAccount: row.creator_MaTaiKhoan
+          ? {
+              MaTaiKhoan: row.creator_MaTaiKhoan,
+              TenDangNhap: row.creator_TenDangNhap ?? 'Hệ thống',
+              QuyenHan: row.creator_QuyenHan ?? 'system',
+            }
+          : null,
         SoGioTinChiQuyDoi: effectiveCredits,
         NgayBatDau: row.NgayBatDau?.toISOString() || null,
         NgayKetThuc: row.NgayKetThuc?.toISOString() || null,

@@ -9,6 +9,14 @@ export const LoaiHoatDongSchema = z.enum(['KhoaHoc', 'HoiThao', 'NghienCuu', 'Ba
 export const DonViTinhSchema = z.enum(['gio', 'tiet', 'tin_chi']);
 export const TrangThaiThongBaoSchema = z.enum(['Moi', 'DaDoc']);
 export const ActivityCatalogStatusSchema = z.enum(['Draft', 'Active', 'Archived']);
+export const CreationMethodSchema = z.enum([
+  'individual',
+  'bulk',
+  'api_import',
+  'migration',
+  'system',
+]);
+export type CreationMethod = z.infer<typeof CreationMethodSchema>;
 
 // UUID validation schema
 // Note: Using relaxed validation to support legacy UUIDs like 00000000-0000-0000-0000-000000000002
@@ -194,6 +202,7 @@ export const GhiNhanHoatDongSchema = z.object({
   FileMinhChungSha256: z.string().nullable(),
   FileMinhChungSize: z.number().int().min(0).nullable(),
   NguoiNhap: UUIDSchema,
+  CreationMethod: CreationMethodSchema.default('individual'),
   TrangThaiDuyet: TrangThaiDuyetSchema.default('ChoDuyet'),
   NgayDuyet: z.date().nullable(),
   GhiChuDuyet: z.string().nullable(),
@@ -314,6 +323,12 @@ export interface SubmissionListItem {
   NgayDuyet: string | null;
   NguoiDuyet: string | null;
   GhiChuDuyet: string | null;
+  CreationMethod: CreationMethod;
+  creatorAccount: {
+    MaTaiKhoan: string;
+    TenDangNhap: string;
+    QuyenHan: string;
+  } | null;
   // Joined practitioner data
   practitioner: {
     HoVaTen: string;

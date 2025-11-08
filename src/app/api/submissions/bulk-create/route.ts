@@ -207,6 +207,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkSubmi
       MaDanhMuc: activity.MaDanhMuc,
       TenHoatDong: activity.TenDanhMuc,
       NguoiNhap: user.id,
+      CreationMethod: 'bulk' as const,
       TrangThaiDuyet: initialStatus,
       DonViToChuc: organizer,
       NgayBatDau: startDate,
