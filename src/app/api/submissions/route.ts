@@ -201,6 +201,7 @@ export async function POST(request: NextRequest) {
       TenHoatDong: validatedData.TenHoatDong,
       FileMinhChungUrl: validatedData.FileMinhChungUrl || null,
       NguoiNhap: user.id,
+      CreationMethod: 'individual' as const,
       TrangThaiDuyet: 'ChoDuyet' as const,
       GhiChuDuyet: validatedData.GhiChuDuyet || null,
       // Extended fields from Migration 003

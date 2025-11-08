@@ -5,6 +5,7 @@ import { getCurrentUser } from '@/lib/auth/server';
 import { UUIDSchema, TrangThaiLamViecSchema } from '@/lib/db/schemas';
 import { danhMucHoatDongRepo, ghiNhanHoatDongRepo, nhanVienRepo, nhatKyHeThongRepo } from '@/lib/db/repositories';
 import type { BulkSubmissionRequest, BulkSubmissionResponse } from '@/types/bulk-submission';
+import { AUDIT_ACTIONS } from '@/types/audit-actions';
 
 const cohortFiltersSchema = z
   .object({
@@ -56,8 +57,32 @@ type ActivityRecord = {
   DaXoaMem?: boolean | null;
 };
 
+/**
+ * Extract client IP address from request headers
+ * Handles various proxy headers (Cloudflare, nginx, etc.)
+ */
+function getClientIp(request: NextRequest): string | null {
+  // Try Cloudflare header first
+  const cfConnectingIp = request.headers.get('cf-connecting-ip');
+  if (cfConnectingIp) return cfConnectingIp;
+
+  // Try X-Forwarded-For (comma-separated list, first is client)
+  const forwarded = request.headers.get('x-forwarded-for');
+  if (forwarded) return forwarded.split(',')[0].trim();
+
+  // Try X-Real-IP
+  const realIp = request.headers.get('x-real-ip');
+  if (realIp) return realIp;
+
+  // Fallback to null (server-side rendering may not have IP)
+  return null;
+}
+
 export async function POST(request: NextRequest): Promise<NextResponse<BulkSubmissionResponse | { error: string; details?: unknown }>> {
   try {
+    // Extract client IP address for audit logging
+    const ipAddress = getClientIp(request);
+
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -182,6 +207,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkSubmi
       MaDanhMuc: activity.MaDanhMuc,
       TenHoatDong: activity.TenDanhMuc,
       NguoiNhap: user.id,
+      CreationMethod: 'bulk' as const,
       TrangThaiDuyet: initialStatus,
       DonViToChuc: organizer,
       NgayBatDau: startDate,
@@ -211,25 +237,39 @@ export async function POST(request: NextRequest): Promise<NextResponse<BulkSubmi
       message: buildSummaryMessage(insertResult.inserted.length, duplicateIdList.length, errors.length),
     };
 
-    await nhatKyHeThongRepo.create({
-      MaTaiKhoan: user.id,
-      HanhDong: 'BULK_SUBMISSION_CREATE',
-      Bang: 'GhiNhanHoatDong',
-      KhoaChinh: null,
-      DiaChiIP: null,
-      NoiDung: {
+    // Audit log: Record bulk submission creation with complete metadata
+    await nhatKyHeThongRepo.logAction(
+      user.id,
+      AUDIT_ACTIONS.BULK_SUBMISSION_CREATE,
+      'GhiNhanHoatDong',
+      null, // No single primary key for bulk operations
+      {
+        // Activity information
         activityId: payload.MaDanhMuc,
         activityName: activity.TenDanhMuc,
+
+        // Cohort selection details
         cohortMode: normalizedSelection.mode,
         cohortFilters: normalizedSelection.filters,
         totalSelected: practitioners.length,
         totalExcluded: normalizedSelection.excludedIds.length,
+
+        // Operation results
         created: insertResult.inserted.length,
         skipped: duplicateIdList.length,
         failed: errors.length,
+
+        // Actor information
         actorRole: user.role,
+        unitId: user.unitId,
+
+        // Sample practitioner IDs (first 10 for audit trail)
+        samplePractitionerIds: practitioners
+          .slice(0, 10)
+          .map(p => p.MaNhanVien),
       },
-    });
+      ipAddress,
+    );
 
     return NextResponse.json(responseBody, { status: insertResult.inserted.length > 0 ? 201 : 200 });
   } catch (error) {

@@ -110,18 +110,18 @@
 - [x] 5.2.1 Add "Bulk Enroll" button to Activities page (DonVi and SoYTe users)
 - [x] 5.2.2 Pre-select activity when navigating from Activities
 - [x] 5.2.3 Add query param support for pre-selection
-- [ ] 5.2.4 Update submissions list to show bulk-created indicator (blocked: no database field exists)
+- [x] 5.2.4 Update submissions list to show bulk-created indicator
 
 ## 6. Audit Logging
 
 ### 6.1 Add Audit Log Entry
-- [ ] 6.1.1 Define `BULK_SUBMISSION_CREATE` action constant
-- [ ] 6.1.2 Log entry with cohort selection details
-- [ ] 6.1.3 Include activity info, counts, filters
-- [ ] 6.1.4 Store sample practitioner IDs (first 10)
-- [ ] 6.1.5 Add timestamp and actor information
+- [x] 6.1.1 Define `BULK_SUBMISSION_CREATE` action constant
+- [x] 6.1.2 Log entry with cohort selection details
+- [x] 6.1.3 Include activity info, counts, filters
+- [x] 6.1.4 Store sample practitioner IDs (first 10)
+- [x] 6.1.5 Add timestamp and actor information
 - [ ] 6.1.6 Test audit log retrieval
-- [ ] 6.1.7 Use `nhatKyHeThongRepo.logAction` helper instead of ad-hoc writes
+- [x] 6.1.7 Use `nhatKyHeThongRepo.logAction` helper instead of ad-hoc writes
 
 ## 7. Database Optimization
 

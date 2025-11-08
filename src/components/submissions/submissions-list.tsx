@@ -38,6 +38,7 @@ interface Submission {
   TenHoatDong: string;
   NgayGhiNhan: string;
   TrangThaiDuyet: 'ChoDuyet' | 'DaDuyet' | 'TuChoi';
+  CreationMethod: 'individual' | 'bulk' | 'api_import' | 'migration' | 'system';
   NgayDuyet: string | null;
   NguoiDuyet: string | null;
   GhiChuDuyet: string | null;
@@ -62,6 +63,11 @@ interface Submission {
   } | null;
   unit: {
     TenDonVi: string;
+  } | null;
+  creatorAccount: {
+    MaTaiKhoan: string;
+    TenDangNhap: string;
+    QuyenHan: string;
   } | null;
 }
 
@@ -430,7 +436,7 @@ export function SubmissionsList({
                           <div className="font-medium text-gray-900">
                             {submission.TenHoatDong}
                           </div>
-                          <div className="flex items-center space-x-2 text-sm text-gray-500">
+                          <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500">
                             {submission.HinhThucCapNhatKienThucYKhoa && (
                               <span>Hình thức: {submission.HinhThucCapNhatKienThucYKhoa}</span>
                             )}
@@ -443,6 +449,20 @@ export function SubmissionsList({
                               </Badge>
                             )}
                           </div>
+                          {submission.CreationMethod === 'bulk' && (
+                            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-medical-blue" aria-label={`Được tạo hàng loạt bởi ${submission.creatorAccount?.TenDangNhap ?? 'quản trị viên'}`}>
+                              <Badge
+                                variant="outline"
+                                className="border-medical-blue/40 bg-medical-blue/10 text-medical-blue flex items-center gap-1"
+                              >
+                                <Users className="h-3 w-3" aria-hidden="true" />
+                                Tạo hàng loạt
+                              </Badge>
+                              <span className="text-gray-500">
+                                Bởi {submission.creatorAccount?.TenDangNhap ?? 'quản trị viên'}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </td>
                       
