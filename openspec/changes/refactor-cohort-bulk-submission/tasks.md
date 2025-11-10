@@ -126,11 +126,11 @@
 ## 7. Database Optimization
 
 ### 7.1 Add Indexes (if not exist)
-- [ ] 7.1.1 Check existing indexes on `GhiNhanHoatDong`
-- [ ] 7.1.2 Add index on `(MaDanhMuc, MaNhanVien)` for duplicate detection
-- [ ] 7.1.3 Add index on `(TrangThaiDuyet, FileMinhChungUrl)` for credit queries
-- [ ] 7.1.4 Test query performance with EXPLAIN
-- [ ] 7.1.5 Document indexes in migration notes
+- [x] 7.1.1 Check existing indexes on `GhiNhanHoatDong`
+- [x] 7.1.2 Add index on `(MaDanhMuc, MaNhanVien)` for duplicate detection
+- [x] 7.1.3 Add index on `(TrangThaiDuyet, FileMinhChungUrl)` for credit queries
+- [x] 7.1.4 Test query performance with EXPLAIN
+- [x] 7.1.5 Document indexes in migration notes
 
 ## 8. Testing
 

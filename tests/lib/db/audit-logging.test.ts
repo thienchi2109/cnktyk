@@ -18,7 +18,7 @@ vi.mock('@/lib/db/client', () => {
 import { db } from '@/lib/db/client';
 import { nhatKyHeThongRepo } from '@/lib/db/repositories';
 import { AUDIT_ACTIONS } from '@/types/audit-actions';
-import type { NhatKyHeThong } from '@/types';
+import type { NhatKyHeThong } from '@/lib/db/schemas';
 
 describe('Task 6.1.6 - Audit Log Retrieval Tests', () => {
   beforeEach(() => {
@@ -116,7 +116,7 @@ describe('Task 6.1.6 - Audit Log Retrieval Tests', () => {
         AUDIT_ACTIONS.BULK_SUBMISSION_CREATE,
         'GhiNhanHoatDong',
         null,
-        mockAuditLog.NoiDung,
+        mockAuditLog.NoiDung!,
         '10.0.0.1'
       );
 
@@ -264,7 +264,7 @@ describe('Task 6.1.6 - Audit Log Retrieval Tests', () => {
         AUDIT_ACTIONS.BULK_SUBMISSION_CREATE,
         'GhiNhanHoatDong',
         null,
-        mockAuditLog.NoiDung,
+        mockAuditLog.NoiDung!,
         null
       );
 
@@ -307,7 +307,7 @@ describe('Task 6.1.6 - Audit Log Retrieval Tests', () => {
         AUDIT_ACTIONS.BULK_SUBMISSION_CREATE,
         'GhiNhanHoatDong',
         null,
-        mockAuditLog.NoiDung,
+        mockAuditLog.NoiDung!,
         null
       );
 
@@ -351,7 +351,7 @@ describe('Task 6.1.6 - Audit Log Retrieval Tests', () => {
         AUDIT_ACTIONS.BULK_SUBMISSION_CREATE,
         'GhiNhanHoatDong',
         null,
-        mockAuditLog.NoiDung,
+        mockAuditLog.NoiDung!,
         null
       );
 
@@ -483,13 +483,13 @@ describe('Task 6.1.6 - Audit Log Retrieval Tests', () => {
   // Test 6: Verify audit log cannot be modified
   describe('Audit Log Immutability - Update Prevention', () => {
     it('throws error when attempting to update audit log', async () => {
-      await expect(nhatKyHeThongRepo.update('audit-123', { HanhDong: 'MODIFIED' } as any))
+      await expect(nhatKyHeThongRepo.update())
         .rejects
         .toThrow('Audit logs cannot be modified');
     });
 
     it('prevents any modification attempts', async () => {
-      await expect(nhatKyHeThongRepo.update('any-id', {} as any))
+      await expect(nhatKyHeThongRepo.update())
         .rejects
         .toThrow('Audit logs cannot be modified');
     });
@@ -498,13 +498,13 @@ describe('Task 6.1.6 - Audit Log Retrieval Tests', () => {
   // Test 7: Verify audit log cannot be deleted
   describe('Audit Log Immutability - Delete Prevention', () => {
     it('throws error when attempting to delete audit log', async () => {
-      await expect(nhatKyHeThongRepo.delete('audit-123'))
+      await expect(nhatKyHeThongRepo.delete())
         .rejects
         .toThrow('Audit logs cannot be deleted');
     });
 
     it('prevents any deletion attempts', async () => {
-      await expect(nhatKyHeThongRepo.delete('any-id'))
+      await expect(nhatKyHeThongRepo.delete())
         .rejects
         .toThrow('Audit logs cannot be deleted');
     });

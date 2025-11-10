@@ -33,7 +33,7 @@ const activityTypeLabels: Record<ActivityCatalogItem['LoaiHoatDong'], string> = 
 
 const wizardSteps: Array<{ id: WizardStep; title: string; subtitle: string }> = [
   { id: 1, title: 'Hoạt động', subtitle: 'Chọn hoạt động cần ghi nhận' },
-  { id: 2, title: 'Nhóm đối tượng', subtitle: 'Xác định cohort áp dụng' },
+  { id: 2, title: 'Nhóm đối tượng', subtitle: 'Xác định nhóm đối tượng áp dụng' },
   { id: 3, title: 'Xem trước & xác nhận', subtitle: 'Kiểm tra kết quả trước khi tạo' },
 ];
 
@@ -245,7 +245,7 @@ export function BulkSubmissionWizard() {
               Ghi nhận hoạt động cho nhóm
             </h1>
             <p className="text-sm text-gray-600 mt-1">
-              Hoàn tất 3 bước để tạo bản ghi hàng loạt cho cohort đã chọn.
+              Hoàn tất 3 bước để tạo bản ghi hàng loạt cho nhóm đối tượng đã chọn.
             </p>
           </div>
         </div>
@@ -351,9 +351,9 @@ export function BulkSubmissionWizard() {
             <GlassButton
               onClick={handleContinueFromActivity}
               disabled={!selectedActivity}
-              aria-label="Tiếp tục đến bước chọn cohort"
+              aria-label="Tiếp tục đến bước chọn nhóm đối tượng"
             >
-              Tiếp tục · Chọn cohort
+              Tiếp tục · Chọn nhóm đối tượng
             </GlassButton>
           </div>
         </GlassCard>
@@ -400,7 +400,7 @@ export function BulkSubmissionWizard() {
           <GlassCard className="space-y-4 sm:space-y-6 p-4 sm:p-6">
             <div className="flex flex-col gap-2">
               <h2 className="text-lg sm:text-xl font-semibold text-gray-900" id="step2-title">
-                Bước 2 · Xây dựng cohort
+                Bước 2 · Xây dựng nhóm đối tượng
               </h2>
               <p className="text-sm text-gray-600">
                 Sử dụng bộ lọc để xác định đối tượng cần áp dụng. Bạn có thể chọn thủ công từng người hoặc áp dụng cho toàn bộ kết quả lọc.
@@ -410,7 +410,7 @@ export function BulkSubmissionWizard() {
           </GlassCard>
 
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-wrap items-center gap-2" role="status" aria-label="Tóm tắt lựa chọn cohort">
+            <div className="flex flex-wrap items-center gap-2" role="status" aria-label="Tóm tắt lựa chọn nhóm đối tượng">
               <Badge variant={selectedCount > 0 ? 'secondary' : 'outline'} aria-label={`Số lượng đã chọn: ${selectedCount}`}>
                 Đã chọn: <span className="ml-1 font-semibold">{selectedCount}</span>
               </Badge>

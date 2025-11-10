@@ -20,7 +20,9 @@ import {
   ghiNhanHoatDongRepo,
   nhanVienRepo,
 } from '@/lib/db/repositories';
-import type { BulkSubmissionInsertInput } from '@/types/bulk-submission';
+
+type BulkSubmissionInsertInputList = Parameters<typeof ghiNhanHoatDongRepo.bulkCreate>[0];
+type BulkSubmissionInsertInput = BulkSubmissionInsertInputList[number];
 
 // Use valid UUIDs for test data
 const ACTIVITY_ID = '550e8400-e29b-41d4-a716-446655440001';
@@ -39,7 +41,7 @@ describe('Task 8.1 - Unit Tests for Bulk Submission Repository', () => {
   // Task 8.1.1: Test bulkCreate() repository method
   describe('8.1.1 - bulkCreate() Repository Method', () => {
     it('successfully creates bulk submissions in batches', async () => {
-      const submissions: BulkSubmissionInsertInput[] = [
+      const submissions: BulkSubmissionInsertInputList = [
         {
           MaNhanVien: PRACTITIONER_IDS[0],
           MaDanhMuc: ACTIVITY_ID,
@@ -92,7 +94,7 @@ describe('Task 8.1 - Unit Tests for Bulk Submission Repository', () => {
     });
 
     it('detects conflicts when some practitioners already have submissions', async () => {
-      const submissions: BulkSubmissionInsertInput[] = [
+      const submissions: BulkSubmissionInsertInputList = [
         {
           MaNhanVien: PRACTITIONER_IDS[0],
           MaDanhMuc: ACTIVITY_ID,
@@ -152,7 +154,7 @@ describe('Task 8.1 - Unit Tests for Bulk Submission Repository', () => {
     });
 
     it('rolls back transaction on database error', async () => {
-      const submissions: BulkSubmissionInsertInput[] = [
+      const submissions: BulkSubmissionInsertInputList = [
         {
           MaNhanVien: PRACTITIONER_IDS[0],
           MaDanhMuc: ACTIVITY_ID,
@@ -586,7 +588,7 @@ describe('Task 8.1 - Unit Tests for Bulk Submission Repository', () => {
   describe('8.1.7 - Batch Processing (>500 submissions)', () => {
     it('processes submissions in batches of 500', async () => {
       // Create 1200 submissions to test batching
-      const submissions: BulkSubmissionInsertInput[] = Array.from({ length: 1200 }, (_, i) => ({
+      const submissions: BulkSubmissionInsertInputList = Array.from({ length: 1200 }, (_, i) => ({
         MaNhanVien: `550e8400-e29b-41d4-a716-${String(i).padStart(12, '0')}`,
         MaDanhMuc: ACTIVITY_ID,
         TenHoatDong: 'Test Activity',
@@ -634,7 +636,7 @@ describe('Task 8.1 - Unit Tests for Bulk Submission Repository', () => {
     });
 
     it('uses custom batch size when provided', async () => {
-      const submissions: BulkSubmissionInsertInput[] = Array.from({ length: 150 }, (_, i) => ({
+      const submissions: BulkSubmissionInsertInputList = Array.from({ length: 150 }, (_, i) => ({
         MaNhanVien: `550e8400-e29b-41d4-a716-${String(i).padStart(12, '0')}`,
         MaDanhMuc: ACTIVITY_ID,
         TenHoatDong: 'Test Activity',
@@ -675,7 +677,7 @@ describe('Task 8.1 - Unit Tests for Bulk Submission Repository', () => {
     });
 
     it('handles conflicts across multiple batches', async () => {
-      const submissions: BulkSubmissionInsertInput[] = Array.from({ length: 600 }, (_, i) => ({
+      const submissions: BulkSubmissionInsertInputList = Array.from({ length: 600 }, (_, i) => ({
         MaNhanVien: `550e8400-e29b-41d4-a716-${String(i).padStart(12, '0')}`,
         MaDanhMuc: ACTIVITY_ID,
         TenHoatDong: 'Test Activity',
@@ -717,7 +719,7 @@ describe('Task 8.1 - Unit Tests for Bulk Submission Repository', () => {
     });
 
     it('rolls back entire transaction if any batch fails', async () => {
-      const submissions: BulkSubmissionInsertInput[] = Array.from({ length: 600 }, (_, i) => ({
+      const submissions: BulkSubmissionInsertInputList = Array.from({ length: 600 }, (_, i) => ({
         MaNhanVien: `550e8400-e29b-41d4-a716-${String(i).padStart(12, '0')}`,
         MaDanhMuc: ACTIVITY_ID,
         TenHoatDong: 'Test Activity',

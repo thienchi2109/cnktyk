@@ -100,7 +100,7 @@ export function PreviewAndConfirm({
             Bước 3 · Xem trước & xác nhận
           </h2>
           <p className="text-sm text-gray-600">
-            Kiểm tra lại hoạt động, cohort được áp dụng và kết quả dự kiến trước khi tạo bản ghi hàng loạt.
+            Kiểm tra lại hoạt động, nhóm đối tượng được áp dụng và kết quả dự kiến trước khi tạo bản ghi hàng loạt.
           </p>
         </div>
 
@@ -146,7 +146,7 @@ export function PreviewAndConfirm({
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex-1">
               <p className="text-sm font-semibold text-gray-900" id="cohort-summary-title">
-                Tóm tắt cohort
+                Tóm tắt nhóm đối tượng
               </p>
               <p className="text-xs text-gray-600 mt-1">
                 {selection?.mode === 'all' ? 'Áp dụng cho toàn bộ kết quả theo bộ lọc' : 'Áp dụng cho các nhân sự được chọn thủ công'}
