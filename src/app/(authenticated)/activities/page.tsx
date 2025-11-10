@@ -8,7 +8,7 @@ import { ActivityFormSheet } from '@/components/activities/activity-form-sheet';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  activitiesCatalogQueryKey,
+  activitiesCatalogBaseKey,
   ActivityCatalogItem,
   ActivityPermissions,
   ActivitiesCatalogResponse,
@@ -39,9 +39,28 @@ export default function ActivitiesPage() {
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [permissions, setPermissions] = useState<ActivityPermissions>(defaultPermissions);
 
-  const catalogKey = activitiesCatalogQueryKey();
+  const catalogKey = activitiesCatalogBaseKey;
 
-  const deleteMutation = useMutation<ActivityCatalogItem, Error, string, { previousCatalog?: ActivitiesCatalogResponse }>({
+  type CatalogSnapshot = Array<[
+    readonly unknown[],
+    ActivitiesCatalogResponse | undefined
+  ]>;
+
+  const takeCatalogSnapshot = () =>
+    queryClient.getQueriesData<ActivitiesCatalogResponse>({ queryKey: catalogKey });
+
+  const restoreCatalogSnapshot = (snapshot?: CatalogSnapshot) => {
+    snapshot?.forEach(([key, data]) => {
+      queryClient.setQueryData(key, data);
+    });
+  };
+
+  const deleteMutation = useMutation<
+    ActivityCatalogItem,
+    Error,
+    string,
+    { previousCatalog?: CatalogSnapshot }
+  >({
     mutationFn: async (activityId: string) => {
       const response = await fetch(`/api/activities/${activityId}`, {
         method: 'DELETE',
@@ -62,20 +81,21 @@ export default function ActivitiesPage() {
       setFeedback(null);
       await queryClient.cancelQueries({ queryKey: catalogKey });
 
-      const previousCatalog = queryClient.getQueryData<ActivitiesCatalogResponse>(catalogKey);
-      if (previousCatalog) {
-        const nextCatalog = removeActivityCatalogEntry(previousCatalog, activityId);
-        if (nextCatalog) {
-          queryClient.setQueryData(catalogKey, nextCatalog);
+      const previousCatalog = takeCatalogSnapshot();
+      previousCatalog.forEach(([key, current]) => {
+        if (!current) {
+          return;
         }
-      }
+        const nextCatalog = removeActivityCatalogEntry(current, activityId);
+        if (nextCatalog) {
+          queryClient.setQueryData(key, nextCatalog);
+        }
+      });
 
       return { previousCatalog };
     },
     onError: (error, _activityId, context) => {
-      if (context?.previousCatalog) {
-        queryClient.setQueryData(catalogKey, context.previousCatalog);
-      }
+      restoreCatalogSnapshot(context?.previousCatalog);
       setFeedback({
         type: 'error',
         message: error instanceof Error ? error.message : 'Có lỗi xảy ra trong quá trình xóa hoạt động',
@@ -92,7 +112,12 @@ export default function ActivitiesPage() {
     },
   });
 
-  const adoptMutation = useMutation<ActivityCatalogItem, Error, string, { previousCatalog?: ActivitiesCatalogResponse }>({
+  const adoptMutation = useMutation<
+    ActivityCatalogItem,
+    Error,
+    string,
+    { previousCatalog?: CatalogSnapshot }
+  >({
     mutationFn: async (activityId: string) => {
       const response = await fetch(`/api/activities/${activityId}`, {
         method: 'PUT',
@@ -114,42 +139,58 @@ export default function ActivitiesPage() {
       setFeedback(null);
       await queryClient.cancelQueries({ queryKey: catalogKey });
 
-      const previousCatalog = queryClient.getQueryData<ActivitiesCatalogResponse>(catalogKey);
-      if (previousCatalog) {
-        const existing =
-          previousCatalog.unit.find((item) => item.MaDanhMuc === activityId) ||
-          previousCatalog.global.find((item) => item.MaDanhMuc === activityId);
-
-        if (existing) {
-          const optimistic: ActivityCatalogItem = {
-            ...existing,
-            MaDonVi: null,
-          };
-
-          const removed = removeActivityCatalogEntry(previousCatalog, activityId);
-          const nextCatalog = upsertActivityCatalogEntry(removed, optimistic);
-          if (nextCatalog) {
-            queryClient.setQueryData(catalogKey, nextCatalog);
-          }
+      const previousCatalog = takeCatalogSnapshot();
+      previousCatalog.forEach(([key, current]) => {
+        if (!current) {
+          return;
         }
-      }
+
+        const existing =
+          current.unit.find((item) => item.MaDanhMuc === activityId) ||
+          current.global.find((item) => item.MaDanhMuc === activityId);
+
+        if (!existing) {
+          return;
+        }
+
+        const optimistic: ActivityCatalogItem = {
+          ...existing,
+          MaDonVi: null,
+        };
+
+        const removed = removeActivityCatalogEntry(current, activityId);
+        const nextCatalog = removed ? upsertActivityCatalogEntry(removed, optimistic) : removed;
+        if (nextCatalog) {
+          queryClient.setQueryData(key, nextCatalog);
+        }
+      });
 
       return { previousCatalog };
     },
     onError: (error, _activityId, context) => {
-      if (context?.previousCatalog) {
-        queryClient.setQueryData(catalogKey, context.previousCatalog);
-      }
+      restoreCatalogSnapshot(context?.previousCatalog);
       setFeedback({
         type: 'error',
         message: error instanceof Error ? error.message : 'Có lỗi xảy ra khi chuyển hoạt động',
       });
     },
     onSuccess: (activity) => {
-      queryClient.setQueryData(catalogKey, (current) =>
-        upsertActivityCatalogEntry(current as ActivitiesCatalogResponse | undefined, activity) ??
-        current
-      );
+      const entries = takeCatalogSnapshot();
+      entries.forEach(([key, current]) => {
+        if (!current) {
+          return;
+        }
+        const contains =
+          current.unit.some((item) => item.MaDanhMuc === activity.MaDanhMuc) ||
+          current.global.some((item) => item.MaDanhMuc === activity.MaDanhMuc);
+        if (!contains) {
+          return;
+        }
+        const updated = upsertActivityCatalogEntry(current, activity);
+        if (updated) {
+          queryClient.setQueryData(key, updated);
+        }
+      });
 
       setFeedback({
         type: 'success',
@@ -161,7 +202,12 @@ export default function ActivitiesPage() {
     },
   });
 
-  const restoreMutation = useMutation<ActivityCatalogItem, Error, string, { previousCatalog?: ActivitiesCatalogResponse }>({
+  const restoreMutation = useMutation<
+    ActivityCatalogItem,
+    Error,
+    string,
+    { previousCatalog?: CatalogSnapshot }
+  >({
     mutationFn: async (activityId: string) => {
       const response = await fetch(`/api/activities/${activityId}/restore`, {
         method: 'POST',
@@ -181,23 +227,27 @@ export default function ActivitiesPage() {
     onMutate: async () => {
       setFeedback(null);
       await queryClient.cancelQueries({ queryKey: catalogKey });
-      const previousCatalog = queryClient.getQueryData<ActivitiesCatalogResponse>(catalogKey);
+      const previousCatalog = takeCatalogSnapshot();
       return { previousCatalog };
     },
     onError: (error, _activityId, context) => {
-      if (context?.previousCatalog) {
-        queryClient.setQueryData(catalogKey, context.previousCatalog);
-      }
+      restoreCatalogSnapshot(context?.previousCatalog);
       setFeedback({
         type: 'error',
         message: error instanceof Error ? error.message : 'Có lỗi xảy ra khi khôi phục hoạt động',
       });
     },
     onSuccess: (activity) => {
-      queryClient.setQueryData(catalogKey, (current) =>
-        upsertActivityCatalogEntry(current as ActivitiesCatalogResponse | undefined, activity) ??
-        current
-      );
+      const entries = takeCatalogSnapshot();
+      entries.forEach(([key, current]) => {
+        if (!current) {
+          return;
+        }
+        const updated = upsertActivityCatalogEntry(current, activity);
+        if (updated) {
+          queryClient.setQueryData(key, updated);
+        }
+      });
 
       setFeedback({
         type: 'success',

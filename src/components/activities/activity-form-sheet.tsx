@@ -20,12 +20,14 @@ import { LoadingNotice } from '@/components/ui/loading-notice';
 import { AlertTriangle, Plus, Edit } from 'lucide-react';
 import { ActivityForm } from './activity-form';
 import {
-  activitiesCatalogQueryKey,
+  activitiesCatalogBaseKey,
   upsertActivityCatalogEntry,
   removeActivityCatalogEntry,
   ActivityCatalogItem,
   ActivityPermissions,
-  ActivitiesCatalogResponse
+  ActivitiesCatalogResponse,
+  NormalizedActivitiesCatalogFilters,
+  activityMatchesFilters,
 } from '@/hooks/use-activities';
 
 interface ActivityFormSheetProps {
@@ -60,8 +62,13 @@ interface ActivityMutationVariables {
   activityId?: string | null;
 }
 
+type CatalogSnapshot = Array<[
+  readonly unknown[],
+  ActivitiesCatalogResponse | undefined
+]>;
+
 interface ActivityMutationContext {
-  previousCatalog?: ActivitiesCatalogResponse;
+  previousCatalog?: CatalogSnapshot;
   tempId?: string;
 }
 
@@ -169,6 +176,24 @@ export function ActivityFormSheet({
 }: ActivityFormSheetProps) {
   const [mutationError, setMutationError] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const catalogKey = activitiesCatalogBaseKey;
+
+  const takeCatalogSnapshot = () =>
+    queryClient.getQueriesData<ActivitiesCatalogResponse>({ queryKey: catalogKey });
+
+  const restoreCatalogSnapshot = (snapshot?: CatalogSnapshot) => {
+    snapshot?.forEach(([key, data]) => {
+      queryClient.setQueryData(key, data);
+    });
+  };
+
+  const resolveFiltersFromKey = (key: readonly unknown[]): NormalizedActivitiesCatalogFilters | null => {
+    const candidate = key[key.length - 1];
+    if (candidate && typeof candidate === 'object' && 'scope' in candidate) {
+      return candidate as NormalizedActivitiesCatalogFilters;
+    }
+    return null;
+  };
 
   useEffect(() => {
     if (!open) {
@@ -218,16 +243,25 @@ export function ActivityFormSheet({
     },
     onMutate: async (variables) => {
       setMutationError(null);
-      const catalogKey = activitiesCatalogQueryKey();
       await queryClient.cancelQueries({ queryKey: catalogKey });
 
-      const previousCatalog = queryClient.getQueryData<ActivitiesCatalogResponse>(catalogKey);
-      if (previousCatalog) {
-        const nextCatalog = upsertActivityCatalogEntry(previousCatalog, variables.optimistic);
-        if (nextCatalog) {
-          queryClient.setQueryData(catalogKey, nextCatalog);
+      const previousCatalog = takeCatalogSnapshot();
+      previousCatalog.forEach(([key, current]) => {
+        if (!current) {
+          return;
         }
-      }
+        const filters = resolveFiltersFromKey(key);
+        const shouldInclude = !filters || activityMatchesFilters(variables.optimistic, filters);
+
+        const withoutEntry = removeActivityCatalogEntry(current, variables.optimistic.MaDanhMuc) ?? current;
+        const nextCatalog = shouldInclude
+          ? upsertActivityCatalogEntry(withoutEntry, variables.optimistic)
+          : withoutEntry;
+
+        if (nextCatalog) {
+          queryClient.setQueryData(key, nextCatalog);
+        }
+      });
 
       const tempId =
         variables.mode === 'create' ? variables.optimistic.MaDanhMuc : undefined;
@@ -235,18 +269,31 @@ export function ActivityFormSheet({
       return { previousCatalog, tempId };
     },
     onError: (error, _variables, context) => {
-      if (context?.previousCatalog) {
-        queryClient.setQueryData(activitiesCatalogQueryKey(), context.previousCatalog);
-      }
+      restoreCatalogSnapshot(context?.previousCatalog);
       setMutationError(error instanceof Error ? error.message : 'Có lỗi xảy ra');
     },
     onSuccess: (result, variables, context) => {
-      queryClient.setQueryData(activitiesCatalogQueryKey(), (current) => {
-        let nextCatalog = current as ActivitiesCatalogResponse | undefined;
+      const snapshot = takeCatalogSnapshot();
+      snapshot.forEach(([key, current]) => {
+        if (!current) {
+          return;
+        }
+
+        const filters = resolveFiltersFromKey(key);
+        const shouldInclude = !filters || activityMatchesFilters(result, filters);
+
+        let nextCatalog: ActivitiesCatalogResponse | undefined = current;
+
         if (context?.tempId) {
           nextCatalog = removeActivityCatalogEntry(nextCatalog, context.tempId);
         }
-        return upsertActivityCatalogEntry(nextCatalog, result) ?? nextCatalog;
+
+        const withoutCurrent = removeActivityCatalogEntry(nextCatalog, result.MaDanhMuc) ?? nextCatalog;
+        const updated = shouldInclude ? upsertActivityCatalogEntry(withoutCurrent, result) : withoutCurrent;
+
+        if (updated) {
+          queryClient.setQueryData(key, updated);
+        }
       });
 
       onUpdate?.({
@@ -257,7 +304,7 @@ export function ActivityFormSheet({
       onOpenChange(false);
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: activitiesCatalogQueryKey() });
+      queryClient.invalidateQueries({ queryKey: catalogKey });
     },
   });
 

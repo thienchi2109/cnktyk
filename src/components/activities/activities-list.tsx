@@ -1,8 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
-import { useActivitiesCatalog, ActivityCatalogItem, ActivityPermissions } from '@/hooks/use-activities';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import {
+  useActivitiesCatalog,
+  ActivityCatalogItem,
+  ActivityPermissions,
+  ActivitiesCatalogStatusFilter,
+  ActivitiesCatalogTypeFilter,
+  getActivityLifecycleStatus,
+} from '@/hooks/use-activities';
 import { GlassCard } from '@/components/ui/glass-card';
 import { GlassButton } from '@/components/ui/glass-button';
 import { Input } from '@/components/ui/input';
@@ -93,26 +101,21 @@ const getScopeBadge = (activity: ActivityCatalogItem, userRole: string) => {
   );
 };
 
-// Get activity status based on validity period
-const getActivityStatus = (activity: ActivityCatalogItem) => {
-  const now = new Date();
-  const startDate = activity.HieuLucTu ? new Date(activity.HieuLucTu) : null;
-  const endDate = activity.HieuLucDen ? new Date(activity.HieuLucDen) : null;
-
-  if (startDate && startDate > now) {
-    return { status: 'pending', label: 'Chưa hiệu lực', color: 'bg-yellow-100 text-yellow-800' };
-  }
-  
-  if (endDate && endDate < now) {
-    return { status: 'expired', label: 'Hết hiệu lực', color: 'bg-red-100 text-red-800' };
-  }
-  
-  return { status: 'active', label: 'Đang hiệu lực', color: 'bg-green-100 text-green-800' };
-};
-
 const getStatusBadge = (activity: ActivityCatalogItem) => {
-  const { status, label, color } = getActivityStatus(activity);
-  const Icon = status === 'active' ? CheckCircle : status === 'expired' ? XCircle : Clock;
+  const status = getActivityLifecycleStatus(activity);
+  let label = 'Đang hiệu lực';
+  let color = 'bg-green-100 text-green-800';
+  let Icon = CheckCircle;
+
+  if (status === 'pending') {
+    label = 'Chưa hiệu lực';
+    color = 'bg-yellow-100 text-yellow-800';
+    Icon = Clock;
+  } else if (status === 'expired') {
+    label = 'Hết hiệu lực';
+    color = 'bg-red-100 text-red-800';
+    Icon = XCircle;
+  }
   
   return (
     <Badge className={`${color} border-0`}>
@@ -132,16 +135,136 @@ export function ActivitiesList({
   onRestoreActivity,
   onPermissionsLoaded 
 }: ActivitiesListProps) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<string>('all');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const scopeParam = (searchParams.get('scope') as 'all' | 'global' | 'unit') ?? 'all';
+  const rawType = (searchParams.get('type') as ActivitiesCatalogTypeFilter | null) ?? 'all';
+  const rawStatus = (searchParams.get('status') as ActivitiesCatalogStatusFilter | null) ?? 'all';
+  const searchParam = searchParams.get('search') ?? '';
+  const limitParam = parseInt(searchParams.get('limit') ?? '50', 10);
+  const pageParam = parseInt(searchParams.get('page') ?? '1', 10);
+
+  const [searchTerm, setSearchTerm] = useState(searchParam);
+  const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setSearchTerm(searchParam);
+  }, [searchParam]);
+
+  const updateQueryParams = useCallback(
+    (
+      changes: Partial<Record<'scope' | 'search' | 'type' | 'status' | 'page' | 'limit', string | null>>,
+      options: { resetPage?: boolean } = {}
+    ) => {
+      const next = new URLSearchParams(searchParams.toString());
+
+      Object.entries(changes).forEach(([key, value]) => {
+        if (value === null) {
+          next.delete(key);
+          return;
+        }
+
+        if (key === 'search') {
+          const trimmed = value.trim();
+          if (trimmed.length === 0) {
+            next.delete('search');
+          } else {
+            next.set('search', trimmed);
+          }
+          return;
+        }
+
+        if (key === 'type' || key === 'status') {
+          if (value === 'all') {
+            next.delete(key);
+          } else {
+            next.set(key, value);
+          }
+          return;
+        }
+
+        if (key === 'scope') {
+          if (value === 'all') {
+            next.delete('scope');
+          } else {
+            next.set('scope', value);
+          }
+          return;
+        }
+
+        next.set(key, value);
+      });
+
+      const shouldResetPage = options.resetPage ?? true;
+      if (shouldResetPage && !('page' in changes)) {
+        next.delete('page');
+      }
+
+      const queryString = next.toString();
+      const target = queryString.length > 0 ? `${pathname}?${queryString}` : pathname;
+      router.replace(target, { scroll: false });
+    },
+    [pathname, router, searchParams]
+  );
+
+  useEffect(() => {
+    if (searchTerm === searchParam) {
+      return;
+    }
+
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+
+    searchDebounceRef.current = setTimeout(() => {
+      updateQueryParams({ search: searchTerm }, { resetPage: true });
+    }, 300);
+
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, [searchTerm, searchParam, updateQueryParams]);
+
+  const activeScope = scopeParam;
+  const typeFilter = rawType ?? 'all';
+  const statusFilter = rawStatus ?? 'all';
+
+  const activitiesQuery = useActivitiesCatalog({
+    scope: activeScope,
+    search: searchParam,
+    type: typeFilter,
+    status: statusFilter,
+    page: Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1,
+    limit: Number.isFinite(limitParam) && limitParam > 0 ? limitParam : 50,
+  });
+  const { data, isLoading, isError, error, isFetching } = activitiesQuery;
   const [selectedActivity, setSelectedActivity] = useState<ActivityCatalogItem | null>(null);
   const [showActivityDetail, setShowActivityDetail] = useState(false);
-  const { data, isLoading, isError, error } = useActivitiesCatalog();
+
   const permissions = data?.permissions ?? defaultPermissions;
   const globalActivities = data?.global ?? [];
   const unitActivities = data?.unit ?? [];
+
+  const displayedActivities = useMemo(() => {
+    if (activeScope === 'global') {
+      return globalActivities;
+    }
+    if (activeScope === 'unit') {
+      return unitActivities;
+    }
+    return [...globalActivities, ...unitActivities];
+  }, [activeScope, globalActivities, unitActivities]);
+
+  const pagination = data?.pagination;
+  const totalGlobal = pagination?.totalGlobal ?? globalActivities.length;
+  const totalUnit = pagination?.totalUnit ?? unitActivities.length;
+  const totalAll = totalGlobal + totalUnit;
+  const hasFilters =
+    (searchParam?.trim().length ?? 0) > 0 || typeFilter !== 'all' || statusFilter !== 'all';
 
   useEffect(() => {
     if (data?.permissions && onPermissionsLoaded) {
@@ -149,37 +272,16 @@ export function ActivitiesList({
     }
   }, [data?.permissions, onPermissionsLoaded]);
 
-  // Get activities based on active tab
-  const getDisplayActivities = () => {
-    if (activeTab === 'global') return globalActivities;
-    if (activeTab === 'unit') return unitActivities;
-    return [...globalActivities, ...unitActivities]; // all
+  const handleScopeChange = (value: string) => {
+    updateQueryParams({ scope: value }, { resetPage: true });
   };
-
-  // Filter activities based on search, type, and status
-  const filterActivities = (activities: ActivityCatalogItem[]) => {
-    return activities.filter(activity => {
-      const matchesSearch = activity.TenDanhMuc.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesType = typeFilter === 'all' || activity.LoaiHoatDong === typeFilter;
-      
-      if (statusFilter === 'all') {
-        return matchesSearch && matchesType;
-      }
-      
-      const { status } = getActivityStatus(activity);
-      return matchesSearch && matchesType && status === statusFilter;
-    });
-  };
-
-  const filteredActivities = filterActivities(getDisplayActivities());
 
   const handleTypeFilter = (value: string) => {
-    setTypeFilter(value);
+    updateQueryParams({ type: value }, { resetPage: true });
   };
 
   const handleStatusFilter = (value: string) => {
-    setStatusFilter(value);
+    updateQueryParams({ status: value }, { resetPage: true });
   };
 
   // Check if user can edit this specific activity
@@ -230,19 +332,19 @@ export function ActivitiesList({
       </div>
 
       {/* Tabs and Filters */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeScope} onValueChange={handleScopeChange} className="w-full">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
           <TabsList>
             <TabsTrigger value="all">
-              Tất cả ({globalActivities.length + unitActivities.length})
+              Tất cả ({totalAll})
             </TabsTrigger>
             <TabsTrigger value="global">
               <Globe className="h-4 w-4 mr-2" />
-              Hệ thống ({globalActivities.length})
+              Hệ thống ({totalGlobal})
             </TabsTrigger>
             <TabsTrigger value="unit">
               <Building2 className="h-4 w-4 mr-2" />
-              Đơn vị ({unitActivities.length})
+              Đơn vị ({totalUnit})
             </TabsTrigger>
           </TabsList>
         </div>
@@ -298,18 +400,18 @@ export function ActivitiesList({
         </GlassCard>
 
         {/* Activities Table */}
-        <TabsContent value={activeTab} className="mt-0">
+        <TabsContent value={activeScope} className="mt-0">
         <GlassCard className="!bg-white !backdrop-blur-none !border-slate-200 shadow-lg">
-        {isLoading ? (
+        {isLoading || isFetching ? (
           <div className="p-12">
             <LoadingNotice message="Đang tải danh mục hoạt động..." />
           </div>
-        ) : filteredActivities.length === 0 ? (
+        ) : displayedActivities.length === 0 ? (
           <div className="p-8 text-center">
             <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">Không có hoạt động nào</h3>
             <p className="text-gray-500">
-              {searchTerm || typeFilter !== 'all' || statusFilter !== 'all'
+              {hasFilters
                 ? 'Không tìm thấy hoạt động phù hợp với bộ lọc'
                 : 'Chưa có hoạt động nào được tạo'}
             </p>
@@ -330,7 +432,7 @@ export function ActivitiesList({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredActivities.map((activity) => {
+                {displayedActivities.map((activity) => {
                   const TypeIcon = activityTypeIcons[activity.LoaiHoatDong];
                   
                   return (

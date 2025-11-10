@@ -47,8 +47,101 @@ export function activitiesQueryKey() {
   return ["activities", "active"] as const;
 }
 
-export function activitiesCatalogQueryKey() {
-  return ["activities", "catalog"] as const;
+export type ActivitiesCatalogScope = "all" | "global" | "unit";
+export type ActivitiesCatalogStatusFilter = "active" | "pending" | "expired" | "all";
+export type ActivitiesCatalogTypeFilter = ActivityCatalogItem["LoaiHoatDong"] | "all";
+
+export type ActivityLifecycleStatus = "active" | "pending" | "expired";
+
+export interface ActivitiesCatalogFilters {
+  scope?: ActivitiesCatalogScope;
+  search?: string;
+  type?: ActivitiesCatalogTypeFilter;
+  status?: ActivitiesCatalogStatusFilter;
+  page?: number;
+  limit?: number;
+}
+
+export const activitiesCatalogBaseKey = ["activities", "catalog"] as const;
+
+export interface NormalizedActivitiesCatalogFilters {
+  scope: ActivitiesCatalogScope;
+  page: number;
+  limit: number;
+  search: string;
+  type: ActivitiesCatalogTypeFilter;
+  status: ActivitiesCatalogStatusFilter;
+}
+
+function normalizeCatalogFilters(filters: ActivitiesCatalogFilters = {}): NormalizedActivitiesCatalogFilters {
+  const scope: ActivitiesCatalogScope = filters.scope ?? "all";
+  const rawPage = filters.page ?? 1;
+  const page = Number.isFinite(rawPage) && rawPage > 0 ? Math.floor(rawPage) : 1;
+  const rawLimit = filters.limit ?? 50;
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.floor(rawLimit) : 50;
+  const search = filters.search?.trim() ?? "";
+  const type: ActivitiesCatalogTypeFilter = filters.type ?? "all";
+  const status: ActivitiesCatalogStatusFilter = filters.status ?? "all";
+
+  return { scope, page, limit, search, type, status } as const;
+}
+
+export function activitiesCatalogQueryKey(filters?: ActivitiesCatalogFilters) {
+  const normalized = normalizeCatalogFilters(filters);
+  return [...activitiesCatalogBaseKey, normalized] as const;
+}
+
+export function getNormalizedActivitiesCatalogFilters(filters?: ActivitiesCatalogFilters): NormalizedActivitiesCatalogFilters {
+  return normalizeCatalogFilters(filters);
+}
+
+export function getActivityLifecycleStatus(activity: ActivityCatalogItem): ActivityLifecycleStatus {
+  const now = new Date();
+  const startDate = activity.HieuLucTu ? new Date(activity.HieuLucTu) : null;
+  const endDate = activity.HieuLucDen ? new Date(activity.HieuLucDen) : null;
+
+  if (startDate && startDate > now) {
+    return "pending";
+  }
+
+  if (endDate && endDate < now) {
+    return "expired";
+  }
+
+  return "active";
+}
+
+export function activityMatchesFilters(
+  activity: ActivityCatalogItem,
+  filters: NormalizedActivitiesCatalogFilters
+): boolean {
+  if (filters.scope === "global" && activity.MaDonVi !== null) {
+    return false;
+  }
+
+  if (filters.scope === "unit" && activity.MaDonVi === null) {
+    return false;
+  }
+
+  if (filters.search.length > 0) {
+    const searchLower = filters.search.toLowerCase();
+    if (!activity.TenDanhMuc.toLowerCase().includes(searchLower)) {
+      return false;
+    }
+  }
+
+  if (filters.type !== "all" && activity.LoaiHoatDong !== filters.type) {
+    return false;
+  }
+
+  if (filters.status !== "all") {
+    const status = getActivityLifecycleStatus(activity);
+    if (status !== filters.status) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 async function fetchActivities({ signal }: { signal?: AbortSignal } = {}) {
@@ -59,8 +152,25 @@ async function fetchActivities({ signal }: { signal?: AbortSignal } = {}) {
   return res.json(); // { activities, pagination }
 }
 
-async function fetchActivitiesCatalog({ signal }: { signal?: AbortSignal } = {}) {
-  const res = await fetch(`/api/activities?scope=all&limit=100`, { signal });
+async function fetchActivitiesCatalog({ signal, filters }: { signal?: AbortSignal; filters?: ActivitiesCatalogFilters } = {}) {
+  const normalized = normalizeCatalogFilters(filters);
+  const params = new URLSearchParams();
+  params.set("scope", normalized.scope);
+  params.set("page", normalized.page.toString());
+  params.set("limit", normalized.limit.toString());
+  if (normalized.search.length > 0) {
+    params.set("search", normalized.search);
+  }
+  if (normalized.type !== "all") {
+    params.set("type", normalized.type);
+  }
+  if (normalized.status !== "all") {
+    params.set("status", normalized.status);
+  }
+
+  const queryString = params.toString();
+  const url = queryString.length > 0 ? `/api/activities?${queryString}` : "/api/activities";
+  const res = await fetch(url, { signal });
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
     throw new Error(errorData.error || "Failed to load activities catalog");
@@ -78,10 +188,10 @@ export function useActivities() {
   });
 }
 
-export function useActivitiesCatalog() {
+export function useActivitiesCatalog(filters?: ActivitiesCatalogFilters) {
   return useQuery<ActivitiesCatalogResponse, Error>({
-    queryKey: activitiesCatalogQueryKey(),
-    queryFn: ({ signal }) => fetchActivitiesCatalog({ signal }),
+    queryKey: activitiesCatalogQueryKey(filters),
+    queryFn: ({ signal }) => fetchActivitiesCatalog({ signal, filters }),
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
