@@ -213,8 +213,8 @@ export function ActivitiesList({
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Danh mục hoạt động</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">Quản lý các loại hoạt động đào tạo liên tục</p>
+          <h1 className="text-2xl font-bold text-gray-900">Danh mục hoạt động</h1>
+          <p className="text-gray-600 mt-1">Quản lý các loại hoạt động đào tạo liên tục</p>
         </div>
         
         {(permissions.canCreateGlobal || permissions.canCreateUnit) && onCreateActivity && (
@@ -299,16 +299,16 @@ export function ActivitiesList({
 
         {/* Activities Table */}
         <TabsContent value={activeTab} className="mt-0">
-        <GlassCard className="!bg-white dark:!bg-slate-900 !backdrop-blur-none !border-slate-200 dark:!border-slate-700 shadow-lg">
+        <GlassCard className="!bg-white !backdrop-blur-none !border-slate-200 shadow-lg">
         {isLoading ? (
           <div className="p-12">
             <LoadingNotice message="Đang tải danh mục hoạt động..." />
           </div>
         ) : filteredActivities.length === 0 ? (
           <div className="p-8 text-center">
-            <BookOpen className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Không có hoạt động nào</h3>
-            <p className="text-gray-500 dark:text-gray-400">
+            <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Không có hoạt động nào</h3>
+            <p className="text-gray-500">
               {searchTerm || typeFilter !== 'all' || statusFilter !== 'all'
                 ? 'Không tìm thấy hoạt động phù hợp với bộ lọc'
                 : 'Chưa có hoạt động nào được tạo'}
@@ -336,7 +336,7 @@ export function ActivitiesList({
                   return (
                     <TableRow
                       key={activity.MaDanhMuc}
-                      className="cursor-pointer hover:bg-gray-50/30 dark:hover:bg-slate-800/50"
+                      className="cursor-pointer hover:bg-gray-50/30"
                       tabIndex={0}
                       role="button"
                       aria-label={`Xem chi tiết ${activity.TenDanhMuc}`}
@@ -359,9 +359,9 @@ export function ActivitiesList({
                             </div>
                           </div>
                           <div>
-                            <div className="font-medium text-gray-900 dark:text-gray-100">{activity.TenDanhMuc}</div>
+                            <div className="font-medium text-gray-900">{activity.TenDanhMuc}</div>
                             {activity.YeuCauMinhChung && (
-                              <div className="text-sm text-gray-500 dark:text-gray-400">Yêu cầu minh chứng</div>
+                              <div className="text-sm text-gray-500">Yêu cầu minh chứng</div>
                             )}
                           </div>
                         </div>
@@ -394,7 +394,7 @@ export function ActivitiesList({
                               {activity.GioToiDa !== null && `Tối đa: ${activity.GioToiDa}h`}
                             </>
                           ) : (
-                            <span className="text-gray-500 dark:text-gray-400">Không giới hạn</span>
+                            <span className="text-gray-500">Không giới hạn</span>
                           )}
                         </div>
                       </TableCell>
