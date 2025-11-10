@@ -37,7 +37,7 @@ function getActivityStatus(activity: ActivityCatalogItem) {
     return "inactive" as const;
   }
 
-  if (activity.TrangThai && activity.TrangThai !== "DangHoatDong") {
+  if (activity.TrangThai && activity.TrangThai !== "Active") {
     return "inactive" as const;
   }
 
