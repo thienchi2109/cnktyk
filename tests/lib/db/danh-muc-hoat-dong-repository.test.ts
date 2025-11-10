@@ -76,7 +76,8 @@ describe('DanhMucHoatDongRepository', () => {
 
       expect(result).toEqual([mockGlobalActivity]);
       expect(mocks.query).toHaveBeenCalledWith(
-        expect.stringContaining('WHERE "MaDonVi" IS NULL')
+        expect.stringContaining('WHERE "MaDonVi" IS NULL'),
+        expect.any(Array)
       );
     });
 
@@ -86,7 +87,8 @@ describe('DanhMucHoatDongRepository', () => {
       await repo.findGlobal();
 
       expect(mocks.query).toHaveBeenCalledWith(
-        expect.stringContaining('"DaXoaMem" = false')
+        expect.stringContaining('"DaXoaMem" = false'),
+        expect.any(Array)
       );
     });
   });

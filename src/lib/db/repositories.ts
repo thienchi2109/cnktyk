@@ -1258,6 +1258,25 @@ export class DonViRepository extends BaseRepository<DonVi, CreateDonVi, UpdateDo
   }
 }
 
+type ActivityStatusFilter = 'active' | 'pending' | 'expired';
+type ActivityTypeFilter = DanhMucHoatDong['LoaiHoatDong'];
+
+type CatalogFilterOptions = {
+  search?: string;
+  type?: ActivityTypeFilter;
+  status?: ActivityStatusFilter;
+};
+
+type CatalogQueryOptions = CatalogFilterOptions & {
+  limit?: number;
+  offset?: number;
+};
+
+type UnitCatalogQueryOptions = CatalogQueryOptions & {
+  unitId?: string | null;
+  includeAllUnits?: boolean;
+};
+
 // DanhMucHoatDong (Activity Catalog) Repository
 export class DanhMucHoatDongRepository extends BaseRepository<DanhMucHoatDong, CreateDanhMucHoatDong, UpdateDanhMucHoatDong> {
   constructor() {
@@ -1270,6 +1289,149 @@ export class DanhMucHoatDongRepository extends BaseRepository<DanhMucHoatDong, C
 
   async findById(id: string): Promise<DanhMucHoatDong | null> {
     return db.queryOne<DanhMucHoatDong>(`SELECT * FROM "${this.tableName}" WHERE "MaDanhMuc" = $1`, [id]);
+  }
+
+  private buildCatalogFilterClause(
+    baseConditions: Array<{ condition: string; value?: unknown }>,
+    filters: CatalogFilterOptions
+  ): { whereClause: string; params: unknown[] } {
+    const params: unknown[] = [];
+    const conditions: string[] = [];
+
+    const addCondition = (condition: string, value?: unknown) => {
+      if (value === undefined) {
+        conditions.push(condition);
+        return;
+      }
+
+      params.push(value);
+      const placeholder = `$${params.length}`;
+      conditions.push(condition.replace('?', placeholder));
+    };
+
+    baseConditions.forEach(({ condition, value }) => addCondition(condition, value));
+    addCondition('"DaXoaMem" = false');
+
+    if (filters.search) {
+      addCondition('LOWER("TenDanhMuc") LIKE LOWER(?)', `%${filters.search}%`);
+    }
+
+    if (filters.type) {
+      addCondition('"LoaiHoatDong" = ?', filters.type);
+    }
+
+    if (filters.status === 'active') {
+      addCondition('(("HieuLucTu" IS NULL OR "HieuLucTu" <= CURRENT_DATE) AND ("HieuLucDen" IS NULL OR "HieuLucDen" >= CURRENT_DATE))');
+    } else if (filters.status === 'pending') {
+      addCondition('("HieuLucTu" IS NOT NULL AND "HieuLucTu" > CURRENT_DATE)');
+    } else if (filters.status === 'expired') {
+      addCondition('("HieuLucDen" IS NOT NULL AND "HieuLucDen" < CURRENT_DATE)');
+    }
+
+    const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    return { whereClause, params };
+  }
+
+  async filterGlobalCatalog(options: CatalogQueryOptions = {}): Promise<{ items: DanhMucHoatDong[]; total: number }> {
+    const { limit, offset, search, type, status } = options;
+
+    const { whereClause, params } = this.buildCatalogFilterClause(
+      [{ condition: '"MaDonVi" IS NULL' }],
+      { search, type, status }
+    );
+
+    const selectBase = `
+      SELECT "MaDanhMuc", "TenDanhMuc", "LoaiHoatDong", "DonViTinh", "TyLeQuyDoi",
+             "GioToiThieu", "GioToiDa", "YeuCauMinhChung", "HieuLucTu", "HieuLucDen",
+             "MaDonVi", "NguoiTao", "NguoiCapNhat", "TaoLuc", "CapNhatLuc", "TrangThai"
+      FROM "${this.tableName}"
+      ${whereClause}
+      ORDER BY "TenDanhMuc" ASC
+    `;
+
+    const dataParams = [...params];
+    let dataQuery = selectBase;
+
+    if (limit !== undefined) {
+      dataQuery += ` LIMIT $${params.length + 1}`;
+      dataParams.push(limit);
+
+      if (offset !== undefined) {
+        dataQuery += ` OFFSET $${params.length + 2}`;
+        dataParams.push(offset);
+      }
+    }
+
+    const countQuery = `
+      SELECT COUNT(*)::int as count
+      FROM "${this.tableName}"
+      ${whereClause}
+    `;
+
+    const [rows, countRow] = await Promise.all([
+      db.query<DanhMucHoatDong>(dataQuery, dataParams),
+      db.queryOne<{ count: number }>(countQuery, params),
+    ]);
+
+    return {
+      items: rows,
+      total: countRow?.count ?? 0,
+    };
+  }
+
+  async filterUnitCatalog(options: UnitCatalogQueryOptions = {}): Promise<{ items: DanhMucHoatDong[]; total: number }> {
+    const { limit, offset, search, type, status, unitId, includeAllUnits } = options;
+
+    const baseConditions: Array<{ condition: string; value?: unknown }> = [];
+
+    if (includeAllUnits) {
+      baseConditions.push({ condition: '"MaDonVi" IS NOT NULL' });
+    } else {
+      if (!unitId) {
+        throw new Error('unitId is required when includeAllUnits is false');
+      }
+      baseConditions.push({ condition: '"MaDonVi" = ?', value: unitId });
+    }
+
+    const { whereClause, params } = this.buildCatalogFilterClause(baseConditions, { search, type, status });
+
+    const selectBase = `
+      SELECT "MaDanhMuc", "TenDanhMuc", "LoaiHoatDong", "DonViTinh", "TyLeQuyDoi",
+             "GioToiThieu", "GioToiDa", "YeuCauMinhChung", "HieuLucTu", "HieuLucDen",
+             "MaDonVi", "NguoiTao", "NguoiCapNhat", "TaoLuc", "CapNhatLuc", "TrangThai"
+      FROM "${this.tableName}"
+      ${whereClause}
+      ORDER BY "TenDanhMuc" ASC
+    `;
+
+    const dataParams = [...params];
+    let dataQuery = selectBase;
+
+    if (limit !== undefined) {
+      dataQuery += ` LIMIT $${params.length + 1}`;
+      dataParams.push(limit);
+
+      if (offset !== undefined) {
+        dataQuery += ` OFFSET $${params.length + 2}`;
+        dataParams.push(offset);
+      }
+    }
+
+    const countQuery = `
+      SELECT COUNT(*)::int as count
+      FROM "${this.tableName}"
+      ${whereClause}
+    `;
+
+    const [rows, countRow] = await Promise.all([
+      db.query<DanhMucHoatDong>(dataQuery, dataParams),
+      db.queryOne<{ count: number }>(countQuery, params),
+    ]);
+
+    return {
+      items: rows,
+      total: countRow?.count ?? 0,
+    };
   }
 
   /**

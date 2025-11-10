@@ -12,6 +12,8 @@ vi.mock('@/lib/db/repositories', () => ({
     findGlobal: vi.fn(),
     findByUnit: vi.fn(),
     findAccessible: vi.fn(),
+    filterGlobalCatalog: vi.fn(),
+    filterUnitCatalog: vi.fn(),
     createWithOwnership: vi.fn(),
     updateWithOwnership: vi.fn(),
     softDelete: vi.fn(),
@@ -98,8 +100,8 @@ async function makeRestoreRequest(id: string) {
 const mockGlobalActivity = {
   MaDanhMuc: 'activity-global-1',
   TenDanhMuc: 'Global Activity 1',
-  LoaiHoatDong: 'Hội thảo khoa học',
-  DonViTinh: 'Giờ',
+  LoaiHoatDong: 'HoiThao',
+  DonViTinh: 'gio',
   TyLeQuyDoi: 1.0,
   GioToiThieu: null,
   GioToiDa: null,
@@ -118,8 +120,8 @@ const mockGlobalActivity = {
 const mockUnitActivity = {
   MaDanhMuc: 'activity-unit-1',
   TenDanhMuc: 'Unit Activity 1',
-  LoaiHoatDong: 'Đào tạo nội bộ',
-  DonViTinh: 'Giờ',
+  LoaiHoatDong: 'KhoaHoc',
+  DonViTinh: 'gio',
   TyLeQuyDoi: 1.0,
   GioToiThieu: null,
   GioToiDa: null,
@@ -143,8 +145,8 @@ describe('GET /api/activities - List Activities', () => {
   it('SoYTe can see all global and unit activities', async () => {
     const user = { id: 'soyte-1', username: 'soyte@admin.vn', role: 'SoYTe', unitId: undefined };
     (getCurrentUser as any).mockResolvedValueOnce(user);
-    (danhMucHoatDongRepo.findGlobal as any).mockResolvedValueOnce([mockGlobalActivity]);
-    (danhMucHoatDongRepo.findAll as any).mockResolvedValueOnce([mockGlobalActivity, mockUnitActivity]);
+    (danhMucHoatDongRepo.filterGlobalCatalog as any).mockResolvedValueOnce({ items: [mockGlobalActivity], total: 1 });
+    (danhMucHoatDongRepo.filterUnitCatalog as any).mockResolvedValueOnce({ items: [mockUnitActivity], total: 1 });
 
     const res = await makeGetRequest({ scope: 'all' });
     const json = await res.json();
@@ -154,15 +156,16 @@ describe('GET /api/activities - List Activities', () => {
     expect(json.unit).toHaveLength(1);
     expect(json.permissions.canCreateGlobal).toBe(true);
     expect(json.permissions.canAdoptToGlobal).toBe(true);
+    expect(danhMucHoatDongRepo.filterUnitCatalog).toHaveBeenCalledWith(
+      expect.objectContaining({ includeAllUnits: true })
+    );
   });
 
   it('DonVi can see global activities and their unit activities', async () => {
     const user = { id: 'donvi-1', username: 'donvi@unit1.vn', role: 'DonVi', unitId: 'unit-1' };
     (getCurrentUser as any).mockResolvedValueOnce(user);
-    (danhMucHoatDongRepo.findAccessible as any).mockResolvedValueOnce({
-      global: [mockGlobalActivity],
-      unit: [mockUnitActivity],
-    });
+    (danhMucHoatDongRepo.filterGlobalCatalog as any).mockResolvedValueOnce({ items: [mockGlobalActivity], total: 1 });
+    (danhMucHoatDongRepo.filterUnitCatalog as any).mockResolvedValueOnce({ items: [mockUnitActivity], total: 1 });
 
     const res = await makeGetRequest({ scope: 'all' });
     const json = await res.json();
@@ -173,6 +176,9 @@ describe('GET /api/activities - List Activities', () => {
     expect(json.permissions.canCreateUnit).toBe(true);
     expect(json.permissions.canCreateGlobal).toBe(false);
     expect(json.permissions.canAdoptToGlobal).toBe(false);
+    expect(danhMucHoatDongRepo.filterUnitCatalog).toHaveBeenCalledWith(
+      expect.objectContaining({ unitId: 'unit-1' })
+    );
   });
 
   it('DonVi without unitId gets 403', async () => {
@@ -181,12 +187,13 @@ describe('GET /api/activities - List Activities', () => {
 
     const res = await makeGetRequest();
     expect(res.status).toBe(403);
+    expect(danhMucHoatDongRepo.filterUnitCatalog).not.toHaveBeenCalled();
   });
 
   it('filters by scope=global returns only global activities', async () => {
     const user = { id: 'donvi-1', username: 'donvi@unit1.vn', role: 'DonVi', unitId: 'unit-1' };
     (getCurrentUser as any).mockResolvedValueOnce(user);
-    (danhMucHoatDongRepo.findGlobal as any).mockResolvedValueOnce([mockGlobalActivity]);
+    (danhMucHoatDongRepo.filterGlobalCatalog as any).mockResolvedValueOnce({ items: [mockGlobalActivity], total: 1 });
 
     const res = await makeGetRequest({ scope: 'global' });
     const json = await res.json();
@@ -194,12 +201,13 @@ describe('GET /api/activities - List Activities', () => {
     expect(res.status).toBe(200);
     expect(json.global).toHaveLength(1);
     expect(json.unit).toHaveLength(0);
+    expect(danhMucHoatDongRepo.filterUnitCatalog).not.toHaveBeenCalled();
   });
 
   it('filters by scope=unit returns only unit activities', async () => {
     const user = { id: 'donvi-1', username: 'donvi@unit1.vn', role: 'DonVi', unitId: 'unit-1' };
     (getCurrentUser as any).mockResolvedValueOnce(user);
-    (danhMucHoatDongRepo.findByUnit as any).mockResolvedValueOnce([mockUnitActivity]);
+    (danhMucHoatDongRepo.filterUnitCatalog as any).mockResolvedValueOnce({ items: [mockUnitActivity], total: 1 });
 
     const res = await makeGetRequest({ scope: 'unit' });
     const json = await res.json();
@@ -207,12 +215,13 @@ describe('GET /api/activities - List Activities', () => {
     expect(res.status).toBe(200);
     expect(json.global).toHaveLength(0);
     expect(json.unit).toHaveLength(1);
+    expect(danhMucHoatDongRepo.filterGlobalCatalog).not.toHaveBeenCalled();
   });
 
   it('other roles only see global activities', async () => {
     const user = { id: 'practitioner-1', username: 'prac@unit1.vn', role: 'NguoiHanhNghe', unitId: 'unit-1' };
     (getCurrentUser as any).mockResolvedValueOnce(user);
-    (danhMucHoatDongRepo.findGlobal as any).mockResolvedValueOnce([mockGlobalActivity]);
+    (danhMucHoatDongRepo.filterGlobalCatalog as any).mockResolvedValueOnce({ items: [mockGlobalActivity], total: 1 });
 
     const res = await makeGetRequest();
     const json = await res.json();
@@ -220,6 +229,16 @@ describe('GET /api/activities - List Activities', () => {
     expect(res.status).toBe(200);
     expect(json.global).toHaveLength(1);
     expect(json.unit).toHaveLength(0);
+    expect(danhMucHoatDongRepo.filterUnitCatalog).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 for invalid pagination inputs', async () => {
+    const user = { id: 'donvi-1', username: 'donvi@unit1.vn', role: 'DonVi', unitId: 'unit-1' };
+    (getCurrentUser as any).mockResolvedValueOnce(user);
+
+    const res = await makeGetRequest({ page: '0', limit: '-10' });
+    expect(res.status).toBe(400);
+    expect(danhMucHoatDongRepo.filterGlobalCatalog).not.toHaveBeenCalled();
   });
 });
 
@@ -697,9 +716,10 @@ describe('Pagination Tests', () => {
       TenDanhMuc: `Global Activity ${i}`,
     }));
 
-    // Mock paginated response and count
-    (danhMucHoatDongRepo.findGlobal as any).mockResolvedValueOnce(mockGlobal.slice(0, 10));
-    (danhMucHoatDongRepo.countGlobal as any).mockResolvedValueOnce(100);
+    (danhMucHoatDongRepo.filterGlobalCatalog as any).mockResolvedValueOnce({
+      items: mockGlobal.slice(0, 10),
+      total: 100,
+    });
 
     const res = await makeGetRequest({ scope: 'global', page: '1', limit: '10' });
     const json = await res.json();
@@ -710,7 +730,9 @@ describe('Pagination Tests', () => {
     expect(json.pagination.limit).toBe(10);
     expect(json.pagination.totalGlobal).toBe(100);
     expect(json.pagination.totalPages.global).toBe(10);
-    expect(danhMucHoatDongRepo.findGlobal).toHaveBeenCalledWith({ limit: 10, offset: 0 });
+    expect(danhMucHoatDongRepo.filterGlobalCatalog).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 10, offset: 0 })
+    );
   });
 
   it('paginates to page 2 with correct offset', async () => {
@@ -723,9 +745,10 @@ describe('Pagination Tests', () => {
       TenDanhMuc: `Unit Activity ${i}`,
     }));
 
-    // Mock paginated response and count
-    (danhMucHoatDongRepo.findByUnit as any).mockResolvedValueOnce(mockUnit.slice(10, 20));
-    (danhMucHoatDongRepo.countByUnit as any).mockResolvedValueOnce(50);
+    (danhMucHoatDongRepo.filterUnitCatalog as any).mockResolvedValueOnce({
+      items: mockUnit.slice(10, 20),
+      total: 50,
+    });
 
     const res = await makeGetRequest({ scope: 'unit', page: '2', limit: '10' });
     const json = await res.json();
@@ -736,57 +759,62 @@ describe('Pagination Tests', () => {
     expect(json.pagination.limit).toBe(10);
     expect(json.pagination.totalUnit).toBe(50);
     expect(json.pagination.totalPages.unit).toBe(5);
-    expect(danhMucHoatDongRepo.findByUnit).toHaveBeenCalledWith('unit-1', { limit: 10, offset: 10 });
+    expect(danhMucHoatDongRepo.filterUnitCatalog).toHaveBeenCalledWith(
+      expect.objectContaining({ unitId: 'unit-1', limit: 10, offset: 10 })
+    );
   });
 
   it('handles pagination without limit parameter (uses default 50)', async () => {
     const user = { id: 'soyte-1', username: 'soyte@admin.vn', role: 'SoYTe', unitId: undefined };
     (getCurrentUser as any).mockResolvedValueOnce(user);
 
-    (danhMucHoatDongRepo.findGlobal as any).mockResolvedValueOnce([]);
-    (danhMucHoatDongRepo.countGlobal as any).mockResolvedValueOnce(0);
+    (danhMucHoatDongRepo.filterGlobalCatalog as any).mockResolvedValueOnce({ items: [], total: 0 });
 
     await makeGetRequest({ scope: 'global', page: '1' });
 
-    expect(danhMucHoatDongRepo.findGlobal).toHaveBeenCalledWith({ limit: 50, offset: 0 });
+    expect(danhMucHoatDongRepo.filterGlobalCatalog).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 50, offset: 0 })
+    );
   });
 
   it('handles pagination without page parameter (defaults to page 1)', async () => {
     const user = { id: 'donvi-1', username: 'donvi@unit1.vn', role: 'DonVi', unitId: 'unit-1' };
     (getCurrentUser as any).mockResolvedValueOnce(user);
 
-    (danhMucHoatDongRepo.findByUnit as any).mockResolvedValueOnce([]);
-    (danhMucHoatDongRepo.countByUnit as any).mockResolvedValueOnce(0);
+    (danhMucHoatDongRepo.filterUnitCatalog as any).mockResolvedValueOnce({ items: [], total: 0 });
 
     await makeGetRequest({ scope: 'unit', limit: '20' });
 
-    expect(danhMucHoatDongRepo.findByUnit).toHaveBeenCalledWith('unit-1', { limit: 20, offset: 0 });
+    expect(danhMucHoatDongRepo.filterUnitCatalog).toHaveBeenCalledWith(
+      expect.objectContaining({ unitId: 'unit-1', limit: 20, offset: 0 })
+    );
   });
 
-  it('calls countByUnit with null for all units (SoYTe)', async () => {
+  it('requests all unit activities for SoYTe tenants', async () => {
     const user = { id: 'soyte-1', username: 'soyte@admin.vn', role: 'SoYTe', unitId: undefined };
     (getCurrentUser as any).mockResolvedValueOnce(user);
 
-    (danhMucHoatDongRepo.findAll as any).mockResolvedValueOnce([]);
-    (danhMucHoatDongRepo.countByUnit as any).mockResolvedValueOnce(0);
+    (danhMucHoatDongRepo.filterUnitCatalog as any).mockResolvedValueOnce({ items: [], total: 0 });
 
     await makeGetRequest({ scope: 'unit', page: '1', limit: '10' });
 
-    expect(danhMucHoatDongRepo.countByUnit).toHaveBeenCalledWith(null); // All units
+    expect(danhMucHoatDongRepo.filterUnitCatalog).toHaveBeenCalledWith(
+      expect.objectContaining({ includeAllUnits: true, limit: 10, offset: 0 })
+    );
   });
 
   it('returns correct pagination metadata for "all" scope', async () => {
     const user = { id: 'donvi-1', username: 'donvi@unit1.vn', role: 'DonVi', unitId: 'unit-1' };
     (getCurrentUser as any).mockResolvedValueOnce(user);
 
-    const accessible = {
-      global: [mockGlobalActivity],
-      unit: [mockUnitActivity],
-    };
-
-    (danhMucHoatDongRepo.findAccessible as any).mockResolvedValueOnce(accessible);
-    (danhMucHoatDongRepo.countGlobal as any).mockResolvedValueOnce(1);
-    (danhMucHoatDongRepo.countByUnit as any).mockResolvedValueOnce(1);
+    (danhMucHoatDongRepo.filterGlobalCatalog as any).mockResolvedValueOnce({
+      items: [mockGlobalActivity],
+      total: 1,
+    });
+    (danhMucHoatDongRepo.filterUnitCatalog as any).mockResolvedValueOnce({
+      items: [mockUnitActivity],
+      total: 1,
+    });
 
     const res = await makeGetRequest({ scope: 'all', page: '1', limit: '10' });
     const json = await res.json();
