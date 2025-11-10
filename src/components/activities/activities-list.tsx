@@ -299,7 +299,7 @@ export function ActivitiesList({
 
         {/* Activities Table */}
         <TabsContent value={activeTab} className="mt-0">
-        <GlassCard className="overflow-hidden">
+        <GlassCard className="!bg-white dark:!bg-slate-900 !backdrop-blur-none !border-slate-200 dark:!border-slate-700 shadow-lg">
         {isLoading ? (
           <div className="p-12">
             <LoadingNotice message="Đang tải danh mục hoạt động..." />
