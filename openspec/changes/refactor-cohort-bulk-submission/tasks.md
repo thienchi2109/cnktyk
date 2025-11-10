@@ -120,7 +120,7 @@
 - [x] 6.1.3 Include activity info, counts, filters
 - [x] 6.1.4 Store sample practitioner IDs (first 10)
 - [x] 6.1.5 Add timestamp and actor information
-- [ ] 6.1.6 Test audit log retrieval
+- [x] 6.1.6 Test audit log retrieval
 - [x] 6.1.7 Use `nhatKyHeThongRepo.logAction` helper instead of ad-hoc writes
 
 ## 7. Database Optimization
@@ -135,21 +135,21 @@
 ## 8. Testing
 
 ### 8.1 Unit Tests
-- [ ] 8.1.1 Test `bulkCreate()` repository method
-- [ ] 8.1.2 Test cohort resolution logic (all/manual modes)
-- [ ] 8.1.3 Test duplicate detection
-- [ ] 8.1.4 Test tenancy validation (DonVi cannot cross units)
-- [ ] 8.1.5 Test status assignment (YeuCauMinhChung logic)
-- [ ] 8.1.6 Test credit calculation with/without evidence
-- [ ] 8.1.7 Test batch processing (>500 submissions)
+- [x] 8.1.1 Test `bulkCreate()` repository method
+- [x] 8.1.2 Test cohort resolution logic (all/manual modes)
+- [x] 8.1.3 Test duplicate detection
+- [x] 8.1.4 Test tenancy validation (DonVi cannot cross units)
+- [x] 8.1.5 Test status assignment (YeuCauMinhChung logic)
+- [x] 8.1.6 Test credit calculation with/without evidence
+- [x] 8.1.7 Test batch processing (>500 submissions)
 
 ### 8.2 Integration Tests
-- [ ] 8.2.1 Test full bulk create API endpoint (happy path)
-- [ ] 8.2.2 Test duplicate handling (skip existing)
-- [ ] 8.2.3 Test authorization (DonVi vs SoYTe)
-- [ ] 8.2.4 Test error cases (invalid activity, invalid practitioners)
-- [ ] 8.2.5 Test audit log creation
-- [ ] 8.2.6 Test credit calculation on approval
+- [x] 8.2.1 Test full bulk create API endpoint (happy path)
+- [x] 8.2.2 Test duplicate handling (skip existing)
+- [x] 8.2.3 Test authorization (DonVi vs SoYTe)
+- [x] 8.2.4 Test error cases (invalid activity, invalid practitioners)
+- [x] 8.2.5 Test audit log creation
+- [x] 8.2.6 Test credit calculation on approval
 
 ### 8.3 E2E Tests (Optional)
 - [ ] 8.3.1 Test wizard flow: Activity → Cohort → Confirm
