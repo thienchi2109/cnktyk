@@ -187,7 +187,6 @@ export const GhiNhanHoatDongSchema = z.object({
   MaNhanVien: UUIDSchema,
   MaDanhMuc: UUIDSchema.nullable(),
   TenHoatDong: z.string().min(1, 'Activity name is required'),
-  VaiTro: z.string().nullable(),
   // Migration 003 fields
   HinhThucCapNhatKienThucYKhoa: z.string().nullable(),
   ChiTietVaiTro: z.string().nullable(),
@@ -198,9 +197,6 @@ export const GhiNhanHoatDongSchema = z.object({
   BangChungSoGiayChungNhan: z.string().nullable(),
   SoGioTinChiQuyDoi: z.number().min(0, 'Credits must be non-negative'),
   FileMinhChungUrl: z.string().url().nullable().or(z.literal('')),
-  FileMinhChungETag: z.string().nullable(),
-  FileMinhChungSha256: z.string().nullable(),
-  FileMinhChungSize: z.number().int().min(0).nullable(),
   NguoiNhap: UUIDSchema,
   CreationMethod: CreationMethodSchema.default('individual'),
   TrangThaiDuyet: TrangThaiDuyetSchema.default('ChoDuyet'),

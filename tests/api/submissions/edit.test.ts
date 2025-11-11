@@ -49,7 +49,7 @@ const mockSubmission = {
   MaGhiNhan: 'submission-1',
   MaNhanVien: 'practitioner-1',
   TenHoatDong: 'Original Activity',
-  VaiTro: 'Tham gia',
+  ChiTietVaiTro: 'Tham gia',
   TrangThaiDuyet: 'ChoDuyet',
   SoGioTinChiQuyDoi: 5.0,
   SoTiet: 10,

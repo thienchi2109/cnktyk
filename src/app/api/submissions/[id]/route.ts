@@ -284,7 +284,6 @@ export async function PATCH(
     // Validate input - define editable fields
     const editSchema = z.object({
       TenHoatDong: z.string().min(1, 'Activity name is required').optional(),
-      VaiTro: z.string().nullable().optional(),
       HinhThucCapNhatKienThucYKhoa: z.string().nullable().optional(),
       ChiTietVaiTro: z.string().nullable().optional(),
       DonViToChuc: z.string().nullable().optional(),
@@ -294,9 +293,6 @@ export async function PATCH(
       BangChungSoGiayChungNhan: z.string().nullable().optional(),
       SoGioTinChiQuyDoi: z.number().min(0, 'Credits must be non-negative').optional(),
       FileMinhChungUrl: z.string().url().nullable().or(z.literal('')).optional(),
-      FileMinhChungETag: z.string().nullable().optional(),
-      FileMinhChungSha256: z.string().nullable().optional(),
-      FileMinhChungSize: z.number().int().min(0).nullable().optional(),
       MaDanhMuc: z.string().uuid().nullable().optional(),
     }).refine(
       (data) => {
