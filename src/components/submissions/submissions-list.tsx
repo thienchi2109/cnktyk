@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import type { MouseEvent } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -44,6 +45,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useSubmissions, useBulkApproveSubmissions, useBulkDeleteSubmissions } from '@/hooks/use-submissions';
 import { useDeleteSubmissionMutation } from '@/hooks/use-submission';
+import { useEvidenceFile } from '@/hooks/use-evidence-file';
 
 interface Submission {
   MaGhiNhan: string;
@@ -129,12 +131,14 @@ export function SubmissionsList({
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [activeEvidenceSubmissionId, setActiveEvidenceSubmissionId] = useState<string | null>(null);
 
   const reviewerRole = ['DonVi', 'SoYTe'].includes(userRole);
   const bulkApprove = useBulkApproveSubmissions();
   const bulkDelete = useBulkDeleteSubmissions();
   const deleteMutation = useDeleteSubmissionMutation();
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const evidenceFile = useEvidenceFile();
 
   const { data, isLoading, error } = useSubmissions({
     page,
@@ -250,18 +254,46 @@ export function SubmissionsList({
     }
   };
 
-  const handleDownloadEvidence = async (submission: Submission) => {
+  const getSubmissionFileName = (url: string): string => {
+    try {
+      const sanitized = url.split('?')[0] || '';
+      const segments = sanitized.split('/');
+      return decodeURIComponent(segments.pop() || 'evidence');
+    } catch {
+      return 'evidence';
+    }
+  };
+
+  const handleViewEvidence = async (
+    event: MouseEvent<HTMLButtonElement>,
+    submission: Submission
+  ) => {
+    event.stopPropagation();
     if (!submission.FileMinhChungUrl) return;
 
+    setActiveEvidenceSubmissionId(submission.MaGhiNhan);
     try {
-      const response = await fetch(`${submission.FileMinhChungUrl}?action=signed-url`);
-      const data = await response.json();
-      
-      if (data.signedUrl) {
-        window.open(data.signedUrl, '_blank');
-      }
-    } catch (error) {
-      console.error('Failed to download evidence:', error);
+      await evidenceFile.viewFile(submission.FileMinhChungUrl);
+    } finally {
+      setActiveEvidenceSubmissionId(null);
+    }
+  };
+
+  const handleDownloadEvidence = async (
+    event: MouseEvent<HTMLButtonElement>,
+    submission: Submission
+  ) => {
+    event.stopPropagation();
+    if (!submission.FileMinhChungUrl) return;
+
+    setActiveEvidenceSubmissionId(submission.MaGhiNhan);
+    try {
+      await evidenceFile.downloadFile(
+        submission.FileMinhChungUrl,
+        getSubmissionFileName(submission.FileMinhChungUrl)
+      );
+    } finally {
+      setActiveEvidenceSubmissionId(null);
     }
   };
 
@@ -480,7 +512,12 @@ export function SubmissionsList({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200/50">
-                  {filteredSubmissions.map((submission) => (
+{filteredSubmissions.map((submission) => {
+                    const isActiveEvidenceRow = activeEvidenceSubmissionId === submission.MaGhiNhan;
+                    const isViewingEvidence = isActiveEvidenceRow && evidenceFile.activeAction === 'view';
+                    const isDownloadingEvidence = isActiveEvidenceRow && evidenceFile.activeAction === 'download';
+
+                    return (
                     <tr
                       key={submission.MaGhiNhan}
                       className="hover:bg-gray-50/30 transition-colors cursor-pointer"
@@ -594,41 +631,83 @@ export function SubmissionsList({
                       
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end gap-2">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <GlassButton
+                            size="sm"
+                            variant="secondary"
+                            aria-label="Xem chi ti?t ho?t d?ng"
+                            title="Xem chi ti?t ho?t d?ng"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewSubmission(submission.MaGhiNhan);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </GlassButton>
+
+                          {submission.FileMinhChungUrl && (
+                            <>
                               <GlassButton
                                 size="sm"
                                 variant="secondary"
+                                aria-label="Xem minh ch?ng"
+                                title="Xem minh ch?ng"
+                                disabled={evidenceFile.isLoading}
+                                onClick={(event) => handleViewEvidence(event, submission)}
                               >
-                                <MoreHorizontal className="h-4 w-4" />
+                                {isViewingEvidence ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <FileText className="h-4 w-4" />
+                                )}
                               </GlassButton>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleViewSubmission(submission.MaGhiNhan); }}>
-                                <Eye className="h-4 w-4 mr-2" />
-                                Xem
-                              </DropdownMenuItem>
-                              {submission.FileMinhChungUrl && (
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDownloadEvidence(submission); }}>
-                                  <Download className="h-4 w-4 mr-2" />
-                                  Tải xuống
-                                </DropdownMenuItem>
-                              )}
-                              {canDelete(submission) && (
+
+                              <GlassButton
+                                size="sm"
+                                className="bg-medical-green text-white hover:bg-medical-green/90"
+                                aria-label="T?i xu?ng minh ch?ng"
+                                title="T?i xu?ng minh ch?ng"
+                                disabled={evidenceFile.isLoading}
+                                onClick={(event) => handleDownloadEvidence(event, submission)}
+                              >
+                                {isDownloadingEvidence ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Download className="h-4 w-4" />
+                                )}
+                              </GlassButton>
+                            </>
+                          )}
+
+                          {canDelete(submission) && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <GlassButton
+                                  size="sm"
+                                  variant="secondary"
+                                  aria-label="T�y ch?n kh�c"
+                                  title="T�y ch?n kh�c"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </GlassButton>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
                                 <DropdownMenuItem
                                   onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(submission.MaGhiNhan); }}
                                   destructive
                                 >
                                   <Trash2 className="h-4 w-4 mr-2" />
-                                  Xóa
+                                  X�a
                                 </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
                         </div>
                       </td>
+
                     </tr>
-                  ))}
+                  );
+                  })}
                 </tbody>
               </table>
             </div>

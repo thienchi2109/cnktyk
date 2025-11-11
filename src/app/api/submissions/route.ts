@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 import { getCurrentUser } from '@/lib/auth/server';
 import { ghiNhanHoatDongRepo, danhMucHoatDongRepo, nhanVienRepo } from '@/lib/db/repositories';
 import { CreateGhiNhanHoatDong } from '@/lib/db/schemas';
@@ -119,8 +120,9 @@ export async function GET(request: NextRequest) {
 
 // POST /api/submissions - Create new activity submission
 export async function POST(request: NextRequest) {
+  let user: Awaited<ReturnType<typeof getCurrentUser>> | null = null;
   try {
-    const user = await getCurrentUser();
+    user = await getCurrentUser();
     if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -128,8 +130,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const activeUser = user;
+
     // Only practitioners and unit admins can submit activities
-    if (!['NguoiHanhNghe', 'DonVi'].includes(user.role)) {
+    if (!['NguoiHanhNghe', 'DonVi'].includes(activeUser.role)) {
       return NextResponse.json(
         { error: 'Insufficient permissions' },
         { status: 403 }
@@ -160,20 +164,20 @@ export async function POST(request: NextRequest) {
     // Find practitioner
     let practitionerId = validatedData.MaNhanVien;
     
-    if (user.role === 'NguoiHanhNghe') {
+    if (activeUser.role === 'NguoiHanhNghe') {
       // For practitioners, prefer direct FK mapping on the account
       const { db } = await import('@/lib/db/client');
       const link = await db.queryOne<{ MaNhanVien: string }>(
         'SELECT "MaNhanVien" FROM "TaiKhoan" WHERE "MaTaiKhoan" = $1 AND "MaNhanVien" IS NOT NULL LIMIT 1',
-        [user.id]
+        [activeUser.id]
       );
 
       if (link?.MaNhanVien) {
         practitionerId = link.MaNhanVien;
       } else {
         // Fallback to email-based lookup within unit if mapping not present
-        const practitioners = await nhanVienRepo.findByUnit(user.unitId || '');
-        const userPractitioner = practitioners.find(p => p.Email && p.Email.toLowerCase() === user.username.toLowerCase());
+        const practitioners = await nhanVienRepo.findByUnit(activeUser.unitId || '');
+        const userPractitioner = practitioners.find(p => p.Email && p.Email.toLowerCase() === activeUser.username.toLowerCase());
         if (!userPractitioner) {
           return NextResponse.json(
             { error: 'Practitioner profile not found' },
@@ -195,25 +199,25 @@ export async function POST(request: NextRequest) {
     }
 
     // Create submission with new schema
-    const submissionData = {
+    const submissionData: CreateGhiNhanHoatDong = {
       MaNhanVien: practitionerId,
-      MaDanhMuc: validatedData.MaDanhMuc || null,
+      MaDanhMuc: validatedData.MaDanhMuc ?? null,
       TenHoatDong: validatedData.TenHoatDong,
-      FileMinhChungUrl: validatedData.FileMinhChungUrl || null,
-      NguoiNhap: user.id,
-      CreationMethod: 'individual' as const,
-      TrangThaiDuyet: 'ChoDuyet' as const,
-      GhiChuDuyet: validatedData.GhiChuDuyet || null,
-      // Extended fields from Migration 003
-      HinhThucCapNhatKienThucYKhoa: validatedData.HinhThucCapNhatKienThucYKhoa || null,
-      ChiTietVaiTro: validatedData.ChiTietVaiTro || null,
-      DonViToChuc: validatedData.DonViToChuc || null,
+      FileMinhChungUrl: validatedData.FileMinhChungUrl ?? null,
+      NguoiNhap: activeUser.id,
+      CreationMethod: 'individual',
+      TrangThaiDuyet: 'ChoDuyet',
+      GhiChuDuyet: validatedData.GhiChuDuyet ?? null,
+      HinhThucCapNhatKienThucYKhoa: validatedData.HinhThucCapNhatKienThucYKhoa ?? null,
+      ChiTietVaiTro: validatedData.ChiTietVaiTro ?? null,
+      DonViToChuc: validatedData.DonViToChuc ?? null,
       NgayBatDau: validatedData.NgayBatDau ? new Date(validatedData.NgayBatDau) : null,
       NgayKetThuc: validatedData.NgayKetThuc ? new Date(validatedData.NgayKetThuc) : null,
-      SoTiet: validatedData.SoTiet || null,
+      SoTiet: validatedData.SoTiet ?? null,
       SoGioTinChiQuyDoi: calculatedCredits,
-      BangChungSoGiayChungNhan: validatedData.BangChungSoGiayChungNhan || null,
-    } as any; // Temporary workaround for type mismatch
+      BangChungSoGiayChungNhan: validatedData.BangChungSoGiayChungNhan ?? null,
+      NgayDuyet: null,
+    };
 
     const submission = await ghiNhanHoatDongRepo.create(submissionData);
 
@@ -242,17 +246,49 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
 
   } catch (error) {
-    console.error('Activity submission error:', error);
-    
+    const requestId = randomUUID();
+    const baseLog = {
+      requestId,
+      userId: user?.id ?? null,
+      role: user?.role ?? null,
+      message: error instanceof Error ? error.message : String(error),
+    };
+
     if (error instanceof z.ZodError) {
+      console.error('Activity submission validation error', {
+        ...baseLog,
+        issues: error.issues,
+      });
+
       return NextResponse.json(
-        { error: 'Validation error', details: error.issues },
+        { error: 'Validation error', details: error.issues, requestId },
         { status: 400 }
       );
     }
 
+    const isSchemaMismatch =
+      error instanceof Error && /column\s+"?[a-zA-Z0-9_]+"?\s+does not exist/i.test(error.message);
+
+    if (isSchemaMismatch) {
+      console.error('Submission schema mismatch detected', baseLog);
+
+      return NextResponse.json(
+        {
+          error: 'Không thể lưu hoạt động do hệ thống đang được cập nhật. Vui lòng thử lại sau.',
+          errorCode: 'submission_schema_mismatch',
+          requestId,
+        },
+        { status: 500 }
+      );
+    }
+
+    console.error('Activity submission error', baseLog);
+
     return NextResponse.json(
-      { error: 'Internal server error' },
+      {
+        error: 'Internal server error',
+        requestId,
+      },
       { status: 500 }
     );
   }

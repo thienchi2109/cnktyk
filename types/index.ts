@@ -26,23 +26,23 @@ export interface NhanVien {
 export interface GhiNhanHoatDong {
   MaGhiNhan: string;       // UUID primary key
   MaNhanVien: string;      // Practitioner ID
-  MaDanhMuc?: string;      // Activity catalog ID
+  MaDanhMuc?: string | null;      // Activity catalog ID
   TenHoatDong: string;     // Activity name
-  VaiTro?: string;         // Role in activity
-  ThoiGianBatDau?: Date;   // Start time
-  ThoiGianKetThuc?: Date;  // End time
-  SoGio?: number;          // Hours
-  SoTinChiQuyDoi: number;  // Converted credits
-  FileMinhChungUrl?: string;     // Evidence file URL
-  FileMinhChungETag?: string;    // File ETag
-  FileMinhChungSha256?: string;  // File checksum
-  FileMinhChungSize?: number;    // File size
+  HinhThucCapNhatKienThucYKhoa?: string | null;
+  ChiTietVaiTro?: string | null;
+  DonViToChuc?: string | null;
+  NgayBatDau?: Date | null;
+  NgayKetThuc?: Date | null;
+  SoTiet?: number | null;
+  SoGioTinChiQuyDoi: number;  // Converted credits
+  FileMinhChungUrl?: string | null;     // Evidence file URL
+  BangChungSoGiayChungNhan?: string | null;
   NguoiNhap: string;       // Submitter ID
+  CreationMethod: 'individual' | 'bulk' | 'api_import' | 'migration' | 'system';
   TrangThaiDuyet: 'ChoDuyet' | 'DaDuyet' | 'TuChoi';
-  ThoiGianDuyet?: Date;    // Approval timestamp
-  GhiChu?: string;         // Comments
-  CreatedAt: Date;
-  UpdatedAt: Date;
+  NgayDuyet?: Date | null;    // Approval timestamp
+  GhiChuDuyet?: string | null;         // Comments
+  NgayGhiNhan: Date;
 }
 
 export interface DonVi {

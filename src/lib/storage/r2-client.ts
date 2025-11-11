@@ -3,7 +3,16 @@
  * Handles file upload, download, and management operations
  */
 
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand, ListObjectsV2Command, ListObjectsV2CommandOutput } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+  HeadObjectCommand,
+  ListObjectsV2Command,
+  type ListObjectsV2CommandOutput,
+  type GetObjectCommandInput,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Readable } from 'stream';
 import { ReadableStream as WebReadableStream } from 'stream/web';
@@ -133,18 +142,47 @@ class R2StorageClient {
     }
   }
 
+  private resolveDownloadName(filename: string): string {
+    const lastSegment = filename.split('/').filter(Boolean).pop();
+    if (!lastSegment) {
+      return 'download';
+    }
+
+    // Remove CRLF characters to avoid header injection and trim whitespace
+    return lastSegment.replace(/[\r\n]/g, '').trim() || 'download';
+  }
+
+  private buildContentDisposition(filename: string, disposition: 'inline' | 'attachment'): string {
+    if (disposition === 'attachment') {
+      const safeName = this.resolveDownloadName(filename).replace(/"/g, "'");
+      const encodedName = encodeURIComponent(safeName).replace(/'/g, '%27');
+      return `attachment; filename="${safeName}"; filename*=UTF-8''${encodedName}`;
+    }
+    return 'inline';
+  }
+
   /**
    * Get a signed URL for secure file access
+   * @param filename - Object key stored in R2
+   * @param expiresIn - Expiration window for the signed URL
+   * @param disposition - Content disposition mode ('inline' | 'attachment')
    */
-  async getSignedUrl(filename: string, expiresIn: number = 3600): Promise<string> {
+  async getSignedUrl(
+    filename: string,
+    expiresIn: number = 3600,
+    disposition: 'inline' | 'attachment' = 'inline'
+  ): Promise<string> {
     if (!this.isConfigured || !this.client) {
       throw new Error('Cloudflare R2 is not configured. File access functionality is disabled.');
     }
 
-    const command = new GetObjectCommand({
+    const commandParams: GetObjectCommandInput = {
       Bucket: this.bucketName,
       Key: filename,
-    });
+      ResponseContentDisposition: this.buildContentDisposition(filename, disposition),
+    };
+
+    const command = new GetObjectCommand(commandParams);
 
     return await getSignedUrl(this.client, command, { expiresIn });
   }

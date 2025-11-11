@@ -1,7 +1,7 @@
 # Implementation Tasks: Fix Evidence Download and Add View
 
 **Change ID:** `fix-evidence-download-add-view`
-**Status:** Not Started
+**Status:** In Progress
 **Created:** 2025-11-10
 
 ---
@@ -10,39 +10,39 @@
 
 ### Storage Layer Changes
 
-- [ ] **Update r2-client.ts getSignedUrl() method**
-  - [ ] Add `disposition` parameter: `'inline' | 'attachment' = 'inline'`
-  - [ ] Implement Content-Disposition header logic for attachment mode
-  - [ ] Implement Content-Disposition header logic for inline mode
-  - [ ] Add filename extraction from path (handle `/` separators)
-  - [ ] Add RFC 6266 compliant filename encoding (ASCII + UTF-8)
-  - [ ] Handle Unicode characters in filenames
-  - [ ] Handle special characters (spaces, quotes, slashes)
-  - [ ] Ensure backward compatibility (default disposition='inline')
-  - [ ] Update JSDoc comments with parameter descriptions
+- [x] **Update r2-client.ts getSignedUrl() method**
+  - [x] Add `disposition` parameter: `'inline' | 'attachment' = 'inline'`
+  - [x] Implement Content-Disposition header logic for attachment mode
+  - [x] Implement Content-Disposition header logic for inline mode
+  - [x] Add filename extraction from path (handle `/` separators)
+  - [x] Add RFC 6266 compliant filename encoding (ASCII + UTF-8)
+  - [x] Handle Unicode characters in filenames
+  - [x] Handle special characters (spaces, quotes, slashes)
+  - [x] Ensure backward compatibility (default disposition='inline')
+  - [x] Update JSDoc comments with parameter descriptions
 
 ### API Endpoint Changes
 
-- [ ] **Update /api/files/[...filename]/route.ts**
-  - [ ] Extract `disposition` query parameter from request
-  - [ ] Validate disposition value (attachment | inline | undefined)
-  - [ ] Default to 'inline' if missing or invalid
-  - [ ] Pass disposition to `r2Client.getSignedUrl()`
-  - [ ] Update API response structure (unchanged, verify)
-  - [ ] Update error handling (unchanged, verify)
+- [x] **Update /api/files/[...filename]/route.ts**
+  - [x] Extract `disposition` query parameter from request
+  - [x] Validate disposition value (attachment | inline | undefined)
+  - [x] Default to 'inline' if missing or invalid
+  - [x] Pass disposition to `r2Client.getSignedUrl()`
+  - [x] Update API response structure (unchanged, verify)
+  - [x] Update error handling (unchanged, verify)
 
 ### Backend Testing
 
-- [ ] **Unit tests for r2-client.ts**
-  - [ ] Test: disposition='attachment' includes Content-Disposition: attachment
-  - [ ] Test: disposition='inline' includes Content-Disposition: inline
-  - [ ] Test: default (no parameter) uses 'inline'
-  - [ ] Test: Unicode filename "Báo cáo.pdf" encoded correctly
-  - [ ] Test: Filename with spaces "My Report.pdf" encoded correctly
-  - [ ] Test: Filename with quotes 'Report "Final".pdf' encoded correctly
-  - [ ] Test: Filename with special chars "#report@2024.pdf" encoded correctly
-  - [ ] Test: Edge case - empty filename defaults to "download"
-  - [ ] Test: Edge case - filename with path "folder/file.pdf" extracts "file.pdf"
+- [x] **Unit tests for r2-client.ts**
+  - [x] Test: disposition='attachment' includes Content-Disposition: attachment
+  - [x] Test: disposition='inline' includes Content-Disposition: inline
+  - [x] Test: default (no parameter) uses 'inline'
+  - [x] Test: Unicode filename "Báo cáo.pdf" encoded correctly
+  - [x] Test: Filename with spaces "My Report.pdf" encoded correctly
+  - [x] Test: Filename with quotes 'Report "Final".pdf' encoded correctly
+  - [x] Test: Filename with special chars "#report@2024.pdf" encoded correctly
+  - [x] Test: Edge case - empty filename defaults to "download"
+  - [x] Test: Edge case - filename with path "folder/file.pdf" extracts "file.pdf"
 
 - [ ] **Integration tests for API endpoint**
   - [ ] Test: GET with disposition=attachment returns signed URL with attachment header
@@ -68,38 +68,38 @@
 
 ### New Hook Implementation
 
-- [ ] **Create src/hooks/use-evidence-file.ts**
-  - [ ] Define `FileAction` type: 'download' | 'view'
-  - [ ] Implement `useEvidenceFile()` hook
-  - [ ] Add `isLoading` state
-  - [ ] Implement `handleFileAction(fileUrl, action, filename?)` function
-  - [ ] Implement `downloadFile(fileUrl, filename?)` wrapper
-  - [ ] Implement `viewFile(fileUrl)` wrapper
-  - [ ] Add error handling with toast notifications
-  - [ ] Add popup blocker detection (check if `window.open()` returns null)
-  - [ ] Add loading state management (setIsLoading)
-  - [ ] Add try-catch with console.error logging
+- [x] **Create src/hooks/use-evidence-file.ts**
+  - [x] Define `FileAction` type: 'download' | 'view'
+  - [x] Implement `useEvidenceFile()` hook
+  - [x] Add `isLoading` state
+  - [x] Implement `handleFileAction(fileUrl, action, filename?)` function
+  - [x] Implement `downloadFile(fileUrl, filename?)` wrapper
+  - [x] Implement `viewFile(fileUrl)` wrapper
+  - [x] Add error handling with toast notifications
+  - [x] Add popup blocker detection (check if `window.open()` returns null)
+  - [x] Add loading state management (setIsLoading)
+  - [x] Add try-catch with console.error logging
 
 ### Hook Testing
 
-- [ ] **Unit tests for use-evidence-file.ts**
-  - [ ] Test: `downloadFile()` calls fetch with disposition=attachment
-  - [ ] Test: `viewFile()` calls fetch with disposition=inline
-  - [ ] Test: `isLoading` becomes true during operation
-  - [ ] Test: `isLoading` becomes false after success
-  - [ ] Test: `isLoading` becomes false after error
-  - [ ] Test: Error shows toast notification
-  - [ ] Test: Popup blocker shows warning toast
-  - [ ] Test: Network error shows toast with retry message
-  - [ ] Test: File not found (404) shows appropriate toast
-  - [ ] Test: Missing fileUrl shows error toast
+- [x] **Unit tests for use-evidence-file.ts**
+  - [x] Test: `downloadFile()` calls fetch with disposition=attachment
+  - [x] Test: `viewFile()` calls fetch with disposition=inline
+  - [x] Test: `isLoading` becomes true during operation
+  - [x] Test: `isLoading` becomes false after success
+  - [x] Test: `isLoading` becomes false after error
+  - [x] Test: Error shows toast notification
+  - [x] Test: Popup blocker shows warning toast
+  - [x] Test: Network error shows toast with retry message
+  - [x] Test: File not found (404) shows appropriate toast
+  - [x] Test: Missing fileUrl shows error toast
 
-- [ ] **Integration tests**
-  - [ ] Test: Complete download flow (fetch → open → success)
-  - [ ] Test: Complete view flow (fetch → open → success)
-  - [ ] Test: Error flow (fetch fails → toast shown)
-  - [ ] Mock `window.open()` and verify it's called with signed URL
-  - [ ] Mock `fetch()` and verify correct API calls
+- [x] **Integration tests**
+  - [x] Test: Complete download flow (fetch → open → success)
+  - [x] Test: Complete view flow (fetch → open → success)
+  - [x] Test: Error flow (fetch fails → toast shown)
+  - [x] Mock `window.open()` and verify it's called with signed URL
+  - [x] Mock `fetch()` and verify correct API calls
 
 ---
 
@@ -108,18 +108,18 @@
 ### Component Updates
 
 - [ ] **Update src/components/submissions/submissions-list.tsx**
-  - [ ] Import `useEvidenceFile` hook
-  - [ ] Import `FileText` icon from lucide-react
-  - [ ] Initialize hook: `const evidenceFile = useEvidenceFile()`
-  - [ ] Remove old `handleDownloadEvidence` function (lines 201-214)
-  - [ ] Update action buttons section (lines 523-543)
-  - [ ] Add View button with FileText icon
-  - [ ] Update Download button to use `evidenceFile.downloadFile()`
-  - [ ] Add tooltip "Xem minh chứng" for View button
-  - [ ] Add tooltip "Tải xuống minh chứng" for Download button
-  - [ ] Add `disabled={evidenceFile.isLoading}` to both buttons
-  - [ ] Add `onClick={(e) => e.stopPropagation()}` to prevent row click
-  - [ ] Add title attributes for accessibility
+  - [x] Import `useEvidenceFile` hook
+  - [x] Import `FileText` icon from lucide-react
+  - [x] Initialize hook: `const evidenceFile = useEvidenceFile()`
+  - [x] Remove old `handleDownloadEvidence` function (lines 201-214)
+  - [x] Update action buttons section (lines 523-543)
+  - [x] Add View button with FileText icon
+  - [x] Update Download button to use `evidenceFile.downloadFile()`
+  - [x] Add tooltip "Xem minh chứng" for View button
+  - [x] Add tooltip "Tải xuống minh chứng" for Download button
+  - [x] Add `disabled={evidenceFile.isLoading}` to both buttons
+  - [x] Add `onClick={(e) => e.stopPropagation()}` to prevent row click
+  - [x] Add title attributes for accessibility
   - [ ] Test button spacing and alignment
 
 ### UI Polish
@@ -133,8 +133,8 @@
   - [ ] Test with long activity names (button alignment)
 
 - [ ] **Accessibility**
-  - [ ] Add aria-label to View file button
-  - [ ] Add aria-label to Download button
+  - [x] Add aria-label to View file button
+  - [x] Add aria-label to Download button
   - [ ] Test keyboard navigation (Tab, Enter)
   - [ ] Test screen reader announcements
   - [ ] Ensure disabled state is announced
@@ -166,25 +166,25 @@
 ### Component Updates
 
 - [ ] **Update src/components/submissions/submission-review.tsx**
-  - [ ] Import `useEvidenceFile` hook
-  - [ ] Import `Eye` icon from lucide-react (for View button)
-  - [ ] Initialize hook: `const evidenceFile = useEvidenceFile()`
-  - [ ] Remove old `handleDownloadEvidence` function (lines 132-145)
-  - [ ] Update evidence section (lines 356-380)
-  - [ ] Add file metadata display (extension, filename)
-  - [ ] Implement `getFileName()` helper function
-  - [ ] Implement `getFileExtension()` helper function
-  - [ ] Add View button with Eye icon and "Xem" label
-  - [ ] Update Download button to use `evidenceFile.downloadFile()`
-  - [ ] Update Download button label to "Tải xuống"
-  - [ ] Add `disabled={evidenceFile.isLoading}` to both buttons
-  - [ ] Style View button as outline variant
-  - [ ] Style Download button with medical-green background
-  - [ ] Add button container with flex layout (gap-2)
+  - [x] Import `useEvidenceFile` hook
+  - [x] Import `Eye` icon from lucide-react (for View button)
+  - [x] Initialize hook: `const evidenceFile = useEvidenceFile()`
+  - [x] Remove old `handleDownloadEvidence` function (lines 132-145)
+  - [x] Update evidence section (lines 356-380)
+  - [x] Add file metadata display (extension, filename)
+  - [x] Implement `getFileName()` helper function
+  - [x] Implement `getFileExtension()` helper function
+  - [x] Add View button with Eye icon and "Xem" label
+  - [x] Update Download button to use `evidenceFile.downloadFile()`
+  - [x] Update Download button label to "Tải xuống"
+  - [x] Add `disabled={evidenceFile.isLoading}` to both buttons
+  - [x] Style View button as outline variant
+  - [x] Style Download button with medical-green background
+  - [x] Add button container with flex layout (gap-2)
 
 ### Helper Functions
 
-- [ ] **Implement file metadata helpers**
+- [x] **Implement file metadata helpers**
   ```typescript
   const getFileName = (url: string) => {
     return decodeURIComponent(url.split('/').pop() || 'file');

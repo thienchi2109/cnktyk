@@ -16,3 +16,4 @@ export { GlassProgress, GlassCircularProgress } from './glass-progress';
 export { Button } from './button';
 export { Label } from './label';
 export { Alert } from './alert';
+export { Toaster } from './toaster';

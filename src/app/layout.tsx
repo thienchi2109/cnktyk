@@ -30,6 +30,7 @@ const systemMonoFonts = [
 
 import { AuthProvider } from "@/components/providers/session-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { Toaster } from "@/components/ui/toaster";
 import { auth } from "@/lib/auth";
 
 export const metadata: Metadata = {
@@ -57,6 +58,7 @@ export default async function RootLayout({
           <AuthProvider session={session}>
             {children}
           </AuthProvider>
+          <Toaster />
         </QueryProvider>
       </body>
     </html>
