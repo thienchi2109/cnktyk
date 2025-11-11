@@ -16,7 +16,8 @@ import {
   Loader2,
   Edit,
   MoreHorizontal,
-  Trash2
+  Trash2,
+  Eye,
 } from 'lucide-react';
 
 import { GlassCard } from '@/components/ui/glass-card';
@@ -39,6 +40,23 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useSubmission, useReviewSubmissionMutation, useEditSubmissionMutation, useDeleteSubmissionMutation } from '@/hooks/use-submission';
+import { useEvidenceFile } from '@/hooks/use-evidence-file';
+
+const getFileNameFromUrl = (url: string): string => {
+  try {
+    const sanitized = url.split('?')[0] || '';
+    const segments = sanitized.split('/');
+    return decodeURIComponent(segments.pop() || 'evidence');
+  } catch {
+    return 'evidence';
+  }
+};
+
+const getFileExtensionFromUrl = (url: string): string => {
+  const filename = getFileNameFromUrl(url);
+  const ext = filename.split('.').pop();
+  return ext ? ext.toUpperCase() : 'FILE';
+};
 
 interface SubmissionDetails {
   MaGhiNhan: string;
@@ -117,6 +135,11 @@ export function SubmissionReview({
   const reviewMutation = useReviewSubmissionMutation();
   const editMutation = useEditSubmissionMutation();
   const deleteMutation = useDeleteSubmissionMutation();
+  const evidenceFile = useEvidenceFile();
+  const evidenceFileName = submission?.FileMinhChungUrl ? getFileNameFromUrl(submission.FileMinhChungUrl) : null;
+  const evidenceFileExtension = submission?.FileMinhChungUrl ? getFileExtensionFromUrl(submission.FileMinhChungUrl) : null;
+  const isViewingEvidence = evidenceFile.activeAction === 'view';
+  const isDownloadingEvidence = evidenceFile.activeAction === 'download';
 
   const handleReviewSubmission = async (action: 'approve' | 'reject' | 'request_info') => {
     if (!submission || !submissionId) return;
@@ -136,21 +159,6 @@ export function SubmissionReview({
       // errors handled via mutation throw; keep local UI message minimal
     } finally {
       setIsProcessing(false);
-    }
-  };
-
-  const handleDownloadEvidence = async () => {
-    if (!submission?.FileMinhChungUrl) return;
-
-    try {
-      const response = await fetch(`${submission.FileMinhChungUrl}?action=signed-url`);
-      const data = await response.json();
-      
-      if (data.signedUrl) {
-        window.open(data.signedUrl, '_blank');
-      }
-    } catch (error) {
-      console.error('Failed to download evidence:', error);
     }
   };
 
@@ -180,14 +188,6 @@ export function SubmissionReview({
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   if (isLoading) {
@@ -406,27 +406,57 @@ export function SubmissionReview({
         <GlassCard className="p-6">
           <div className="flex items-center space-x-2 mb-4">
             <FileText className="h-5 w-5 text-medical-blue" />
-            <h3 className="text-lg font-semibold text-gray-900">Tệp minh chứng</h3>
+            <h3 className="text-lg font-semibold text-gray-900">T?p minh ch?ng</h3>
           </div>
 
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-            <div className="flex items-center space-x-3">
-              <FileText className="h-8 w-8 text-medical-blue" />
+          <div className="flex flex-col gap-4 rounded-lg bg-gray-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-medical-blue/10 text-sm font-semibold text-medical-blue">
+                {evidenceFileExtension || 'FILE'}
+              </div>
               <div>
-                <p className="font-medium text-gray-900">Tệp minh chứng</p>
+                <p className="font-medium text-gray-900">{evidenceFileName || 'T?p minh ch?ng'}</p>
+                <p className="text-sm text-gray-500">Minh ch?ng dinh k�m</p>
               </div>
             </div>
-            
-            <GlassButton
-              onClick={handleDownloadEvidence}
-              className="bg-medical-green hover:bg-medical-green/90"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Tải xuống
-            </GlassButton>
+
+            <div className="flex items-center gap-2">
+              <GlassButton
+                size="sm"
+                variant="outline"
+                aria-label="Xem minh ch?ng"
+                title="Xem minh ch?ng"
+                disabled={evidenceFile.isLoading}
+                onClick={() => submission.FileMinhChungUrl && evidenceFile.viewFile(submission.FileMinhChungUrl)}
+              >
+                {isViewingEvidence ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+                <span className="ml-2">Xem</span>
+              </GlassButton>
+
+              <GlassButton
+                size="sm"
+                className="bg-medical-green text-white hover:bg-medical-green/90"
+                aria-label="T?i xu?ng minh ch?ng"
+                title="T?i xu?ng minh ch?ng"
+                disabled={evidenceFile.isLoading}
+                onClick={() => submission.FileMinhChungUrl && evidenceFile.downloadFile(submission.FileMinhChungUrl, evidenceFileName || undefined)}
+              >
+                {isDownloadingEvidence ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                <span className="ml-2">T?i xu?ng</span>
+              </GlassButton>
+            </div>
           </div>
         </GlassCard>
       )}
+
 
       {/* Submission Timeline */}
       <GlassCard className="p-6">

@@ -13,6 +13,8 @@ interface RouteParams {
   };
 }
 
+type DispositionMode = 'inline' | 'attachment';
+
 const buildFilenameFromParams = (params: RouteParams['params']): string | null => {
   const segments = params.filename ?? [];
   if (!Array.isArray(segments) || segments.length === 0) {
@@ -25,6 +27,12 @@ const buildFilenameFromParams = (params: RouteParams['params']): string | null =
   } catch {
     return joined;
   }
+};
+
+const parseDisposition = (value: string | null): DispositionMode => {
+  if (!value) return 'inline';
+  const normalized = value.toLowerCase();
+  return normalized === 'attachment' ? 'attachment' : 'inline';
 };
 
 export async function GET(
@@ -50,6 +58,9 @@ export async function GET(
 
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
+    const disposition = parseDisposition(searchParams.get('disposition'));
+    const expiresParam = Number.parseInt(searchParams.get('expires') || '3600', 10);
+    const expiresIn = Number.isFinite(expiresParam) && expiresParam > 0 ? expiresParam : 3600;
 
     switch (action) {
       case 'metadata': {
@@ -63,8 +74,7 @@ export async function GET(
         return NextResponse.json({ metadata });
       }
       case 'signed-url': {
-        const expiresIn = parseInt(searchParams.get('expires') || '3600', 10);
-        const signedUrl = await r2Client.getSignedUrl(filename, expiresIn);
+        const signedUrl = await r2Client.getSignedUrl(filename, expiresIn, disposition);
         return NextResponse.json({ signedUrl });
       }
       case 'exists': {
@@ -72,7 +82,7 @@ export async function GET(
         return NextResponse.json({ exists });
       }
       default: {
-        const defaultSignedUrl = await r2Client.getSignedUrl(filename);
+        const defaultSignedUrl = await r2Client.getSignedUrl(filename, expiresIn, disposition);
         return NextResponse.redirect(defaultSignedUrl);
       }
     }
