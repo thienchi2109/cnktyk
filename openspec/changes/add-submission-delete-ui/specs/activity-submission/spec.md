@@ -5,20 +5,20 @@
 ### Requirement: Submission Deletion for Admin Roles
 DonVi (Unit Admin) and SoYTe (DoH Admin) users SHALL be able to delete activity submissions with pending approval status (ChoDuyet) to correct data entry errors and remove duplicate or mistaken submissions.
 
-#### Scenario: Delete button visibility for pending submissions (individual)
+#### Scenario: More button with delete action for pending submissions (individual)
 - **WHEN** a DonVi or SoYTe user views a submission detail page where TrangThaiDuyet is 'ChoDuyet'
-- **THEN** a "Xóa" (Delete) button is visible and enabled next to the Edit button
+- **THEN** a "More" (...) dropdown button is visible containing "Chỉnh sửa" (Edit) and "Xóa" (Delete) menu items
 
-#### Scenario: Delete button hidden for approved submissions
+#### Scenario: Delete menu item hidden for approved submissions
 - **WHEN** a DonVi or SoYTe user views a submission detail page where TrangThaiDuyet is 'DaDuyet'
-- **THEN** the delete button is not visible or is disabled with tooltip "Không thể xóa hoạt động đã duyệt"
+- **THEN** the "Xóa" menu item is not visible in the More dropdown, or is disabled with tooltip "Không thể xóa hoạt động đã duyệt"
 
-#### Scenario: Delete button hidden for rejected submissions
+#### Scenario: Delete menu item hidden for rejected submissions
 - **WHEN** a DonVi or SoYTe user views a submission detail page where TrangThaiDuyet is 'TuChoi'
-- **THEN** the delete button is not visible or is disabled with tooltip "Không thể xóa hoạt động đã từ chối"
+- **THEN** the "Xóa" menu item is not visible in the More dropdown, or is disabled with tooltip "Không thể xóa hoạt động đã từ chối"
 
 #### Scenario: Delete confirmation dialog
-- **WHEN** a user clicks the delete button on a submission detail page
+- **WHEN** a user clicks the "Xóa" menu item from the More dropdown on a submission detail page
 - **THEN** a confirmation dialog appears with the submission title and warning "Hành động này không thể hoàn tác"
 
 #### Scenario: Successful individual deletion
@@ -146,14 +146,22 @@ The system SHALL provide a DELETE endpoint at `/api/submissions/bulk-delete` for
 - **THEN** the operation completes within 5 seconds (average ~50ms per submission)
 
 ### Requirement: Delete UI Components
-The submission delete UI SHALL use consistent patterns with existing destructive actions (reject, bulk operations) to maintain UX coherence.
+The submission delete UI SHALL use consistent patterns with existing destructive actions (reject, bulk operations) to maintain UX coherence. Actions are grouped in a "More" (...) dropdown menu for neatness.
 
-#### Scenario: Delete button styling (individual)
-- **WHEN** the delete button is displayed in the submission detail view
-- **THEN** it uses `variant="destructive"` styling with red background, Trash2 icon, and clear visual distinction from edit/approve actions
+#### Scenario: More dropdown button in submission detail view
+- **WHEN** a DonVi or SoYTe user views a submission detail page
+- **THEN** a "More" (...) button appears in the header, displaying a dropdown menu with "Chỉnh sửa" (Edit icon) and "Xóa" (Trash2 icon) items based on permissions
+
+#### Scenario: Delete menu item styling (individual)
+- **WHEN** the "Xóa" menu item is displayed in the More dropdown
+- **THEN** it uses destructive styling with red text color, Trash2 icon, and clear visual distinction from edit action
+
+#### Scenario: More dropdown button in submissions list action column
+- **WHEN** a user views the submissions list
+- **THEN** each row displays a "More" (...) button in the action column, containing "Xem" (Eye icon), "Tải xuống" (Download icon, if evidence exists), and "Xóa" (Trash2 icon, if canDelete()) menu items
 
 #### Scenario: Delete button styling (bulk)
-- **WHEN** the bulk delete button is displayed in the submissions list
+- **WHEN** the bulk delete button is displayed in the submissions list header
 - **THEN** it uses red destructive styling matching the reject button, positioned after the bulk approve button
 
 #### Scenario: Confirmation dialog structure
@@ -259,29 +267,31 @@ Delete operations SHALL provide clear, actionable error messages when failures o
 ## MODIFIED Requirements
 
 ### Requirement: Submission List Action Buttons (MODIFIED)
-**Change:** Add delete button to action column for admin users viewing pending submissions.
+**Change:** Replace individual action buttons with a "More" (...) dropdown menu containing View, Download, and Delete actions for cleaner UI.
 
 **Before:**
-- View button (Eye icon)
-- Download evidence button (if FileMinhChungUrl exists)
+- View button (Eye icon) - standalone
+- Download evidence button (Download icon) - standalone, if FileMinhChungUrl exists
 
 **After:**
-- View button (Eye icon)
-- Download evidence button (if FileMinhChungUrl exists)
-- Delete button (Trash2 icon) - if canDelete()
+- More (...) dropdown button containing:
+  - Xem (View with Eye icon)
+  - Tải xuống (Download with Download icon) - if FileMinhChungUrl exists
+  - Xóa (Delete with Trash2 icon) - if canDelete() - NEW
 
 **Location:** `src/components/submissions/submissions-list.tsx:523-543`
 
 ### Requirement: Submission Detail View Actions (MODIFIED)
-**Change:** Add delete button next to edit button in submission detail header.
+**Change:** Replace individual Edit button with a "More" (...) dropdown menu containing Edit and Delete actions for cleaner, more scalable UI.
 
 **Before:**
-- Edit button (DonVi only, pending submissions)
+- Edit button (DonVi only, pending submissions) - standalone
 - Status badge
 
 **After:**
-- Edit button (DonVi only, pending submissions)
-- Delete button (DonVi/SoYTe, pending submissions)
+- More (...) dropdown button containing:
+  - Chỉnh sửa (Edit with Edit icon) - if canEdit()
+  - Xóa (Delete with Trash2 icon) - if canDelete() - NEW
 - Status badge
 
 **Location:** `src/components/submissions/submission-review.tsx:213-228`

@@ -73,3 +73,25 @@ export function useEditSubmissionMutation() {
     },
   });
 }
+
+export function useDeleteSubmissionMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: { id: string }) => {
+      const res = await fetch(`/api/submissions/${args.id}`, {
+        method: "DELETE",
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        throw new Error(result?.error || "Failed to delete submission");
+      }
+      return result as { success: boolean; message: string };
+    },
+    onSuccess: (data, vars) => {
+      // remove from cache
+      qc.removeQueries({ queryKey: submissionQueryKey(vars.id) });
+      // invalidate list queries to refresh
+      qc.invalidateQueries({ queryKey: ["submissions"] });
+    },
+  });
+}

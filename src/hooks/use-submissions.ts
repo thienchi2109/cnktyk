@@ -79,3 +79,34 @@ export function useBulkApproveSubmissions() {
     },
   });
 }
+
+export function useBulkDeleteSubmissions() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: { ids: string[] }) => {
+      const res = await fetch('/api/submissions/bulk-delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: args.ids }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || 'Failed to bulk delete');
+      }
+      return data as {
+        success: boolean;
+        deleted: number;
+        skipped: number;
+        failed: number;
+        details: {
+          deletedIds: string[];
+          skippedIds: string[];
+          errors: Array<{ id: string; error: string }>;
+        };
+      };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['submissions'] });
+    },
+  });
+}

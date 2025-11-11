@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
-  Eye, 
-  FileText, 
+import {
+  Clock,
+  CheckCircle,
+  XCircle,
+  Eye,
+  FileText,
   User,
   Calendar,
   Filter,
@@ -18,7 +18,9 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
-  Users
+  Users,
+  MoreHorizontal,
+  Trash2
 } from 'lucide-react';
 
 import { GlassCard } from '@/components/ui/glass-card';
@@ -29,9 +31,19 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { LoadingNotice } from '@/components/ui/loading-notice';
-import { useSubmissions, useBulkApproveSubmissions } from '@/hooks/use-submissions';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useSubmissions, useBulkApproveSubmissions, useBulkDeleteSubmissions } from '@/hooks/use-submissions';
+import { useDeleteSubmissionMutation } from '@/hooks/use-submission';
 
 interface Submission {
   MaGhiNhan: string;
@@ -120,6 +132,9 @@ export function SubmissionsList({
 
   const reviewerRole = ['DonVi', 'SoYTe'].includes(userRole);
   const bulkApprove = useBulkApproveSubmissions();
+  const bulkDelete = useBulkDeleteSubmissions();
+  const deleteMutation = useDeleteSubmissionMutation();
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const { data, isLoading, error } = useSubmissions({
     page,
@@ -194,6 +209,43 @@ export function SubmissionsList({
       setTimeout(() => setFeedback(null), 3000);
     } catch (e) {
       setFeedback({ type: 'error', message: e instanceof Error ? e.message : 'Thao tác thất bại' });
+      setTimeout(() => setFeedback(null), 3000);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.length} hoạt động đã chọn?\n\nChỉ các hoạt động đang chờ duyệt sẽ được xóa. Hành động này không thể hoàn tác.`)) return;
+    try {
+      const res = await bulkDelete.mutateAsync({ ids: selectedIds });
+      setSelectedIds([]);
+      const message = res.skipped > 0
+        ? `Đã xóa ${res.deleted} hoạt động (bỏ qua ${res.skipped}${res.failed > 0 ? `, lỗi ${res.failed}` : ''}).`
+        : `Đã xóa ${res.deleted} hoạt động.`;
+      setFeedback({ type: 'success', message });
+      // Refresh header badge and page data
+      router.refresh();
+      setTimeout(() => setFeedback(null), 3000);
+    } catch (e) {
+      setFeedback({ type: 'error', message: e instanceof Error ? e.message : 'Thao tác thất bại' });
+      setTimeout(() => setFeedback(null), 3000);
+    }
+  };
+
+  const canDelete = (submission: Submission) => {
+    return reviewerRole && submission.TrangThaiDuyet === 'ChoDuyet';
+  };
+
+  const handleIndividualDelete = async () => {
+    if (!deleteConfirmId) return;
+    try {
+      await deleteMutation.mutateAsync({ id: deleteConfirmId });
+      setDeleteConfirmId(null);
+      setFeedback({ type: 'success', message: 'Đã xóa hoạt động thành công' });
+      router.refresh();
+      setTimeout(() => setFeedback(null), 3000);
+    } catch (e) {
+      setFeedback({ type: 'error', message: e instanceof Error ? e.message : 'Không thể xóa hoạt động' });
       setTimeout(() => setFeedback(null), 3000);
     }
   };
@@ -274,25 +326,45 @@ export function SubmissionsList({
               </Link>
               {/* Bulk approve button - only visible when items are selected */}
               {selectedIds.length > 0 && (
-                <GlassButton
-                  onClick={handleBulkApprove}
-                  disabled={bulkApprove.isPending}
-                  variant="success"
-                  className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6"
-                  size="lg"
-                >
-                  {bulkApprove.isPending ? (
-                    <>
-                      <div className="h-5 w-5 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                      Đang xử lý...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="h-5 w-5" />
-                      Phê duyệt hàng loạt ({selectedIds.length})
-                    </>
-                  )}
-                </GlassButton>
+                <>
+                  <GlassButton
+                    onClick={handleBulkApprove}
+                    disabled={bulkApprove.isPending}
+                    variant="success"
+                    className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6"
+                    size="lg"
+                  >
+                    {bulkApprove.isPending ? (
+                      <>
+                        <div className="h-5 w-5 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        Đang xử lý...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-5 w-5" />
+                        Phê duyệt hàng loạt ({selectedIds.length})
+                      </>
+                    )}
+                  </GlassButton>
+                  <GlassButton
+                    onClick={handleBulkDelete}
+                    disabled={bulkDelete.isPending}
+                    className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6 bg-red-600 hover:bg-red-700 text-white"
+                    size="lg"
+                  >
+                    {bulkDelete.isPending ? (
+                      <>
+                        <div className="h-5 w-5 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        Đang xóa...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="h-5 w-5" />
+                        Xóa hàng loạt ({selectedIds.length})
+                      </>
+                    )}
+                  </GlassButton>
+                </>
               )}
             </>
           )}
@@ -522,23 +594,37 @@ export function SubmissionsList({
                       
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end gap-2">
-                          <GlassButton
-                            size="sm"
-                            variant="secondary"
-                            onClick={(e) => { e.stopPropagation(); handleViewSubmission(submission.MaGhiNhan); }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </GlassButton>
-                          
-                          {submission.FileMinhChungUrl && (
-                            <GlassButton
-                              size="sm"
-                              variant="secondary"
-                              onClick={(e) => { e.stopPropagation(); handleDownloadEvidence(submission); }}
-                            >
-                              <Download className="h-4 w-4" />
-                            </GlassButton>
-                          )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <GlassButton
+                                size="sm"
+                                variant="secondary"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </GlassButton>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleViewSubmission(submission.MaGhiNhan); }}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                Xem
+                              </DropdownMenuItem>
+                              {submission.FileMinhChungUrl && (
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDownloadEvidence(submission); }}>
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Tải xuống
+                                </DropdownMenuItem>
+                              )}
+                              {canDelete(submission) && (
+                                <DropdownMenuItem
+                                  onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(submission.MaGhiNhan); }}
+                                  destructive
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Xóa
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </td>
                     </tr>
@@ -576,6 +662,50 @@ export function SubmissionsList({
           </>
         )}
       </GlassCard>
+
+      {/* Individual Delete Confirmation Dialog */}
+      <Dialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận xóa hoạt động</DialogTitle>
+          </DialogHeader>
+
+          <div className="py-4">
+            <p className="text-gray-700 mb-2">
+              Bạn có chắc chắn muốn xóa hoạt động này?
+            </p>
+            <Alert className="border-red-200 bg-red-50">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <AlertDescription className="text-red-700">
+                Hành động này không thể hoàn tác.
+              </AlertDescription>
+            </Alert>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteConfirmId(null)}
+              disabled={deleteMutation.isPending}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleIndividualDelete}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Đang xóa...</>
+              ) : (
+                <><Trash2 className="h-4 w-4 mr-2" /> Xác nhận xóa</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
