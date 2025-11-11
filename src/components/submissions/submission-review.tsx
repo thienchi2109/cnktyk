@@ -1,20 +1,22 @@
 'use client';
 
 import { useState } from 'react';
-import { 
-  CheckCircle, 
-  XCircle, 
-  MessageSquare, 
-  User, 
-  Calendar, 
-  Clock, 
-  FileText, 
+import {
+  CheckCircle,
+  XCircle,
+  MessageSquare,
+  User,
+  Calendar,
+  Clock,
+  FileText,
   Download,
   ArrowLeft,
   AlertTriangle,
   Info,
   Loader2,
-  Edit
+  Edit,
+  MoreHorizontal,
+  Trash2
 } from 'lucide-react';
 
 import { GlassCard } from '@/components/ui/glass-card';
@@ -30,7 +32,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '@/components/ui/input';
 import { formatDate } from '@/lib/utils';
 import { SheetFooter } from '@/components/ui/sheet';
-import { useSubmission, useReviewSubmissionMutation, useEditSubmissionMutation } from '@/hooks/use-submission';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useSubmission, useReviewSubmissionMutation, useEditSubmissionMutation, useDeleteSubmissionMutation } from '@/hooks/use-submission';
 
 interface SubmissionDetails {
   MaGhiNhan: string;
@@ -91,15 +99,16 @@ const activityTypeLabels = {
   BaoCao: 'Báo cáo',
 };
 
-export function SubmissionReview({ 
-  submissionId, 
-  userRole, 
-  onBack, 
-  onReviewComplete 
+export function SubmissionReview({
+  submissionId,
+  userRole,
+  onBack,
+  onReviewComplete
 }: SubmissionReviewProps) {
   const { data, isLoading, error } = useSubmission(submissionId);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const submission: SubmissionDetails | null = data?.submission || null;
   const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | 'request_info' | null>(null);
   const [comments, setComments] = useState('');
@@ -107,6 +116,7 @@ export function SubmissionReview({
 
   const reviewMutation = useReviewSubmissionMutation();
   const editMutation = useEditSubmissionMutation();
+  const deleteMutation = useDeleteSubmissionMutation();
 
   const handleReviewSubmission = async (action: 'approve' | 'reject' | 'request_info') => {
     if (!submission || !submissionId) return;
@@ -145,12 +155,31 @@ export function SubmissionReview({
   };
 
   const canReview = () => {
-    return ['DonVi', 'SoYTe'].includes(userRole) && 
+    return ['DonVi', 'SoYTe'].includes(userRole) &&
            submission?.TrangThaiDuyet === 'ChoDuyet';
   };
 
   const canEdit = () => {
     return userRole === 'DonVi' && submission?.TrangThaiDuyet === 'ChoDuyet';
+  };
+
+  const canDelete = () => {
+    return ['DonVi', 'SoYTe'].includes(userRole) && submission?.TrangThaiDuyet === 'ChoDuyet';
+  };
+
+  const handleDelete = async () => {
+    if (!submission || !submissionId) return;
+    setShowDeleteDialog(false);
+    setIsProcessing(true);
+    try {
+      await deleteMutation.mutateAsync({ id: submissionId });
+      if (onReviewComplete) onReviewComplete();
+      if (onBack) onBack();
+    } catch (err) {
+      // Error handled by mutation
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const formatFileSize = (bytes: number) => {
@@ -211,15 +240,35 @@ export function SubmissionReview({
         </div>
 
         <div className="flex items-center space-x-3">
-          {canEdit() && (
-            <GlassButton
-              onClick={() => setShowEditDialog(true)}
-              variant="outline"
-              className="border-medical-blue text-medical-blue hover:bg-medical-blue/10"
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Chỉnh sửa
-            </GlassButton>
+          {(canEdit() || canDelete()) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <GlassButton
+                  variant="outline"
+                  className="border-gray-300"
+                  size="sm"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </GlassButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {canEdit() && (
+                  <DropdownMenuItem onClick={() => setShowEditDialog(true)}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Chỉnh sửa
+                  </DropdownMenuItem>
+                )}
+                {canDelete() && (
+                  <DropdownMenuItem
+                    onClick={() => setShowDeleteDialog(true)}
+                    destructive
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Xóa
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
           <Badge className={`${statusColors[submission.TrangThaiDuyet]} border text-sm px-3 py-1`}>
             {statusLabels[submission.TrangThaiDuyet]}
@@ -631,6 +680,50 @@ export function SubmissionReview({
                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Đang lưu...</>
               ) : (
                 <><Edit className="h-4 w-4 mr-2" /> Lưu thay đổi</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận xóa hoạt động</DialogTitle>
+          </DialogHeader>
+
+          <div className="py-4">
+            <p className="text-gray-700 mb-2">
+              Bạn có chắc chắn muốn xóa hoạt động <strong>&quot;{submission?.TenHoatDong}&quot;</strong>?
+            </p>
+            <Alert className="border-red-200 bg-red-50">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <AlertDescription className="text-red-700">
+                Hành động này không thể hoàn tác.
+              </AlertDescription>
+            </Alert>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={isProcessing || deleteMutation.isPending}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isProcessing || deleteMutation.isPending}
+            >
+              {isProcessing || deleteMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Đang xóa...</>
+              ) : (
+                <><Trash2 className="h-4 w-4 mr-2" /> Xác nhận xóa</>
               )}
             </Button>
           </DialogFooter>
