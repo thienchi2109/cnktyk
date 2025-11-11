@@ -9,6 +9,8 @@ import {
   GetObjectCommand,
   DeleteObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
+  type ListObjectsV2CommandOutput,
   type GetObjectCommandInput,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -31,6 +33,14 @@ export interface UploadResult {
   filename?: string;
   error?: string;
   metadata?: FileMetadata;
+}
+
+export interface StorageMetrics {
+  totalObjects: number;
+  totalSize: number; // in bytes
+  totalSizeFormatted: string; // human-readable format
+  fileTypes: Record<string, { count: number; size: number }>;
+  lastCalculated: Date;
 }
 
 class R2StorageClient {
@@ -320,6 +330,78 @@ class R2StorageClient {
       console.error('R2 download error:', error);
       return null;
     }
+  }
+
+  /**
+   * Get storage metrics for the R2 bucket
+   * Calculates total objects, total size, and breakdown by file type
+   */
+  async getStorageMetrics(): Promise<StorageMetrics | null> {
+    if (!this.isConfigured || !this.client) {
+      console.warn('Cloudflare R2 is not configured. Storage metrics functionality is disabled.');
+      return null;
+    }
+
+    try {
+      let totalObjects = 0;
+      let totalSize = 0;
+      const fileTypes: Record<string, { count: number; size: number }> = {};
+      let continuationToken: string | undefined;
+
+      // List all objects in the bucket (paginated)
+      do {
+        const command = new ListObjectsV2Command({
+          Bucket: this.bucketName,
+          ContinuationToken: continuationToken,
+        });
+
+        const response: ListObjectsV2CommandOutput = await this.client.send(command);
+
+        if (response.Contents) {
+          for (const object of response.Contents) {
+            const size = object.Size || 0;
+            totalObjects++;
+            totalSize += size;
+
+            // Extract file extension
+            const filename = object.Key || '';
+            const extension = filename.split('.').pop()?.toLowerCase() || 'unknown';
+
+            if (!fileTypes[extension]) {
+              fileTypes[extension] = { count: 0, size: 0 };
+            }
+            fileTypes[extension].count++;
+            fileTypes[extension].size += size;
+          }
+        }
+
+        continuationToken = response.NextContinuationToken;
+      } while (continuationToken);
+
+      return {
+        totalObjects,
+        totalSize,
+        totalSizeFormatted: this.formatBytes(totalSize),
+        fileTypes,
+        lastCalculated: new Date(),
+      };
+    } catch (error) {
+      console.error('R2 storage metrics error:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Format bytes to human-readable string
+   */
+  private formatBytes(bytes: number): string {
+    if (bytes === 0) return '0 Bytes';
+
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
   }
 }
 
