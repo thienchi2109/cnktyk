@@ -145,7 +145,7 @@ class R2StorageClient {
   private buildContentDisposition(filename: string, disposition: 'inline' | 'attachment'): string {
     if (disposition === 'attachment') {
       const safeName = this.resolveDownloadName(filename).replace(/"/g, "'");
-      const encodedName = encodeURIComponent(safeName);
+      const encodedName = encodeURIComponent(safeName).replace(/'/g, '%27');
       return `attachment; filename="${safeName}"; filename*=UTF-8''${encodedName}`;
     }
     return 'inline';

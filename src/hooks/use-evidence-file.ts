@@ -81,12 +81,21 @@ export function useEvidenceFile(): UseEvidenceFileResult {
         }
       } catch (error) {
         console.error('Evidence file action failed', error);
-        const message =
-          error instanceof Error
+        const defaultMessage =
+          action === 'download' ? 'Kh?ng th? t?i xu?ng t?p.' : 'Kh?ng th? xem t?p minh ch?ng.';
+        const isNetworkError =
+          error instanceof TypeError ||
+          (error instanceof Error && /Failed to fetch/i.test(error.message || ''));
+
+        let message =
+          error instanceof Error && !isNetworkError && error.message
             ? error.message
-            : action === 'download'
-              ? 'Kh�ng th? t?i xu?ng t?p.'
-              : 'Kh�ng th? xem t?p minh ch?ng.';
+            : defaultMessage;
+
+        if (isNetworkError) {
+          message = 'Kh?ng th? k?t n?i t?i m?y ch? - vui l?ng th? l?i.';
+        }
+
         showErrorToast(message);
       } finally {
         setActiveAction(null);

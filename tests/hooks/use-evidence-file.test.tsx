@@ -44,6 +44,35 @@ describe('useEvidenceFile', () => {
     expect(result.current.activeAction).toBeNull();
   });
 
+  it('tracks loading state for download operations', async () => {
+    let resolveFetch: ((value: any) => void) | null = null;
+    (global.fetch as any).mockImplementation(
+      () =>
+        new Promise(resolve => {
+          resolveFetch = resolve;
+        })
+    );
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click');
+    const { result } = renderHook(() => useEvidenceFile());
+
+    await act(async () => {
+      const pending = result.current.downloadFile('/api/files/foo', 'foo.pdf');
+      expect(result.current.isLoading).toBe(true);
+      expect(result.current.activeAction).toBe('download');
+
+      resolveFetch?.({
+        ok: true,
+        json: async () => ({ signedUrl: 'https://signed-url' }),
+      });
+
+      await pending;
+    });
+
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.activeAction).toBeNull();
+    expect(clickSpy).toHaveBeenCalled();
+  });
+
   it('opens view action in new tab with inline disposition', async () => {
     (global.fetch as any).mockResolvedValue({
       ok: true,
@@ -63,7 +92,7 @@ describe('useEvidenceFile', () => {
     expect(result.current.activeAction).toBeNull();
   });
 
-  it('shows toast when fetch fails', async () => {
+  it('resets loading state and surfaces server errors', async () => {
     (global.fetch as any).mockResolvedValue({
       ok: false,
       json: async () => ({ error: 'File not found' }),
@@ -71,10 +100,19 @@ describe('useEvidenceFile', () => {
     const { result } = renderHook(() => useEvidenceFile());
 
     await act(async () => {
-      await result.current.downloadFile('/api/files/missing');
+      const pending = result.current.viewFile('/api/files/missing');
+      expect(result.current.isLoading).toBe(true);
+      expect(result.current.activeAction).toBe('view');
+      await pending;
     });
 
-    expect(toast).toHaveBeenCalled();
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.activeAction).toBeNull();
+    expect(toast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: 'File not found',
+      })
+    );
   });
 
   it('warns when popup is blocked', async () => {
@@ -94,5 +132,37 @@ describe('useEvidenceFile', () => {
         description: expect.stringMatching(/Popup/),
       })
     );
+  });
+
+  it('shows retry guidance when network fails', async () => {
+    (global.fetch as any).mockRejectedValue(new TypeError('Failed to fetch'));
+    const { result } = renderHook(() => useEvidenceFile());
+
+    await act(async () => {
+      await result.current.downloadFile('/api/files/network');
+    });
+
+    expect(toast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: expect.stringMatching(/vui l?ng th? l?i/i),
+      })
+    );
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it('validates empty fileUrl before fetching', async () => {
+    const { result } = renderHook(() => useEvidenceFile());
+
+    await act(async () => {
+      await result.current.downloadFile('');
+    });
+
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(toast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: expect.stringContaining('Thi?u'),
+      })
+    );
+    expect(result.current.isLoading).toBe(false);
   });
 });

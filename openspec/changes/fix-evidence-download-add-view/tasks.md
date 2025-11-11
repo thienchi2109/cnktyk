@@ -33,16 +33,16 @@
 
 ### Backend Testing
 
-- [ ] **Unit tests for r2-client.ts**
-  - [ ] Test: disposition='attachment' includes Content-Disposition: attachment
-  - [ ] Test: disposition='inline' includes Content-Disposition: inline
-  - [ ] Test: default (no parameter) uses 'inline'
-  - [ ] Test: Unicode filename "Báo cáo.pdf" encoded correctly
-  - [ ] Test: Filename with spaces "My Report.pdf" encoded correctly
-  - [ ] Test: Filename with quotes 'Report "Final".pdf' encoded correctly
-  - [ ] Test: Filename with special chars "#report@2024.pdf" encoded correctly
-  - [ ] Test: Edge case - empty filename defaults to "download"
-  - [ ] Test: Edge case - filename with path "folder/file.pdf" extracts "file.pdf"
+- [x] **Unit tests for r2-client.ts**
+  - [x] Test: disposition='attachment' includes Content-Disposition: attachment
+  - [x] Test: disposition='inline' includes Content-Disposition: inline
+  - [x] Test: default (no parameter) uses 'inline'
+  - [x] Test: Unicode filename "Báo cáo.pdf" encoded correctly
+  - [x] Test: Filename with spaces "My Report.pdf" encoded correctly
+  - [x] Test: Filename with quotes 'Report "Final".pdf' encoded correctly
+  - [x] Test: Filename with special chars "#report@2024.pdf" encoded correctly
+  - [x] Test: Edge case - empty filename defaults to "download"
+  - [x] Test: Edge case - filename with path "folder/file.pdf" extracts "file.pdf"
 
 - [ ] **Integration tests for API endpoint**
   - [ ] Test: GET with disposition=attachment returns signed URL with attachment header
@@ -82,17 +82,17 @@
 
 ### Hook Testing
 
-- [ ] **Unit tests for use-evidence-file.ts**
+- [x] **Unit tests for use-evidence-file.ts**
   - [x] Test: `downloadFile()` calls fetch with disposition=attachment
   - [x] Test: `viewFile()` calls fetch with disposition=inline
-  - [ ] Test: `isLoading` becomes true during operation
-  - [ ] Test: `isLoading` becomes false after success
-  - [ ] Test: `isLoading` becomes false after error
+  - [x] Test: `isLoading` becomes true during operation
+  - [x] Test: `isLoading` becomes false after success
+  - [x] Test: `isLoading` becomes false after error
   - [x] Test: Error shows toast notification
   - [x] Test: Popup blocker shows warning toast
-  - [ ] Test: Network error shows toast with retry message
-  - [ ] Test: File not found (404) shows appropriate toast
-  - [ ] Test: Missing fileUrl shows error toast
+  - [x] Test: Network error shows toast with retry message
+  - [x] Test: File not found (404) shows appropriate toast
+  - [x] Test: Missing fileUrl shows error toast
 
 - [x] **Integration tests**
   - [x] Test: Complete download flow (fetch → open → success)
