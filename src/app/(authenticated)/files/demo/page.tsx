@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { FileUpload, UploadedFile } from '@/components/ui/file-upload';
 import { FileManager } from '@/components/ui/file-manager';
 import { FileViewer } from '@/components/ui/file-viewer';
+import { StorageMetrics } from '@/components/storage/storage-metrics';
 import { GlassCard } from '@/components/ui/glass-card';
 import { GlassButton } from '@/components/ui/glass-button';
 import { useAuth } from '@/lib/auth/hooks';
@@ -148,12 +149,24 @@ export default function FileUploadDemo() {
           />
         </GlassCard>
 
+        {/* Storage Metrics - SoYTe Only */}
+        {user.role === 'SoYTe' && (
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
+              <span className="text-sm font-medium text-gray-600">Thống kê lưu trữ</span>
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
+            </div>
+            <StorageMetrics autoLoad={false} />
+          </div>
+        )}
+
         {/* Usage Instructions */}
         <GlassCard className="p-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">
             Hướng dẫn sử dụng
           </h2>
-          
+
           <div className="space-y-3 text-sm text-gray-600">
             <div className="flex items-start space-x-2">
               <span className="font-medium text-medical-blue">1.</span>
