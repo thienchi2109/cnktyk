@@ -20,6 +20,8 @@ const ApplySchema = z.object({
   activity: z.object({
     TenHoatDong: z.string().min(1),
     MaDanhMuc: z.string().uuid().optional(),
+    LoaiHoatDong: z.string().optional(),
+    YeuCauMinhChung: z.boolean().optional(),
     NgayBatDau: z.string().datetime().nullable().optional(),
     NgayKetThuc: z.string().datetime().nullable().optional(),
     SoGioTinChiQuyDoi: z.number().min(0).default(0),
