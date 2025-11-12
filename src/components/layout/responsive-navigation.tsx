@@ -19,7 +19,8 @@ import {
   X,
   FileArchive,
   FolderOpen,
-  UserPlus
+  UserPlus,
+  MoreHorizontal
 } from "lucide-react";
 import { GlassHeader } from "./glass-header";
 import { GlassFooter } from "./glass-footer";
@@ -35,6 +36,7 @@ interface NavigationItem {
   children?: NavigationItem[];
   badge?: string | number;
   roles?: string[]; // Which roles can see this item
+  priority?: 'high' | 'low'; // Priority for overflow handling (defaults to 'high')
 }
 
 interface ResponsiveNavigationProps {
@@ -177,18 +179,21 @@ const getNavigationItems = (
         id: 'system-overview',
         label: 'Tổng quan',
         icon: <BarChart3 className="h-4 w-4" />,
-        href: '/system'
+        href: '/system',
+        priority: 'low' // Low priority - goes to More menu
       },
       {
         id: 'units',
         label: 'Đơn vị',
         icon: <Users className="h-4 w-4" />,
-        href: '/dashboard/doh/units'
+        href: '/dashboard/doh/units',
+        priority: 'high'
       },
         {
         id: 'analytics',
         label: 'Phân tích',
         icon: <BarChart3 className="h-4 w-4" />,
+        priority: 'high',
         children: [
           {
             id: 'compliance-trends',
@@ -208,31 +213,36 @@ const getNavigationItems = (
         id: 'activities',
         label: 'Danh mục hoạt động',
         icon: <FileText className="h-4 w-4" />,
-        href: '/activities'
+        href: '/activities',
+        priority: 'high'
       },
       {
         id: 'bulk-enrollment',
         label: 'Ghi nhận hàng loạt',
         icon: <UserPlus className="h-4 w-4" />,
         href: '/submissions/bulk',
-        roles: ['DonVi', 'SoYTe']
+        roles: ['DonVi', 'SoYTe'],
+        priority: 'high'
       },
       {
         id: 'credit-rules',
         label: 'Quy tắc tín chỉ',
         icon: <Shield className="h-4 w-4" />,
-        href: '/credits/rules'
+        href: '/credits/rules',
+        priority: 'low' // Low priority - goes to More menu
       },
       {
         id: 'user-management',
         label: 'Người dùng',
         icon: <Users className="h-4 w-4" />,
-        href: '/users'
+        href: '/users',
+        priority: 'high'
       },
       {
         id: 'file-management',
         label: 'Quản lý tệp tin',
         icon: <FolderOpen className="h-4 w-4" />,
+        priority: 'high',
         children: [
           {
             id: 'files',
@@ -252,12 +262,14 @@ const getNavigationItems = (
         id: 'notifications',
         label: 'Thông báo',
         icon: <Bell className="h-4 w-4" />,
-        href: '/notifications'
+        href: '/notifications',
+        priority: 'low' // Low priority - goes to More menu
       },
       {
         id: 'settings',
         label: 'Cài đặt',
         icon: <Settings className="h-4 w-4" />,
+        priority: 'low', // Low priority - goes to More menu
         children: [
           {
             id: 'system-config',
@@ -311,16 +323,21 @@ const getNavigationItems = (
 };
 
 // Header Navigation Bar Component
-const HeaderNavigation = ({ 
-  items, 
-  activeItem, 
-  onNavigate 
-}: { 
-  items: NavigationItem[]; 
-  activeItem?: string; 
-  onNavigate?: (item: NavigationItem) => void; 
+const HeaderNavigation = ({
+  items,
+  activeItem,
+  onNavigate
+}: {
+  items: NavigationItem[];
+  activeItem?: string;
+  onNavigate?: (item: NavigationItem) => void;
 }) => {
   const [openDropdown, setOpenDropdown] = React.useState<string | null>(null);
+  const [moreMenuOpen, setMoreMenuOpen] = React.useState(false);
+
+  // Separate high and low priority items
+  const highPriorityItems = items.filter(item => item.priority !== 'low');
+  const lowPriorityItems = items.filter(item => item.priority === 'low');
 
   const handleItemClick = (item: NavigationItem) => {
     if (item.children && item.children.length > 0) {
@@ -328,87 +345,209 @@ const HeaderNavigation = ({
     } else {
       onNavigate?.(item);
       setOpenDropdown(null);
+      setMoreMenuOpen(false);
     }
+  };
+
+  // Close more menu when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (moreMenuOpen && !target.closest('[data-more-menu]')) {
+        setMoreMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [moreMenuOpen]);
+
+  const renderNavigationItem = (item: NavigationItem) => {
+    const isActive = activeItem === item.id;
+    const hasChildren = item.children && item.children.length > 0;
+    const isOpen = openDropdown === item.id;
+
+    return (
+      <div key={item.id} className="relative">
+        <GlassButton
+          variant={isActive ? "default" : "ghost"}
+          onClick={() => handleItemClick(item)}
+          className={cn(
+            "flex items-center gap-2 px-4 lg:px-5 py-2.5 text-sm",
+            hasChildren && "pr-2"
+          )}
+        >
+          {item.icon}
+          <span className="hidden lg:inline">{item.label}</span>
+          {item.badge && (
+            <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-red-500 text-white">
+              {item.badge}
+            </span>
+          )}
+          {hasChildren && (
+            <ChevronDown className={cn(
+              "h-3 w-3 transition-transform duration-200 ml-1",
+              isOpen && "rotate-180"
+            )} />
+          )}
+        </GlassButton>
+
+        {/* Dropdown Menu for children */}
+        {hasChildren && isOpen && (
+          <div className="absolute top-full left-0 mt-1 min-w-48 backdrop-blur-md bg-white/90 border border-white/30 rounded-lg shadow-lg z-[100]">
+            <div className="py-1">
+              {item.children?.map((child) => (
+                <button
+                  key={child.id}
+                  onClick={() => {
+                    onNavigate?.(child);
+                    setOpenDropdown(null);
+                  }}
+                  className={cn(
+                    "w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-white/20 transition-colors",
+                    activeItem === child.id && "bg-primary/20 text-primary-900"
+                  )}
+                >
+                  {child.icon}
+                  {child.label}
+                  {child.badge && (
+                    <span className="ml-auto px-1.5 py-0.5 text-xs rounded-full bg-red-500 text-white">
+                      {child.badge}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
     <nav className="hidden xl:flex items-center space-x-2 lg:space-x-3">
-      {items.map((item) => {
-        const isActive = activeItem === item.id;
-        const hasChildren = item.children && item.children.length > 0;
-        const isOpen = openDropdown === item.id;
+      {/* High priority items */}
+      {highPriorityItems.map(renderNavigationItem)}
 
-        return (
-          <div key={item.id} className="relative">
-            <GlassButton
-              variant={isActive ? "default" : "ghost"}
-              onClick={() => handleItemClick(item)}
-              className={cn(
-                "flex items-center gap-2 px-4 lg:px-5 py-2.5 text-sm",
-                hasChildren && "pr-2"
-              )}
+      {/* More menu for low priority items */}
+      {lowPriorityItems.length > 0 && (
+        <div className="relative" data-more-menu>
+          <GlassButton
+            variant="ghost"
+            onClick={() => setMoreMenuOpen(!moreMenuOpen)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape' && moreMenuOpen) {
+                setMoreMenuOpen(false);
+              }
+            }}
+            className="flex items-center gap-2 px-4 lg:px-5 py-2.5 text-sm"
+            aria-expanded={moreMenuOpen}
+            aria-haspopup="menu"
+            aria-label="More navigation options"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+            <span className="hidden lg:inline">More</span>
+            <ChevronDown className={cn(
+              "h-3 w-3 transition-transform duration-200",
+              moreMenuOpen && "rotate-180"
+            )} />
+          </GlassButton>
+
+          {/* More dropdown */}
+          {moreMenuOpen && (
+            <div
+              className="absolute top-full right-0 mt-1 min-w-56 backdrop-blur-md bg-white/90 border border-white/30 rounded-lg shadow-lg z-[100]"
+              role="menu"
+              aria-label="Additional navigation items"
             >
-              {item.icon}
-              <span className="hidden lg:inline">{item.label}</span>
-              {item.badge && (
-                <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-red-500 text-white">
-                  {item.badge}
-                </span>
-              )}
-              {hasChildren && (
-                <ChevronDown className={cn(
-                  "h-3 w-3 transition-transform duration-200 ml-1",
-                  isOpen && "rotate-180"
-                )} />
-              )}
-            </GlassButton>
+              <div className="py-1">
+                {lowPriorityItems.map((item) => {
+                  const isActive = activeItem === item.id;
+                  const hasChildren = item.children && item.children.length > 0;
 
-            {/* Dropdown Menu */}
-            {hasChildren && isOpen && (
-              <div className="absolute top-full left-0 mt-1 min-w-48 backdrop-blur-md bg-white/90 border border-white/30 rounded-lg shadow-lg z-[100]">
-                <div className="py-1">
-                  {item.children?.map((child) => (
-                    <button
-                      key={child.id}
-                      onClick={() => {
-                        onNavigate?.(child);
-                        setOpenDropdown(null);
-                      }}
-                      className={cn(
-                        "w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-white/20 transition-colors",
-                        activeItem === child.id && "bg-primary/20 text-primary-900"
+                  return (
+                    <div key={item.id}>
+                      <button
+                        onClick={() => handleItemClick(item)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') {
+                            setMoreMenuOpen(false);
+                          }
+                        }}
+                        className={cn(
+                          "w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-white/20 transition-colors",
+                          isActive && "bg-primary/20 text-primary-900"
+                        )}
+                        role="menuitem"
+                        aria-label={item.label}
+                      >
+                        {item.icon}
+                        {item.label}
+                        {item.badge && (
+                          <span className="ml-auto px-1.5 py-0.5 text-xs rounded-full bg-red-500 text-white">
+                            {item.badge}
+                          </span>
+                        )}
+                      </button>
+
+                      {/* Show children items in More menu */}
+                      {hasChildren && (
+                        <div className="ml-4 border-l border-white/20">
+                          {item.children?.map((child) => (
+                            <button
+                              key={child.id}
+                              onClick={() => {
+                                onNavigate?.(child);
+                                setMoreMenuOpen(false);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Escape') {
+                                  setMoreMenuOpen(false);
+                                }
+                              }}
+                              className={cn(
+                                "w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-white/20 transition-colors",
+                                activeItem === child.id && "bg-primary/20 text-primary-900"
+                              )}
+                              role="menuitem"
+                              aria-label={child.label}
+                            >
+                              {child.icon}
+                              {child.label}
+                              {child.badge && (
+                                <span className="ml-auto px-1.5 py-0.5 text-xs rounded-full bg-red-500 text-white">
+                                  {child.badge}
+                                </span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
                       )}
-                    >
-                      {child.icon}
-                      {child.label}
-                      {child.badge && (
-                        <span className="ml-auto px-1.5 py-0.5 text-xs rounded-full bg-red-500 text-white">
-                          {child.badge}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
+                    </div>
+                  );
+                })}
               </div>
-            )}
-          </div>
-        );
-      })}
+            </div>
+          )}
+        </div>
+      )}
     </nav>
   );
 };
 
 // Footer Navigation Bar Component (Mobile/Tablet)
-const FooterNavigation = ({ 
-  items, 
-  activeItem, 
-  onNavigate 
-}: { 
-  items: NavigationItem[]; 
-  activeItem?: string; 
-  onNavigate?: (item: NavigationItem) => void; 
+const FooterNavigation = ({
+  items,
+  activeItem,
+  onNavigate
+}: {
+  items: NavigationItem[];
+  activeItem?: string;
+  onNavigate?: (item: NavigationItem) => void;
 }) => {
-  // Flatten items for footer navigation (no nested menus)
+  const [moreMenuOpen, setMoreMenuOpen] = React.useState(false);
+
+  // Flatten items for footer navigation (no nested menus in footer bar)
   const flatItems = items.reduce((acc: NavigationItem[], item) => {
     if (item.children && item.children.length > 0) {
       return [...acc, ...item.children];
@@ -416,15 +555,30 @@ const FooterNavigation = ({
     return [...acc, item];
   }, []);
 
-  // Show only first 5 items in footer navigation
-  const footerItems = flatItems.slice(0, 5);
+  // Show first 4 items in footer bar, rest go to More menu
+  const visibleItems = flatItems.slice(0, 4);
+  const moreItems = flatItems.slice(4);
+
+  // Close more menu when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (moreMenuOpen && !target.closest('[data-footer-more]')) {
+        setMoreMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [moreMenuOpen]);
 
   return (
     <nav className="xl:hidden fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md bg-white/95 border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] safe-area-inset-bottom">
       <div className="flex items-center justify-around px-2 py-2 pb-safe">
-        {footerItems.map((item) => {
+        {/* Visible footer items */}
+        {visibleItems.map((item) => {
           const isActive = activeItem === item.id;
-          
+
           return (
             <button
               key={item.id}
@@ -448,6 +602,76 @@ const FooterNavigation = ({
             </button>
           );
         })}
+
+        {/* More button if there are overflow items */}
+        {moreItems.length > 0 && (
+          <div className="relative flex-1 min-w-0" data-footer-more>
+            <button
+              onClick={() => setMoreMenuOpen(!moreMenuOpen)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape' && moreMenuOpen) {
+                  setMoreMenuOpen(false);
+                }
+              }}
+              className={cn(
+                "flex flex-col items-center gap-1 px-2 py-2 rounded-lg text-xs font-medium transition-all duration-200 w-full",
+                moreMenuOpen
+                  ? "bg-medical-blue/100 text-white"
+                  : "text-slate-600 hover:text-medical-blue hover:bg-medical-blue/10"
+              )}
+              aria-expanded={moreMenuOpen}
+              aria-haspopup="menu"
+              aria-label="More navigation options"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+              <span className="truncate max-w-full">More</span>
+            </button>
+
+            {/* More dropdown menu */}
+            {moreMenuOpen && (
+              <div
+                className="absolute bottom-full right-0 mb-2 w-56 backdrop-blur-md bg-white/95 border border-slate-200 rounded-lg shadow-lg max-h-80 overflow-y-auto"
+                role="menu"
+                aria-label="Additional navigation items"
+              >
+                <div className="py-2">
+                  {moreItems.map((item) => {
+                    const isActive = activeItem === item.id;
+
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          onNavigate?.(item);
+                          setMoreMenuOpen(false);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') {
+                            setMoreMenuOpen(false);
+                          }
+                        }}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-medical-blue/10 transition-colors",
+                          isActive && "bg-medical-blue/20 text-medical-blue"
+                        )}
+                        role="menuitem"
+                        aria-label={item.label}
+                      >
+                        {item.icon}
+                        <span className="flex-1">{item.label}</span>
+                        {item.badge && (
+                          <span className="px-2 py-0.5 text-xs rounded-full bg-red-500 text-white">
+                            {typeof item.badge === 'number' && item.badge > 9 ? '9+' : item.badge}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </nav>
   );
