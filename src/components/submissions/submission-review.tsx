@@ -96,6 +96,7 @@ interface SubmissionReviewProps {
   userRole: string;
   onBack?: () => void;
   onReviewComplete?: () => void;
+  showHeading?: boolean;
 }
 
 const statusLabels = {
@@ -121,7 +122,8 @@ export function SubmissionReview({
   submissionId,
   userRole,
   onBack,
-  onReviewComplete
+  onReviewComplete,
+  showHeading = true,
 }: SubmissionReviewProps) {
   const { data, isLoading, error } = useSubmission(submissionId);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -233,10 +235,12 @@ export function SubmissionReview({
               <ArrowLeft className="h-4 w-4" />
             </GlassButton>
           )}
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 page-title">Chi tiết hoạt động</h1>
-            <p className="text-gray-600 mt-1">Xem xét và phê duyệt hoạt động đào tạo liên tục</p>
-          </div>
+          {showHeading && (
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 page-title">Chi tiết hoạt động</h1>
+              <p className="text-gray-600 mt-1">Xem xét và phê duyệt hoạt động đào tạo liên tục</p>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center space-x-3">
