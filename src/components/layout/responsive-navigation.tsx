@@ -215,6 +215,12 @@ const getNavigationItems = (
         priority: 'high',
         children: [
           {
+            id: 'submissions',
+            label: 'Ghi nhận hoạt động',
+            icon: <Activity className="h-4 w-4" />,
+            href: '/submissions'
+          },
+          {
             id: 'activities',
             label: 'Danh mục hoạt động',
             icon: <FileText className="h-4 w-4" />,
