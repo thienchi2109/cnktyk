@@ -209,19 +209,25 @@ const getNavigationItems = (
         ]
       },
       {
-        id: 'activities',
-        label: 'Danh mục hoạt động',
-        icon: <FileText className="h-4 w-4" />,
-        href: '/activities',
-        priority: 'high'
-      },
-      {
-        id: 'bulk-enrollment',
-        label: 'Ghi nhận hàng loạt',
-        icon: <UserPlus className="h-4 w-4" />,
-        href: '/submissions/bulk',
-        roles: ['DonVi', 'SoYTe'],
-        priority: 'high'
+        id: 'activity-management',
+        label: 'Quản lý hoạt động',
+        icon: <Activity className="h-4 w-4" />,
+        priority: 'high',
+        children: [
+          {
+            id: 'activities',
+            label: 'Danh mục hoạt động',
+            icon: <FileText className="h-4 w-4" />,
+            href: '/activities'
+          },
+          {
+            id: 'bulk-enrollment',
+            label: 'Ghi nhận hàng loạt',
+            icon: <UserPlus className="h-4 w-4" />,
+            href: '/submissions/bulk',
+            roles: ['DonVi', 'SoYTe']
+          }
+        ]
       },
       {
         id: 'credit-rules',

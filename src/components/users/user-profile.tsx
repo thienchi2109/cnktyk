@@ -113,7 +113,7 @@ export function UserProfile({ profile, onUpdateProfile, isLoading = false }: Use
           <div className="p-2 rounded-lg bg-medical-blue/10">
             <User className="h-6 w-6 text-medical-blue" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Thông Tin Cá Nhân</h1>
+          <h1 className="text-3xl font-bold text-gray-900 page-title">Thông tin cá nhân</h1>
         </div>
         <p className="text-gray-600">Xem và cập nhật thông tin tài khoản của bạn trong hệ thống CNKTYKLT</p>
       </div>

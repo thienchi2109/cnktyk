@@ -380,3 +380,8 @@ body {
 html, body {
   background-color: #ffffff !important;
 }
+
+.page-title {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}

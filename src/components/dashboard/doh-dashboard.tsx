@@ -404,7 +404,7 @@ export function DohDashboard({ userId, initialUnitId = null }: DohDashboardProps
                 <Building2 className="w-8 h-8 text-medical-blue" />
               </div>
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-800 page-title">
                   Bảng điều khiển Sở Y Tế
                 </h1>
                 <p className="text-gray-600">Giám sát toàn Hệ thống Quản lý đào tạo nhân lực y tế</p>

@@ -307,7 +307,7 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
                 <Building className="w-8 h-8 text-medical-blue" />
               </div>
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-800 page-title">
                   Bảng điều khiển đơn vị
                 </h1>
                 <p className="text-gray-600">Quản lý và giám sát người hành nghề</p>

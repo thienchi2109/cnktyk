@@ -243,10 +243,10 @@ export function BulkSubmissionWizard() {
             aria-label="Quay lại danh sách ghi nhận"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            <span>Quay lại danh sách</span>
+            <span className="sr-only">Quay lại danh sách</span>
           </GlassButton>
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900" id="wizard-title">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 page-title" id="wizard-title">
               Ghi nhận hoạt động cho nhóm
             </h1>
             <p className="text-sm text-gray-600 mt-1">

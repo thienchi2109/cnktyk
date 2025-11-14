@@ -234,7 +234,7 @@ export function SubmissionReview({
             </GlassButton>
           )}
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Chi tiết hoạt động</h1>
+            <h1 className="text-2xl font-bold text-gray-900 page-title">Chi tiết hoạt động</h1>
             <p className="text-gray-600 mt-1">Xem xét và phê duyệt hoạt động đào tạo liên tục</p>
           </div>
         </div>

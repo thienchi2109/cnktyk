@@ -131,7 +131,7 @@ export function UserList({
             <div className="p-2 rounded-lg bg-medical-blue/10">
               <Users className="h-6 w-6 text-medical-blue" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Quản Lý Tài Khoản</h1>
+            <h1 className="text-3xl font-bold text-gray-900 page-title">Quản lý tài khoản</h1>
           </div>
           <p className="text-gray-600">
             {currentUserRole === 'SoYTe' 

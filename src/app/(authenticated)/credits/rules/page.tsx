@@ -74,8 +74,8 @@ export default function CreditRulesPage() {
           <div className="flex items-center gap-3">
             <Shield className="w-8 h-8 text-medical-blue" />
             <div>
-              <h1 className="text-3xl font-bold text-gray-800">
-                Quy tắc Tín chỉ
+              <h1 className="text-3xl font-bold text-gray-800 page-title">
+                Quy tắc tín chỉ
               </h1>
               <p className="text-gray-600 mt-1">
                 Quản lý quy tắc tính toán và yêu cầu tín chỉ

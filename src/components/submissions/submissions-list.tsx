@@ -329,7 +329,7 @@ export function SubmissionsList({
             <div className="p-2 rounded-lg bg-medical-blue/10">
               <FileText className="h-6 w-6 text-medical-blue" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-3xl font-bold text-gray-900 page-title">
               {userRole === 'NguoiHanhNghe' ? 'Hoạt động của tôi' : 'Quản lý hoạt động'}
             </h1>
           </div>

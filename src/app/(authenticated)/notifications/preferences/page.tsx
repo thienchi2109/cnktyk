@@ -69,7 +69,7 @@ export default function NotificationPreferencesPage() {
                 <Settings className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-slate-900">
+                <h1 className="text-2xl font-bold text-slate-900 page-title">
                   Cài đặt thông báo
                 </h1>
                 <p className="text-slate-600">

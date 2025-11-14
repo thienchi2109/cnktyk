@@ -87,8 +87,8 @@ export default function CreditsPage() {
         <div className="flex items-center gap-3">
           <Award className="w-8 h-8 text-medical-blue" />
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">
-              Quản lý Tín chỉ
+            <h1 className="text-3xl font-bold text-gray-800 page-title">
+              Quản lý tín chỉ
             </h1>
             <p className="text-gray-600 mt-1">
               Theo dõi tiến độ tuân thủ và lịch sử tín chỉ của bạn

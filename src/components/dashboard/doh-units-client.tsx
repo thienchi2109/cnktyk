@@ -308,7 +308,7 @@ export function DohUnitsClient({ userId, initialUnitId }: DohUnitsClientProps) {
     <div className="min-h-screen p-6 space-y-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Quản lý đơn vị</h1>
+          <h1 className="text-3xl font-bold text-gray-800 page-title mb-2">Quản lý đơn vị</h1>
           <p className="text-gray-600">Theo dõi và đánh giá hiệu suất các đơn vị y tế</p>
         </div>
 

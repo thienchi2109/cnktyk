@@ -75,7 +75,7 @@ export default function FileUploadDemo() {
           <div className="flex items-center space-x-3 mb-4">
             <Upload className="h-8 w-8 text-medical-blue" />
             <div>
-              <h1 className="text-2xl font-bold text-gray-800">
+              <h1 className="text-2xl font-bold text-gray-800 page-title">
                 Hệ thống tải lên tệp
               </h1>
               <p className="text-gray-600">

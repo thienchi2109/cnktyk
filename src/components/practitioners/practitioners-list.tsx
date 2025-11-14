@@ -215,7 +215,7 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
             <div className="p-2 rounded-lg bg-medical-blue/10">
               <UserCircle className="h-6 w-6 text-medical-blue" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Người Hành Nghề</h1>
+            <h1 className="text-3xl font-bold text-gray-900 page-title">Người hành nghề</h1>
           </div>
           <p className="text-gray-600">
             Quản lý người hành nghề y tế và trạng thái tuân thủ • {filteredPractitioners.length} người

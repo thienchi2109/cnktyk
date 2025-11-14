@@ -228,7 +228,7 @@ export function PractitionerProfile({ practitionerId, userRole, userUnitId, unit
             Quay lại
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">{practitioner.HoVaTen}</h1>
+            <h1 className="text-3xl font-bold page-title">{practitioner.HoVaTen}</h1>
             <p className="text-gray-600">{practitioner.ChucDanh || 'Người hành nghề y tế'}</p>
           </div>
         </div>
