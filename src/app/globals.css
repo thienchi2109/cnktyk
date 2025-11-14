@@ -388,6 +388,5 @@ html, body {
 }
 
 .page-title {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.015em;
 }
