@@ -2,10 +2,8 @@
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { DONVI_ACCOUNT_MANAGEMENT_DISABLED_MESSAGE } from '@/lib/features/flags';
 import { cn } from '@/lib/utils/cn';
 import { AlertCircle } from 'lucide-react';
-
 interface DonViAccountDisabledMessageProps {
   className?: string;
 }
@@ -33,12 +31,7 @@ export function DonViAccountDisabledMessage({
             Tạm thời tắt
           </Badge>
         </div>
-        <AlertDescription className="space-y-2 text-sm text-gray-700">
-          <p>{DONVI_ACCOUNT_MANAGEMENT_DISABLED_MESSAGE.vi}</p>
-          <p className="text-xs text-gray-500 italic">
-            {DONVI_ACCOUNT_MANAGEMENT_DISABLED_MESSAGE.en}
-          </p>
-        </AlertDescription>
+        <AlertDescription className="space-y-2 text-sm text-gray-700" />
       </div>
     </Alert>
   );

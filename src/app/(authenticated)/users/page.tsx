@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { CreateTaiKhoanSchema, UpdateTaiKhoanSchema } from '@/lib/db/schemas';
-import { DonViAccountDisabledMessage } from '@/components/users/donvi-account-disabled-message';
 
 interface User {
   MaTaiKhoan: string;
@@ -32,7 +31,7 @@ interface Unit {
 type UserFormData = z.infer<typeof CreateTaiKhoanSchema>;
 
 export default function UsersPage() {
-  const { user, featureFlags, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -58,11 +57,7 @@ export default function UsersPage() {
 
   // Check permissions
   const isDonVi = user?.role === 'DonVi';
-  const donViAccountManagementEnabled =
-    featureFlags?.donViAccountManagementEnabled ?? (isDonVi ? false : true);
-  const isDonViFeatureDisabled = isDonVi && !donViAccountManagementEnabled;
-  const canManageUsers =
-    user?.role === 'SoYTe' || (isDonVi && donViAccountManagementEnabled);
+  const canManageUsers = user?.role === 'SoYTe' || isDonVi;
 
   // Fetch users
   const fetchUsers = async () => {
@@ -281,16 +276,6 @@ export default function UsersPage() {
               Bạn cần đăng nhập để truy cập trang này.
             </AlertDescription>
           </Alert>
-        </GlassCard>
-      </div>
-    );
-  }
-
-  if (isDonViFeatureDisabled) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
-        <GlassCard className="p-8 max-w-2xl shadow-xl space-y-4">
-          <DonViAccountDisabledMessage />
         </GlassCard>
       </div>
     );

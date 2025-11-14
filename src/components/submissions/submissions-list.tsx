@@ -8,20 +8,19 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Eye,
   FileText,
-  User,
-  Calendar,
   Filter,
   Search,
   Plus,
   AlertTriangle,
-  Download,
   ChevronLeft,
   ChevronRight,
   Users,
-  MoreHorizontal,
-  Trash2
+  Trash2,
+  ExternalLink,
+  FileSearch,
+  DownloadCloud,
+  EllipsisVertical
 } from 'lucide-react';
 
 import { GlassCard } from '@/components/ui/glass-card';
@@ -30,7 +29,6 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/glass-select';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -634,14 +632,14 @@ export function SubmissionsList({
                           <GlassButton
                             size="sm"
                             variant="secondary"
-                            aria-label="Xem chi ti?t ho?t d?ng"
-                            title="Xem chi ti?t ho?t d?ng"
+                            aria-label="Xem chi tiết hoạt động"
+                            title="Xem chi tiết hoạt động"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleViewSubmission(submission.MaGhiNhan);
                             }}
                           >
-                            <Eye className="h-4 w-4" />
+                            <ExternalLink className="h-4 w-4" />
                           </GlassButton>
 
                           {submission.FileMinhChungUrl && (
@@ -649,30 +647,30 @@ export function SubmissionsList({
                               <GlassButton
                                 size="sm"
                                 variant="secondary"
-                                aria-label="Xem minh ch?ng"
-                                title="Xem minh ch?ng"
+                                aria-label="Xem minh chứng"
+                                title="Xem minh chứng"
                                 disabled={evidenceFile.isLoading}
                                 onClick={(event) => handleViewEvidence(event, submission)}
                               >
                                 {isViewingEvidence ? (
                                   <Loader2 className="h-4 w-4 animate-spin" />
                                 ) : (
-                                  <FileText className="h-4 w-4" />
+                                  <FileSearch className="h-4 w-4" />
                                 )}
                               </GlassButton>
 
                               <GlassButton
                                 size="sm"
                                 className="bg-medical-green text-white hover:bg-medical-green/90"
-                                aria-label="T?i xu?ng minh ch?ng"
-                                title="T?i xu?ng minh ch?ng"
+                                aria-label="Tải xuống minh chứng"
+                                title="Tải xuống minh chứng"
                                 disabled={evidenceFile.isLoading}
                                 onClick={(event) => handleDownloadEvidence(event, submission)}
                               >
                                 {isDownloadingEvidence ? (
                                   <Loader2 className="h-4 w-4 animate-spin" />
                                 ) : (
-                                  <Download className="h-4 w-4" />
+                                  <DownloadCloud className="h-4 w-4" />
                                 )}
                               </GlassButton>
                             </>
@@ -684,11 +682,11 @@ export function SubmissionsList({
                                 <GlassButton
                                   size="sm"
                                   variant="secondary"
-                                  aria-label="T�y ch?n kh�c"
-                                  title="T�y ch?n kh�c"
+                                  aria-label="Tuỳ chọn khác"
+                                  title="Tuỳ chọn khác"
                                   onClick={(e) => e.stopPropagation()}
                                 >
-                                  <MoreHorizontal className="h-4 w-4" />
+                                  <EllipsisVertical className="h-4 w-4" />
                                 </GlassButton>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
@@ -697,7 +695,7 @@ export function SubmissionsList({
                                   destructive
                                 >
                                   <Trash2 className="h-4 w-4 mr-2" />
-                                  X�a
+                                  Xóa
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>

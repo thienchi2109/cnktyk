@@ -47,10 +47,6 @@ export default async function AuthenticatedLayout({
       }}
       notifications={unreadCount}
       submissionPendingCount={stats.submissionsPendingCount}
-      featureFlags={{
-        donViAccountManagementEnabled:
-          session.featureFlags.donViAccountManagementEnabled,
-      }}
     >
       {children}
     </ResponsiveNavigation>

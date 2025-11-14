@@ -406,7 +406,7 @@ export function SubmissionReview({
         <GlassCard className="p-6">
           <div className="flex items-center space-x-2 mb-4">
             <FileText className="h-5 w-5 text-medical-blue" />
-            <h3 className="text-lg font-semibold text-gray-900">T?p minh ch?ng</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Tệp minh chứng</h3>
           </div>
 
           <div className="flex flex-col gap-4 rounded-lg bg-gray-50 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -415,8 +415,8 @@ export function SubmissionReview({
                 {evidenceFileExtension || 'FILE'}
               </div>
               <div>
-                <p className="font-medium text-gray-900">{evidenceFileName || 'T?p minh ch?ng'}</p>
-                <p className="text-sm text-gray-500">Minh ch?ng dinh k�m</p>
+                <p className="font-medium text-gray-900">{evidenceFileName || 'Tệp minh chứng'}</p>
+                <p className="text-sm text-gray-500">Minh chứng đính kèm</p>
               </div>
             </div>
 
@@ -424,8 +424,8 @@ export function SubmissionReview({
               <GlassButton
                 size="sm"
                 variant="outline"
-                aria-label="Xem minh ch?ng"
-                title="Xem minh ch?ng"
+                aria-label="Xem minh chứng"
+                title="Xem minh chứng"
                 disabled={evidenceFile.isLoading}
                 onClick={() => submission.FileMinhChungUrl && evidenceFile.viewFile(submission.FileMinhChungUrl)}
               >
@@ -440,8 +440,8 @@ export function SubmissionReview({
               <GlassButton
                 size="sm"
                 className="bg-medical-green text-white hover:bg-medical-green/90"
-                aria-label="T?i xu?ng minh ch?ng"
-                title="T?i xu?ng minh ch?ng"
+                aria-label="Tải xuống minh chứng"
+                title="Tải xuống minh chứng"
                 disabled={evidenceFile.isLoading}
                 onClick={() => submission.FileMinhChungUrl && evidenceFile.downloadFile(submission.FileMinhChungUrl, evidenceFileName || undefined)}
               >
@@ -450,7 +450,7 @@ export function SubmissionReview({
                 ) : (
                   <Download className="h-4 w-4" />
                 )}
-                <span className="ml-2">T?i xu?ng</span>
+                <span className="ml-2">Tải xuống</span>
               </GlassButton>
             </div>
           </div>

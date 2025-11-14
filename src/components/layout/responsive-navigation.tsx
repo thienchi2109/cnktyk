@@ -25,7 +25,6 @@ import {
 import { GlassHeader } from "./glass-header";
 import { GlassFooter } from "./glass-footer";
 import { GlassButton } from "@/components/ui/glass-button";
-import { DonViAccountDisabledMessage } from "@/components/users/donvi-account-disabled-message";
 import { cn } from "@/lib/utils/cn";
 
 interface NavigationItem {
@@ -694,8 +693,6 @@ export const ResponsiveNavigation = React.forwardRef<HTMLDivElement, ResponsiveN
     const router = useRouter();
     const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
-    const donViAccountManagementEnabled =
-      featureFlags?.donViAccountManagementEnabled !== false;
 
     const navCounts = React.useMemo(
       () => ({ submissionsPending: submissionPendingCount }),
@@ -703,15 +700,10 @@ export const ResponsiveNavigation = React.forwardRef<HTMLDivElement, ResponsiveN
     );
 
     const navigationItems = React.useMemo(
-      () =>
-        getNavigationItems(user?.role, navCounts, {
-          donViAccountManagementEnabled,
-        }),
-      [user?.role, navCounts, donViAccountManagementEnabled],
+      () => getNavigationItems(user?.role, navCounts, featureFlags || {}),
+      [user?.role, navCounts, featureFlags],
     );
 
-    const showDonViDisabledNotice =
-      user?.role === 'DonVi' && !donViAccountManagementEnabled;
 
     const handleItemClick = (item: NavigationItem) => {
       setMobileMenuOpen(false);
@@ -835,11 +827,6 @@ export const ResponsiveNavigation = React.forwardRef<HTMLDivElement, ResponsiveN
           "xl:pb-4", // Normal padding on desktop
           "pb-20" // Extra padding on mobile/tablet for footer nav
         )}>
-          {showDonViDisabledNotice && (
-            <div className="mb-4">
-              <DonViAccountDisabledMessage />
-            </div>
-          )}
           {children}
         </main>
 

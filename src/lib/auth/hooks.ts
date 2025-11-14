@@ -11,7 +11,6 @@ export function useAuth() {
   
   return {
     user: session?.user,
-    featureFlags: session?.featureFlags,
     isLoading: status === "loading",
     isAuthenticated: !!session?.user,
   };
