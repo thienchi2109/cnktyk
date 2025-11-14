@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { usePractitioners, practitionersQueryKey, fetchPractitionersApi } from '@/hooks/use-practitioners';
-import { Search, Filter, Plus, Eye, Edit, Trash2, AlertTriangle, CheckCircle, Clock, Upload, UserCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Filter, Plus, Eye, Edit, Trash2, AlertTriangle, CheckCircle, Clock, Upload, UserCircle, ChevronLeft, ChevronRight, EllipsisVertical } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
 import { GlassButton } from '@/components/ui/glass-button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,12 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { PractitionerForm } from './practitioner-form';
 import { PractitionerDetailSheet } from './practitioner-detail-sheet';
 import { BulkImportSheet } from './bulk-import-sheet';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface ComplianceStatus {
   totalCredits: number;
@@ -434,18 +440,28 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
                         }
                       }}
                     >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="font-medium text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap max-w-[260px]">
+                        <div
+                          className="font-medium text-gray-900 truncate"
+                          title={practitioner.HoVaTen}
+                        >
                           {practitioner.HoVaTen}
                         </div>
                         {practitioner.MaNhanVienNoiBo && (
-                          <div className="text-sm text-gray-500">Mã NV nội bộ: {practitioner.MaNhanVienNoiBo}</div>
+                          <div
+                            className="text-sm text-gray-500 truncate"
+                            title={`Mã NV nội bộ: ${practitioner.MaNhanVienNoiBo}`}
+                          >
+                            Mã NV nội bộ: {practitioner.MaNhanVienNoiBo}
+                          </div>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {practitioner.ChucDanh || 'Chưa xác định'}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 max-w-[200px]">
+                        <span className="block truncate" title={practitioner.ChucDanh || 'Chưa xác định'}>
+                          {practitioner.ChucDanh || 'Chưa xác định'}
+                        </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900" title={practitioner.SoCCHN || 'N/A'}>
                         {practitioner.SoCCHN || 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -457,33 +473,45 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {practitioner.complianceStatus.totalCredits} / {practitioner.complianceStatus.requiredCredits}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm">
+                      <td className="px-6 py-4 whitespace-nowrap max-w-[220px]">
+                        <div className="text-sm space-y-1">
                           {practitioner.Email && (
-                            <div className="text-gray-900">{practitioner.Email}</div>
+                            <div className="text-gray-900 truncate" title={practitioner.Email}>{practitioner.Email}</div>
                           )}
                           {practitioner.DienThoai && (
-                            <div className="text-gray-500">{practitioner.DienThoai}</div>
+                            <div className="text-gray-500 truncate" title={practitioner.DienThoai}>{practitioner.DienThoai}</div>
                           )}
                           {!practitioner.Email && !practitioner.DienThoai && (
                             <span className="text-gray-400">Không có</span>
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end gap-2">
-                          <GlassButton
-                            size="sm"
-                            variant="secondary"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedPractitionerId(practitioner.MaNhanVien);
-                              setShowDetailSheet(true);
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </GlassButton>
-                        </div>
+                      <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <GlassButton
+                              size="sm"
+                              variant="secondary"
+                              aria-label="Thao tác"
+                              title="Thao tác"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <EllipsisVertical className="h-4 w-4" />
+                            </GlassButton>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedPractitionerId(practitioner.MaNhanVien);
+                                setShowDetailSheet(true);
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              Xem chi tiết
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   ))}

@@ -21,6 +21,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { LoadingNotice } from '@/components/ui/loading-notice';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { ActivityDetailSheet } from './activity-detail-sheet';
 import {
   Search,
@@ -39,7 +45,8 @@ import {
   Building2,
   ArchiveRestore,
   Upload,
-  UserPlus
+  UserPlus,
+  EllipsisVertical
 } from 'lucide-react';
 
 interface ActivitiesListProps {
@@ -426,9 +433,11 @@ export function ActivitiesList({
                   <TableHead>Loại</TableHead>
                   <TableHead>Đơn vị tính</TableHead>
                   <TableHead>Tỷ lệ quy đổi</TableHead>
-                  <TableHead>Giới hạn giờ</TableHead>
-                  <TableHead>Trạng thái</TableHead>
-                  {(permissions.canEditGlobal || permissions.canEditUnit) && <TableHead>Thao tác</TableHead>}
+                    <TableHead>Giới hạn giờ</TableHead>
+                    <TableHead>Trạng thái</TableHead>
+                    {(permissions.canEditGlobal || permissions.canEditUnit) && (
+                      <TableHead className="text-right w-[80px]">Thao tác</TableHead>
+                    )}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -461,7 +470,12 @@ export function ActivitiesList({
                             </div>
                           </div>
                           <div>
-                            <div className="font-medium text-gray-900">{activity.TenDanhMuc}</div>
+                            <div
+                              className="font-medium text-gray-900 truncate max-w-[320px]"
+                              title={activity.TenDanhMuc}
+                            >
+                              {activity.TenDanhMuc}
+                            </div>
                             {activity.YeuCauMinhChung && (
                               <div className="text-sm text-gray-500">Yêu cầu minh chứng</div>
                             )}
@@ -506,57 +520,67 @@ export function ActivitiesList({
                       </TableCell>
                       
                       {(permissions.canEditGlobal || permissions.canEditUnit) && (
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            {['DonVi', 'SoYTe'].includes(userRole) && (
-                              <Link
-                                href={`/submissions/bulk?activityId=${activity.MaDanhMuc}`}
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <GlassButton
+                                variant="secondary"
+                                size="sm"
+                                aria-label="Thao tác"
+                                title="Thao tác"
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                <GlassButton
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-gray-600 hover:text-blue-600"
-                                  title="Ghi nhận hàng loạt"
+                                <EllipsisVertical className="h-4 w-4" />
+                              </GlassButton>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {['DonVi', 'SoYTe'].includes(userRole) && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    router.push(`/submissions/bulk?activityId=${activity.MaDanhMuc}`);
+                                  }}
                                 >
-                                  <UserPlus className="h-4 w-4" />
-                                </GlassButton>
-                              </Link>
-                            )}
-                            {canEditActivity(activity) && onEditActivity && (
-                              <GlassButton
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => { e.stopPropagation(); onEditActivity(activity); }}
-                                className="text-gray-600 hover:text-medical-blue"
-                                title="Chỉnh sửa"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </GlassButton>
-                            )}
-                            {permissions.canAdoptToGlobal && activity.MaDonVi !== null && onAdoptToGlobal && (
-                              <GlassButton
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => { e.stopPropagation(); onAdoptToGlobal(activity.MaDanhMuc); }}
-                                className="text-gray-600 hover:text-green-600"
-                                title="Chuyển thành hoạt động hệ thống"
-                              >
-                                <Upload className="h-4 w-4" />
-                              </GlassButton>
-                            )}
-                            {canDeleteActivity(activity) && onDeleteActivity && (
-                              <GlassButton
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => { e.stopPropagation(); onDeleteActivity(activity.MaDanhMuc); }}
-                                className="text-gray-600 hover:text-red-600"
-                                title="Xóa"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </GlassButton>
-                            )}
-                          </div>
+                                  <UserPlus className="h-4 w-4 mr-2" />
+                                  Ghi nhận hàng loạt
+                                </DropdownMenuItem>
+                              )}
+                              {canEditActivity(activity) && onEditActivity && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onEditActivity(activity);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Chỉnh sửa
+                                </DropdownMenuItem>
+                              )}
+                              {permissions.canAdoptToGlobal && activity.MaDonVi !== null && onAdoptToGlobal && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onAdoptToGlobal(activity.MaDanhMuc);
+                                  }}
+                                >
+                                  <Upload className="h-4 w-4 mr-2" />
+                                  Chuyển thành hoạt động hệ thống
+                                </DropdownMenuItem>
+                              )}
+                              {canDeleteActivity(activity) && onDeleteActivity && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDeleteActivity(activity.MaDanhMuc);
+                                  }}
+                                  destructive
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Xóa
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       )}
                     </TableRow>
