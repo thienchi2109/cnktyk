@@ -498,9 +498,9 @@ export function SubmissionsList({
                         />
                       </th>
                     )}
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hoạt động</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[250px]">Hoạt động</th>
                     {userRole !== 'NguoiHanhNghe' && (
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Người hành nghề</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[180px] max-w-[180px]">Người hành nghề</th>
                     )}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thời gian</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tín chỉ</th>
@@ -538,7 +538,7 @@ export function SubmissionsList({
                           ) : null}
                         </td>
                       )}
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 min-w-[250px]">
                         <div className="space-y-1">
                           <div className="font-medium text-gray-900">
                             {submission.TenHoatDong}
@@ -574,13 +574,19 @@ export function SubmissionsList({
                       </td>
                       
                       {userRole !== 'NguoiHanhNghe' && (
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-6 py-4 max-w-[180px]">
                           <div className="space-y-1">
-                            <div className="font-medium text-gray-900">
+                            <div
+                              className="font-medium text-gray-900 truncate"
+                              title={submission.practitioner.HoVaTen}
+                            >
                               {submission.practitioner.HoVaTen}
                             </div>
                             {submission.practitioner.ChucDanh && (
-                              <div className="text-sm text-gray-500">
+                              <div
+                                className="text-sm text-gray-500 truncate"
+                                title={submission.practitioner.ChucDanh}
+                              >
                                 {submission.practitioner.ChucDanh}
                               </div>
                             )}
