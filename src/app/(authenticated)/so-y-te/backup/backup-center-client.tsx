@@ -20,10 +20,9 @@ import {
   TrendingDown,
 } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import LoadingNotice from '@/components/ui/loading-notice';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { GlassProgress } from '@/components/ui/glass-progress';
 import {
@@ -778,9 +777,9 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
               </p>
             </div>
           </div>
-          <GlassButton variant="ghost" size="sm" disabled>
+          <Button variant="ghost" size="sm" disabled>
             {adminName}
-          </GlassButton>
+          </Button>
         </div>
 
         <GlassCard className="space-y-6 p-6">
@@ -850,7 +849,7 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
 
             <div className="flex flex-wrap justify-start gap-2 md:justify-end">
               {datePresets.map((preset) => (
-                <GlassButton
+                <Button
                   key={preset.id}
                   type="button"
                   size="sm"
@@ -859,7 +858,7 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
                   disabled={isDownloading}
                 >
                   {preset.label}
-                </GlassButton>
+                </Button>
               ))}
             </div>
           </div>
@@ -949,7 +948,7 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
             <div className="text-sm text-slate-600">
               Chọn phạm vi thời gian để tải xuống bản sao lưu minh chứng đã được duyệt. Mỗi tệp chứa manifest chi tiết và các minh chứng trong khoảng thời gian đã chọn.
             </div>
-            <GlassButton
+            <Button
               size="lg"
               className="min-w-[220px]"
               onClick={handleDownload}
@@ -957,7 +956,7 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
             >
               <DownloadCloud className="mr-2 h-5 w-5" />
               {isDownloading ? 'Đang tạo sao lưu...' : 'Tải xuống sao lưu'}
-            </GlassButton>
+            </Button>
           </div>
 
           {isDownloading && (
@@ -1252,7 +1251,7 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
 
             <div className="flex flex-wrap justify-start gap-2 md:justify-end">
               {datePresets.map((preset) => (
-                <GlassButton
+                <Button
                   key={preset.id}
                   type="button"
                   size="sm"
@@ -1263,7 +1262,7 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
                   disabled={isDeleting}
                 >
                   {preset.label}
-                </GlassButton>
+                </Button>
               ))}
             </div>
           </div>
@@ -1271,7 +1270,7 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
             <div className="text-sm text-slate-600">
               Chỉ nên xóa sau khi đã sao lưu và kiểm tra tệp an toàn. Tác vụ sẽ loại bỏ hoàn toàn minh chứng khỏi Cloudflare R2 và ẩn liên kết tải xuống trong hệ thống.
             </div>
-            <GlassButton
+            <Button
               size="lg"
               variant="danger"
               className="min-w-[240px]"
@@ -1280,7 +1279,7 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
             >
               <Trash2 className="mr-2 h-5 w-5" />
               {isDeleting ? 'Đang xóa minh chứng...' : 'Xóa minh chứng đã sao lưu'}
-            </GlassButton>
+            </Button>
           </div>
 
           {isDeleting && (

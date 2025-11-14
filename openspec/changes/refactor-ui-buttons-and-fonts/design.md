@@ -34,7 +34,7 @@ The current application uses:
 
 ## Decisions
 
-### Decision 1: Replace GlassButton with shadcn Button
+### Decision 1: Replace Button with shadcn Button
 
 **Rationale:**
 - **Accessibility**: Glassmorphism creates low contrast that fails WCAG standards. Semi-transparent buttons with backdrop blur make text harder to read, especially for users with visual impairments.
@@ -46,8 +46,8 @@ The current application uses:
 **Implementation:**
 ```tsx
 // Before
-import { GlassButton } from '@/components/ui/glass-button';
-<GlassButton variant="secondary" size="sm">Action</GlassButton>
+import { Button } from '@/components/ui/glass-button';
+<Button variant="secondary" size="sm">Action</Button>
 
 // After
 import { Button } from '@/components/ui/button';
@@ -55,7 +55,7 @@ import { Button } from '@/components/ui/button';
 ```
 
 **Alternatives Considered:**
-1. **Keep GlassButton, improve contrast**: Would still have readability issues and performance overhead
+1. **Keep Button, improve contrast**: Would still have readability issues and performance overhead
 2. **Hybrid approach**: Creates inconsistency and maintenance burden
 3. **Custom design system**: Overkill for current needs, shadcn provides battle-tested components
 
@@ -103,21 +103,23 @@ medical: "bg-medical-blue text-white hover:bg-medical-blue/90",
 "medical-secondary": "bg-medical-green text-white hover:bg-medical-green/90",
 ```
 
-### Decision 4: Deprecate Rather Than Delete GlassButton
+**Usage Guidelines:**
+- Use `variant="medical"` for primary actions that advance a workflow (submit, approve, confirm). This variant should appear once per view to preserve hierarchy.
+- Use `variant="medical-secondary"` for constructive secondary actions such as “Ghi nhận hoạt động” or “Tạo mới” when they complement the primary action.
+- Continue to use `variant="outline"` for neutral actions (cancel, filter toggles) and `variant="ghost"` for icon-only or low-emphasis controls.
+- Disabled states inherit the base Button opacity treatment; avoid using color-only cues by pairing disabled buttons with helper text when necessary.
+
+### Decision 4: Remove Legacy Glass Button
 
 **Rationale:**
-- Allows gradual migration if needed
-- Provides clear deprecation path
-- Prevents breaking changes in unexpected places
+- Migration is complete across the application, so keeping the old component only adds confusion
+- Eliminates duplicate styling systems and dead code
+- Forces future work to rely on the consolidated `Button` API
 
 **Implementation:**
-```tsx
-/**
- * @deprecated Use Button from '@/components/ui/button' instead
- * GlassButton will be removed in a future version
- */
-export const GlassButton = ...
-```
+- Delete `src/components/ui/glass-button.tsx`
+- Remove the export from `src/components/ui/index.ts`
+- Replace all remaining imports and usages with the updated `Button` variants
 
 ## Risks / Trade-offs
 
@@ -128,10 +130,10 @@ export const GlassButton = ...
 - Gradual rollout if possible
 - Document changes in release notes
 
-### Risk 2: Missed GlassButton Instances
+### Risk 2: Missed Button Instances
 **Impact**: Inconsistent UI if some instances remain
 **Mitigation**:
-- Comprehensive grep/search for all GlassButton usage
+- Comprehensive grep/search for all Button usage
 - TypeScript will catch most import issues
 - Code review checklist
 
@@ -163,7 +165,7 @@ export const GlassButton = ...
 4. Each migration as separate commit for easy rollback
 
 ### Phase 3: Cleanup
-1. Add deprecation notice to GlassButton
+1. Add deprecation notice to Button
 2. Remove unused glassmorphism CSS
 3. Update documentation
 

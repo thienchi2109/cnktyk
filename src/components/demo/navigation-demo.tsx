@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { ResponsiveNavigation } from "@/components/layout";
-import { GlassCard, GlassButton } from "@/components/ui";
+import { GlassCard, Button } from "@/components/ui";
 
 export const NavigationDemo = () => {
   const [activeItem, setActiveItem] = React.useState('dashboard');
@@ -61,30 +61,30 @@ export const NavigationDemo = () => {
             Different roles see different navigation items. Try switching between roles to see the navigation change.
           </p>
           <div className="flex flex-wrap gap-2">
-            <GlassButton
-              variant={userRole === 'NguoiHanhNghe' ? 'default' : 'ghost'}
+            <Button
+              variant={userRole === 'NguoiHanhNghe' ? 'medical' : 'ghost'}
               onClick={() => setUserRole('NguoiHanhNghe')}
             >
               Practitioner
-            </GlassButton>
-            <GlassButton
-              variant={userRole === 'DonVi' ? 'default' : 'ghost'}
+            </Button>
+            <Button
+              variant={userRole === 'DonVi' ? 'medical' : 'ghost'}
               onClick={() => setUserRole('DonVi')}
             >
               Unit Admin
-            </GlassButton>
-            <GlassButton
-              variant={userRole === 'SoYTe' ? 'default' : 'ghost'}
+            </Button>
+            <Button
+              variant={userRole === 'SoYTe' ? 'medical' : 'ghost'}
               onClick={() => setUserRole('SoYTe')}
             >
               DoH Admin
-            </GlassButton>
-            <GlassButton
-              variant={userRole === 'Auditor' ? 'default' : 'ghost'}
+            </Button>
+            <Button
+              variant={userRole === 'Auditor' ? 'medical' : 'ghost'}
               onClick={() => setUserRole('Auditor')}
             >
               Auditor
-            </GlassButton>
+            </Button>
           </div>
         </GlassCard>
 

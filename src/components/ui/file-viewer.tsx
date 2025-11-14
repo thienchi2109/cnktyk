@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { X, Download, ExternalLink, Loader2 } from 'lucide-react';
 import { GlassModal } from './glass-modal';
-import { GlassButton } from './glass-button';
+import { Button } from './button';
 import { UploadedFile } from './file-upload';
 
 export interface FileViewerProps {
@@ -84,13 +84,13 @@ export function FileViewer({ file, isOpen, onClose }: FileViewerProps) {
           <div className="text-center">
             <p className="text-medical-red mb-2">Lỗi tải tệp</p>
             <p className="text-sm text-gray-600">{error}</p>
-            <GlassButton
+            <Button
               onClick={loadSignedUrl}
               className="mt-4"
               variant="outline"
             >
               Thử lại
-            </GlassButton>
+            </Button>
           </div>
         </div>
       );
@@ -134,9 +134,9 @@ if (file.mimeType.startsWith('image/')) {
           <p className="text-gray-600 mb-4">
             Không thể xem trước loại tệp này
           </p>
-          <GlassButton onClick={handleDownload}>
+          <Button onClick={handleDownload}>
             Tải xuống để xem
-          </GlassButton>
+          </Button>
         </div>
       </div>
     );
@@ -160,34 +160,34 @@ if (file.mimeType.startsWith('image/')) {
             <div className="flex items-center space-x-2">
               {signedUrl && (
                 <>
-                  <GlassButton
+                  <Button
                     variant="outline"
                     size="sm"
                     onClick={handleDownload}
                     title="Tải xuống"
                   >
                     <Download className="h-4 w-4" />
-                  </GlassButton>
+                  </Button>
 
-                  <GlassButton
+                  <Button
                     variant="outline"
                     size="sm"
                     onClick={handleOpenExternal}
                     title="Mở trong tab mới"
                   >
                     <ExternalLink className="h-4 w-4" />
-                  </GlassButton>
+                  </Button>
                 </>
               )}
 
-              <GlassButton
+              <Button
                 variant="ghost"
                 size="sm"
                 onClick={onClose}
                 title="Đóng"
               >
                 <X className="h-4 w-4" />
-              </GlassButton>
+              </Button>
             </div>
           </div>
 

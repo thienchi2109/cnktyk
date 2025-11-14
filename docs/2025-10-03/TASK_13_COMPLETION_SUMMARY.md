@@ -134,7 +134,7 @@ docs/
 
 ### Existing Components Reused
 - `GlassCard` - Base glass component
-- `GlassButton` - Glass-styled buttons
+- `Button` - Glass-styled buttons
 - `useIsDesktop` - Responsive detection hook
 
 ### Data Flow

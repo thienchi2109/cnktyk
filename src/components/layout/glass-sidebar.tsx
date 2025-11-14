@@ -4,7 +4,7 @@ import * as React from "react";
 import { X, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { GlassCard } from "@/components/ui/glass-card";
-import { GlassButton } from "@/components/ui/glass-button";
+import { Button } from "@/components/ui/button";
 
 interface SidebarItem {
   id: string;
@@ -112,9 +112,9 @@ export const GlassSidebar = React.forwardRef<HTMLDivElement, GlassSidebarProps>(
             {/* Mobile Close Button */}
             <div className="flex items-center justify-between mb-6 lg:hidden">
               <h2 className="text-lg font-semibold">Menu</h2>
-              <GlassButton variant="ghost" size="icon" onClick={onClose}>
+              <Button variant="ghost" size="icon" onClick={onClose}>
                 <X className="h-5 w-5" />
-              </GlassButton>
+              </Button>
             </div>
 
             {/* Navigation Items */}

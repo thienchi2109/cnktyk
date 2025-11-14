@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useQueryClient } from '@tanstack/react-query';
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { Building2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useDebounce } from '@/hooks/use-debounce';
 import {
@@ -357,7 +357,7 @@ export function DohUnitsClient({ userId, initialUnitId }: DohUnitsClientProps) {
                     className="flex-1 px-4 py-2 rounded-lg border border-gray-200 bg-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-medical-blue/50"
                   />
                   {searchTerm && (
-                    <GlassButton
+                    <Button
                       variant="outline"
                       size="sm"
                       onClick={() => {
@@ -367,10 +367,10 @@ export function DohUnitsClient({ userId, initialUnitId }: DohUnitsClientProps) {
                       aria-label="Xóa từ khóa tìm kiếm"
                     >
                       Xóa
-                    </GlassButton>
+                    </Button>
                   )}
                 </div>
-                <GlassButton
+                <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
@@ -381,7 +381,7 @@ export function DohUnitsClient({ userId, initialUnitId }: DohUnitsClientProps) {
                   }}
                 >
                   Đặt lại
-                </GlassButton>
+                </Button>
               </div>
 
               <UnitComparisonGrid

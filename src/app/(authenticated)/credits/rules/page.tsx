@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Shield, Plus, Edit, Trash2, CheckCircle, XCircle } from 'lucide-react';
 import type { QuyTacTinChi } from '@/lib/db/schemas';
@@ -82,10 +82,10 @@ export default function CreditRulesPage() {
               </p>
             </div>
           </div>
-          <GlassButton variant="default" className="flex items-center gap-2">
+          <Button variant="medical" className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
             Thêm quy tắc mới
-          </GlassButton>
+          </Button>
         </div>
 
         {/* Error Message */}
@@ -170,12 +170,12 @@ export default function CreditRulesPage() {
                   </div>
 
                   <div className="flex gap-2 ml-4">
-                    <GlassButton variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm">
                       <Edit className="w-4 h-4" />
-                    </GlassButton>
-                    <GlassButton variant="ghost" size="sm" className="text-red-600">
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-red-600">
                       <Trash2 className="w-4 h-4" />
-                    </GlassButton>
+                    </Button>
                   </div>
                 </div>
               </GlassCard>

@@ -200,7 +200,7 @@ export default function UnitAdminPage() {
 - `PractitionerDashboard` - Dashboard for practitioners
 - `ComplianceProgressCard` - Reusable progress indicator
 - `GlassCard` - Base glass component
-- `GlassButton` - Glass-styled buttons
+- `Button` - Standard shadcn buttons with medical variants
 
 ## Related Pages
 

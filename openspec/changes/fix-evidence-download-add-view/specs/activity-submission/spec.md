@@ -359,13 +359,13 @@ export function SubmissionsList({ ... }) {
   // Remove old handleDownloadEvidence function
 
   // In JSX:
-  <GlassButton onClick={() => evidenceFile.viewFile(submission.FileMinhChungUrl)}>
+  <Button onClick={() => evidenceFile.viewFile(submission.FileMinhChungUrl)}>
     <FileText className="h-4 w-4" />
-  </GlassButton>
+  </Button>
 
-  <GlassButton onClick={() => evidenceFile.downloadFile(submission.FileMinhChungUrl)}>
+  <Button onClick={() => evidenceFile.downloadFile(submission.FileMinhChungUrl)}>
     <Download className="h-4 w-4" />
-  </GlassButton>
+  </Button>
 }
 ```
 

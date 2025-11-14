@@ -10,7 +10,7 @@ import { useState, useEffect } from 'react';
 import { useIsDesktop } from '@/hooks/use-media-query';
 import { useDebounce } from '@/hooks/use-debounce';
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { PractitionerForm } from '@/components/practitioners/practitioner-form';
@@ -314,10 +314,10 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <GlassButton variant="outline" size="sm" className="hidden md:flex items-center gap-2">
+              <Button variant="outline" size="sm" className="hidden md:flex items-center gap-2">
                 <Download className="w-4 h-4" />
                 Xuất báo cáo
-              </GlassButton>
+              </Button>
             </div>
           </div>
 
@@ -459,9 +459,9 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
                         </div>
                         <div className="flex items-center gap-2">
                           <Link href={`/submissions/${approval.id}`}>
-                            <GlassButton size="sm" variant="outline">
+                            <Button size="sm" variant="outline">
                               Xem chi tiết
-                            </GlassButton>
+                            </Button>
                           </Link>
                         </div>
                       </div>
@@ -471,9 +471,9 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
                   {pendingApprovals.length > 5 && (
                     <div className="text-center pt-4">
                       <Link href="/submissions?status=ChoDuyet">
-                        <GlassButton variant="outline">
+                        <Button variant="outline">
                           Xem tất cả ({pendingApprovals.length})
-                        </GlassButton>
+                        </Button>
                       </Link>
                     </div>
                   )}
@@ -603,9 +603,9 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
                         </div>
                         <div className="flex items-center gap-2">
                           <Link href={`/practitioners/${practitioner.id}`}>
-                            <GlassButton size="sm" variant="outline">
+                            <Button size="sm" variant="outline">
                               Chi tiết
-                            </GlassButton>
+                            </Button>
                           </Link>
                         </div>
                       </div>
@@ -619,7 +619,7 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
                         Hiển thị {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalPractitioners)} / {totalPractitioners}
                       </div>
                       <div className="flex gap-2">
-                        <GlassButton
+                        <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handlePageChange(currentPage - 1)}
@@ -627,7 +627,7 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
                           className="disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Trước
-                        </GlassButton>
+                        </Button>
                         <div className="flex items-center gap-1">
                           {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                             // Show first page, last page, current page, and adjacent pages
@@ -657,7 +657,7 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
                             );
                           })}
                         </div>
-                        <GlassButton
+                        <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handlePageChange(currentPage + 1)}
@@ -665,7 +665,7 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
                           className="disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Sau
-                        </GlassButton>
+                        </Button>
                       </div>
                     </div>
                   )}

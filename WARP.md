@@ -239,7 +239,7 @@ src/
 
 **Glass Components** (`src/components/ui/`):
 - `GlassCard` - Semi-transparent cards with backdrop blur
-- `GlassButton` - Interactive buttons with glass effects
+- `Button` - Interactive buttons with glass effects
 - `GlassInput` - Form inputs with glass styling
 - All use `backdrop-filter: blur(12px)` and `rgba(255, 255, 255, 0.25)` backgrounds
 

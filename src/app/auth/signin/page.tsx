@@ -4,7 +4,7 @@ import { useState, Suspense } from "react";
 import { signIn, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { GlassCard } from "@/components/ui/glass-card";
-import { GlassButton } from "@/components/ui/glass-button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -339,9 +339,9 @@ function SignInForm() {
                   </Alert>
                 )}
 
-                <GlassButton
+                <Button
                   type="submit"
-                  variant="default"
+                  variant="medical"
                   size="default"
                   className="w-full h-11 text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-blue-600 via-blue-600 to-cyan-600 hover:from-blue-700 hover:via-blue-700 hover:to-cyan-700 text-white border-0 rounded-lg hover:scale-[1.02] active:scale-[0.98]"
                   disabled={isLoading}
@@ -357,7 +357,7 @@ function SignInForm() {
                       Đăng nhập hệ thống
                     </>
                   )}
-                </GlassButton>
+                </Button>
               </form>
 
               {/* Additional Info */}

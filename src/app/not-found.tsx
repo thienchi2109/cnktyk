@@ -3,7 +3,7 @@
  */
 
 import Link from 'next/link';
-import { GlassCard, GlassButton } from '@/components/ui';
+import { GlassCard, Button } from '@/components/ui';
 
 export default function NotFound() {
   return (
@@ -19,16 +19,16 @@ export default function NotFound() {
           </div>
           
           <div className="space-y-3">
-            <Link href="/auth/signin">
-              <GlassButton className="w-full">
+            <Button asChild variant="medical" className="w-full">
+              <Link href="/auth/signin">
                 Đăng nhập
-              </GlassButton>
-            </Link>
-            <Link href="/">
-              <GlassButton variant="outline" className="w-full">
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full">
+              <Link href="/">
                 Trang chủ
-              </GlassButton>
-            </Link>
+              </Link>
+            </Button>
           </div>
         </div>
       </GlassCard>

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useQueryClient } from '@tanstack/react-query';
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { 
   Building2, 
   Users, 
@@ -411,7 +411,7 @@ export function DohDashboard({ userId, initialUnitId = null }: DohDashboardProps
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <GlassButton 
+              <Button 
                 variant="outline" 
                 size="sm" 
                 className="flex items-center gap-2"
@@ -420,11 +420,11 @@ export function DohDashboard({ userId, initialUnitId = null }: DohDashboardProps
                 <Building2 className="w-4 h-4" />
                 Quản lý đơn vị
                 <ExternalLink className="w-3 h-3" />
-              </GlassButton>
-              <GlassButton variant="outline" size="sm" className="hidden md:flex items-center gap-2">
+              </Button>
+              <Button variant="outline" size="sm" className="hidden md:flex items-center gap-2">
                 <Download className="w-4 h-4" />
                 Xuất báo cáo
-              </GlassButton>
+              </Button>
             </div>
           </div>
 
@@ -678,17 +678,17 @@ export function DohDashboard({ userId, initialUnitId = null }: DohDashboardProps
                     className="flex-1 px-4 py-2 rounded-lg border border-gray-200 bg-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-medical-blue/50"
                   />
                   {searchTerm ? (
-                    <GlassButton
+                    <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setSearchTerm('')}
                       aria-label="Xóa từ khóa tìm kiếm"
                     >
                       Xóa
-                    </GlassButton>
+                    </Button>
                   ) : null}
                 </div>
-                <GlassButton
+                <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
@@ -699,7 +699,7 @@ export function DohDashboard({ userId, initialUnitId = null }: DohDashboardProps
                   }}
                 >
                   Đặt lại
-                </GlassButton>
+                </Button>
               </div>
 
               <UnitComparisonGrid

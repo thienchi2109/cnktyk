@@ -3,7 +3,7 @@
 import React from 'react';
 import { useSession } from 'next-auth/react';
 import { Settings, ArrowLeft } from 'lucide-react';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { NotificationPreferences } from '@/components/notifications/notification-preferences';
 import { ResponsiveNavigation } from '@/components/layout/responsive-navigation';
 import { useRouter } from 'next/navigation';
@@ -56,14 +56,14 @@ export default function NotificationPreferencesPage() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <GlassButton
+              <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => router.back()}
                 className="mr-2"
               >
                 <ArrowLeft className="h-5 w-5" />
-              </GlassButton>
+              </Button>
               
               <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
                 <Settings className="h-5 w-5 text-white" />

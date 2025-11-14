@@ -24,7 +24,6 @@ import {
 } from 'lucide-react';
 
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/glass-select';
 import { Label } from '@/components/ui/label';
@@ -344,23 +343,24 @@ export function SubmissionsList({
         <div className="flex gap-3">
           {reviewerRole && (
             <>
-              <Link href="/submissions/bulk">
-                <GlassButton
-                  variant="secondary"
-                  className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6"
-                  size="lg"
-                >
+              <Button
+                asChild
+                variant="medical-secondary"
+                className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6"
+                size="lg"
+              >
+                <Link href="/submissions/bulk">
                   <Users className="h-5 w-5" />
                   Gán hoạt động cho nhóm
-                </GlassButton>
-              </Link>
+                </Link>
+              </Button>
               {/* Bulk approve button - only visible when items are selected */}
               {selectedIds.length > 0 && (
                 <>
-                  <GlassButton
+                  <Button
                     onClick={handleBulkApprove}
                     disabled={bulkApprove.isPending}
-                    variant="success"
+                    variant="medical"
                     className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6"
                     size="lg"
                   >
@@ -375,11 +375,12 @@ export function SubmissionsList({
                         Phê duyệt hàng loạt ({selectedIds.length})
                       </>
                     )}
-                  </GlassButton>
-                  <GlassButton
+                  </Button>
+                  <Button
                     onClick={handleBulkDelete}
                     disabled={bulkDelete.isPending}
-                    className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6 bg-red-600 hover:bg-red-700 text-white"
+                    variant="destructive"
+                    className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6"
                     size="lg"
                   >
                     {bulkDelete.isPending ? (
@@ -393,20 +394,21 @@ export function SubmissionsList({
                         Xóa hàng loạt ({selectedIds.length})
                       </>
                     )}
-                  </GlassButton>
+                  </Button>
                 </>
               )}
             </>
           )}
           {canCreateSubmission() && onCreateSubmission && (
-            <GlassButton
+            <Button
               onClick={onCreateSubmission}
+              variant="medical"
               className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6"
               size="lg"
             >
               <Plus className="h-5 w-5" />
               Ghi nhận hoạt động
-            </GlassButton>
+            </Button>
           )}
         </div>
       ) : null}
@@ -636,15 +638,15 @@ export function SubmissionsList({
                       <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <GlassButton
+                            <Button
                               size="sm"
-                              variant="secondary"
+                              variant="outline"
                               aria-label="Thao tác"
                               title="Thao tác"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <EllipsisVertical className="h-4 w-4" />
-                            </GlassButton>
+                            </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
@@ -715,22 +717,22 @@ export function SubmissionsList({
                   Trang {page} / {totalPages}
                 </div>
                 <div className="flex gap-2">
-                  <GlassButton
+                  <Button
                     size="sm"
-                    variant="secondary"
+                    variant="outline"
                     onClick={() => setPage(page - 1)}
                     disabled={page === 1}
                   >
                     <ChevronLeft className="h-4 w-4" />
-                  </GlassButton>
-                  <GlassButton
+                  </Button>
+                  <Button
                     size="sm"
-                    variant="secondary"
+                    variant="outline"
                     onClick={() => setPage(page + 1)}
                     disabled={page === totalPages}
                   >
                     <ChevronRight className="h-4 w-4" />
-                  </GlassButton>
+                  </Button>
                 </div>
               </div>
             )}

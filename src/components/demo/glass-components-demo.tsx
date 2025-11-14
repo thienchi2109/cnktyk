@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import {
   GlassCard,
-  GlassButton,
   Input,
   Select,
   Textarea,
@@ -19,7 +18,8 @@ import {
   GlassFormField,
   GlassModal,
   GlassProgress,
-  GlassCircularProgress
+  GlassCircularProgress,
+  Button,
 } from "@/components/ui";
 import { ResponsiveNavigation } from "@/components/layout";
 
@@ -80,37 +80,37 @@ export const GlassComponentsDemo = () => {
           </div>
         </section>
 
-        {/* Glass Buttons */}
+        {/* Button Variants */}
         <section>
           <h2 className="text-2xl font-semibold mb-4 text-slate-900 dark:text-white">
-            Glass Buttons
+            Button Variants
           </h2>
           <div className="flex flex-wrap gap-4">
-            <GlassButton variant="default">
+            <Button variant="medical">
               <Home className="h-4 w-4 mr-2" />
-              Default
-            </GlassButton>
-            <GlassButton variant="secondary">
+              Primary
+            </Button>
+            <Button variant="medical-secondary">
               <Users className="h-4 w-4 mr-2" />
               Secondary
-            </GlassButton>
-            <GlassButton variant="success">
+            </Button>
+            <Button className="bg-green-600 text-white hover:bg-green-700">
               <Plus className="h-4 w-4 mr-2" />
               Success
-            </GlassButton>
-            <GlassButton variant="warning">
+            </Button>
+            <Button className="bg-amber-500 text-white hover:bg-amber-600">
               <Bell className="h-4 w-4 mr-2" />
               Warning
-            </GlassButton>
-            <GlassButton variant="danger">
+            </Button>
+            <Button variant="destructive">
               Danger
-            </GlassButton>
-            <GlassButton variant="ghost" size="icon">
+            </Button>
+            <Button variant="ghost" size="icon">
               <Settings className="h-4 w-4" />
-            </GlassButton>
-            <GlassButton variant="outline" size="lg">
+            </Button>
+            <Button variant="outline" size="lg">
               Large Outline
-            </GlassButton>
+            </Button>
           </div>
         </section>
 
@@ -145,12 +145,12 @@ export const GlassComponentsDemo = () => {
                 </GlassFormField>
 
                 <div className="flex gap-2">
-                  <GlassButton variant="default" className="flex-1">
+                  <Button variant="medical" className="flex-1">
                     Submit
-                  </GlassButton>
-                  <GlassButton variant="ghost" className="flex-1">
+                  </Button>
+                  <Button variant="ghost" className="flex-1">
                     Cancel
-                  </GlassButton>
+                  </Button>
                 </div>
               </div>
             </GlassCard>
@@ -172,9 +172,9 @@ export const GlassComponentsDemo = () => {
                     <option value="hospital">Hospital</option>
                     <option value="clinic">Clinic</option>
                   </Select>
-                  <GlassButton variant="default">
+                  <Button variant="medical">
                     <Search className="h-4 w-4" />
-                  </GlassButton>
+                  </Button>
                 </div>
               </div>
             </GlassCard>
@@ -196,18 +196,20 @@ export const GlassComponentsDemo = () => {
                 <GlassProgress value={25} showLabel color="danger" />
                 
                 <div className="flex gap-2">
-                  <GlassButton 
+                  <Button 
                     size="sm" 
+                    variant="outline"
                     onClick={() => setProgress(Math.max(0, progress - 10))}
                   >
                     -10%
-                  </GlassButton>
-                  <GlassButton 
+                  </Button>
+                  <Button 
                     size="sm" 
+                    variant="outline"
                     onClick={() => setProgress(Math.min(100, progress + 10))}
                   >
                     +10%
-                  </GlassButton>
+                  </Button>
                 </div>
               </div>
             </GlassCard>
@@ -242,9 +244,9 @@ export const GlassComponentsDemo = () => {
               <p className="mb-4 text-slate-600 dark:text-slate-400">
                 Click the button below to open a glass modal
               </p>
-              <GlassButton onClick={() => setModalOpen(true)}>
+              <Button variant="medical" onClick={() => setModalOpen(true)}>
                 Open Modal
-              </GlassButton>
+              </Button>
             </div>
           </GlassCard>
         </section>
@@ -269,12 +271,12 @@ export const GlassComponentsDemo = () => {
             </GlassFormField>
             
             <div className="flex justify-end gap-2 pt-4">
-              <GlassButton variant="ghost" onClick={() => setModalOpen(false)}>
+              <Button variant="ghost" onClick={() => setModalOpen(false)}>
                 Cancel
-              </GlassButton>
-              <GlassButton variant="default" onClick={() => setModalOpen(false)}>
+              </Button>
+              <Button variant="medical" onClick={() => setModalOpen(false)}>
                 Confirm
-              </GlassButton>
+              </Button>
             </div>
           </div>
         </GlassModal>

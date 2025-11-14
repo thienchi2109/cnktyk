@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Settings, Bell, Mail, Smartphone, Save, Check } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -304,7 +304,7 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
 
         {/* Save Button */}
         <div className="flex justify-end pt-4 border-t border-slate-200">
-          <GlassButton
+          <Button
             onClick={handleSave}
             disabled={saving || loading}
             className={cn(
@@ -328,7 +328,7 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
                 Lưu cài đặt
               </>
             )}
-          </GlassButton>
+          </Button>
         </div>
       </div>
     </GlassCard>

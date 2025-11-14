@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/glass-select';
 import { Label } from '@/components/ui/label';
@@ -149,10 +149,10 @@ export function UserList({
         </div>
         
         {['SoYTe', 'DonVi'].includes(currentUserRole) && (
-          <GlassButton onClick={onCreateUser} className="flex items-center gap-2">
+          <Button onClick={onCreateUser} className="flex items-center gap-2" variant="medical">
             <UserPlus className="h-4 w-4" />
             Tạo Tài Khoản Mới
-          </GlassButton>
+          </Button>
         )}
       </div>
 
@@ -315,15 +315,15 @@ export function UserList({
                       <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <GlassButton
+                            <Button
                               size="sm"
-                              variant="secondary"
+                              variant="outline"
                               aria-label="Thao tác"
                               title="Thao tác"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <EllipsisVertical className="h-4 w-4" />
-                            </GlassButton>
+                            </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
@@ -374,22 +374,22 @@ export function UserList({
                   Trang {currentPage} / {totalPages}
                 </div>
                 <div className="flex gap-2">
-                  <GlassButton
+                  <Button
                     size="sm"
-                    variant="secondary"
+                    variant="outline"
                     onClick={() => onPageChange(currentPage - 1)}
                     disabled={currentPage === 1}
                   >
                     <ChevronLeft className="h-4 w-4" />
-                  </GlassButton>
-                  <GlassButton
+                  </Button>
+                  <Button
                     size="sm"
-                    variant="secondary"
+                    variant="outline"
                     onClick={() => onPageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}
                   >
                     <ChevronRight className="h-4 w-4" />
-                  </GlassButton>
+                  </Button>
                 </div>
               </div>
             )}

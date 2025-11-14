@@ -48,16 +48,16 @@ The application SHALL provide a standardized Button component using shadcn/ui pa
 ### Requirement: Glassmorphism Deprecation
 The application SHALL deprecate glassmorphism button components in favor of standard high-contrast buttons.
 
-#### Scenario: GlassButton component status
-- **WHEN** developers import GlassButton
+#### Scenario: Button component status
+- **WHEN** developers import Button
 - **THEN** a deprecation warning SHALL be present in the component documentation
 - **AND** the component MAY continue to function for backward compatibility
-- **AND** new code SHALL NOT use GlassButton
+- **AND** new code SHALL NOT use Button
 
 #### Scenario: Migration guidance
-- **WHEN** developers need to replace GlassButton
+- **WHEN** developers need to replace Button
 - **THEN** clear migration documentation SHALL be available
-- **AND** variant mapping SHALL be documented (e.g., GlassButton secondary → Button outline)
+- **AND** variant mapping SHALL be documented (e.g., Button secondary → Button outline)
 
 ### Requirement: Accessibility Compliance
 All button components SHALL meet WCAG 2.1 Level AA accessibility standards.

@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { usePractitioners, practitionersQueryKey, fetchPractitionersApi } from '@/hooks/use-practitioners';
 import { Search, Filter, Plus, Eye, Edit, Trash2, AlertTriangle, CheckCircle, Clock, Upload, UserCircle, ChevronLeft, ChevronRight, EllipsisVertical } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/glass-select';
 import { Label } from '@/components/ui/label';
@@ -232,26 +232,27 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
           <div className="flex gap-3">
             {/* Bulk Import Button - DonVi only */}
             {userRole === 'DonVi' && (
-              <GlassButton
+              <Button
                 onClick={() => setShowBulkImportSheet(true)}
-                variant="secondary"
+                variant="medical-secondary"
                 className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6"
                 size="lg"
               >
                 <Upload className="h-5 w-5" />
                 Nhập Hàng Loạt
-              </GlassButton>
+              </Button>
             )}
             
             {/* Add Single Practitioner */}
-            <GlassButton
+            <Button
               onClick={() => setShowCreateDialog(true)}
               className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6"
               size="lg"
+              variant="medical"
             >
               <Plus className="h-5 w-5" />
               Thêm Người Hành Nghề
-            </GlassButton>
+            </Button>
           </div>
         )}
       </div>
@@ -379,7 +380,7 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
             </div>
             <h3 className="text-lg font-semibold text-gray-900">Không tìm thấy người hành nghề</h3>
             <p className="text-gray-500">Điều chỉnh bộ lọc hoặc từ khóa tìm kiếm để xem dữ liệu khác.</p>
-            <GlassButton variant="outline" onClick={() => {
+            <Button variant="outline" onClick={() => {
               setSearchTerm('');
               setStatusFilter('all');
               setUnitFilter('all');
@@ -387,7 +388,7 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
               setPage(1);
             }}>
               Đặt lại bộ lọc
-            </GlassButton>
+            </Button>
           </div>
         ) : (
           <>
@@ -489,15 +490,15 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
                       <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <GlassButton
+                            <Button
                               size="sm"
-                              variant="secondary"
+                              variant="outline"
                               aria-label="Thao tác"
                               title="Thao tác"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <EllipsisVertical className="h-4 w-4" />
-                            </GlassButton>
+                            </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
@@ -540,7 +541,7 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
                   </select>
                 </label>
                 <div className="flex items-center gap-2">
-                  <GlassButton
+                  <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handlePageChange(page - 1)}
@@ -548,11 +549,11 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
                   >
                     <ChevronLeft className="h-4 w-4" />
                     Trước
-                  </GlassButton>
+                  </Button>
                   <span className="text-sm text-gray-600">
                     Trang {totalPages === 0 ? 0 : page} / {totalPages}
                   </span>
-                  <GlassButton
+                  <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handlePageChange(page + 1)}
@@ -560,7 +561,7 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
                   >
                     Sau
                     <ChevronRight className="h-4 w-4" />
-                  </GlassButton>
+                  </Button>
                 </div>
               </div>
             </div>

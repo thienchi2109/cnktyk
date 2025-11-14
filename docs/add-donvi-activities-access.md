@@ -778,20 +778,20 @@ const getActivityScopeBadge = (activity: Activity) => {
       <div className="flex items-center space-x-2">
         {canModifyActivity(activity, userRole, userUnitId) && (
           <>
-            <GlassButton
+            <Button
               variant="ghost"
               size="sm"
               onClick={(e) => { e.stopPropagation(); onEditActivity(activity); }}
             >
               <Edit className="h-4 w-4" />
-            </GlassButton>
-            <GlassButton
+            </Button>
+            <Button
               variant="ghost"
               size="sm"
               onClick={(e) => { e.stopPropagation(); onDeleteActivity(activity.MaDanhMuc); }}
             >
               <Trash2 className="h-4 w-4" />
-            </GlassButton>
+            </Button>
           </>
         )}
         {!canModifyActivity(activity, userRole, userUnitId) && (

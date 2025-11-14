@@ -141,7 +141,7 @@ git add src/app/(authenticated)/so-y-te/backup/date-range-utils.ts tests/app/so-
 import { useMemo, useState } from 'react';
 import { CalendarRange, DownloadCloud, Info } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/glass-button';
 import { formatISODate, buildPresetRange } from './date-range-utils';
 
 const datePresets = [
@@ -269,12 +269,12 @@ const applyPreset = (id: string, months: number) => {
 };
 ```
 
-**Step 2: Render preset buttons with `GlassButton`**
+**Step 2: Render preset buttons with `Button`**
 
 ```tsx
 <div className="flex flex-wrap gap-2">
   {datePresets.map((preset) => (
-    <GlassButton
+    <Button
       key={preset.id}
       type="button"
       variant={activePreset === preset.id ? 'default' : 'ghost'}
@@ -282,7 +282,7 @@ const applyPreset = (id: string, months: number) => {
       onClick={() => applyPreset(preset.id, preset.months)}
     >
       {preset.label}
-    </GlassButton>
+    </Button>
   ))}
 </div>
 ```
@@ -387,7 +387,7 @@ const handleDownload = async () => {
 **Step 3: Render primary button and loading notice**
 
 ```tsx
-<GlassButton
+<Button
   onClick={handleDownload}
   disabled={isDownloading}
   size="lg"
@@ -395,7 +395,7 @@ const handleDownload = async () => {
 >
   <DownloadCloud className="h-5 w-5 mr-2" />
   {isDownloading ? 'Đang tạo sao lưu...' : 'Tải xuống sao lưu'}
-</GlassButton>
+</Button>
 
 {isDownloading && (
   <div className="mt-4">
@@ -516,7 +516,7 @@ git add src/app/(authenticated)/so-y-te/backup/backup-center-client.tsx
 
 **Step 2: Verify focus management**
 
-- Confirm `GlassButton` focus ring works; add `aria-live` to status container.
+- Confirm `Button` focus ring works; add `aria-live` to status container.
 - Ensure loading notice uses `aria-live="polite"`.
 
 **Step 3: Run lint + typecheck + targeted tests**

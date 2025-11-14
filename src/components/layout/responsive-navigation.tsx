@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { GlassHeader } from "./glass-header";
 import { GlassFooter } from "./glass-footer";
-import { GlassButton } from "@/components/ui/glass-button";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 
 interface NavigationItem {
@@ -380,8 +380,8 @@ const HeaderNavigation = ({
 
     return (
       <div key={item.id} className="relative">
-        <GlassButton
-          variant={isActive ? "default" : "ghost"}
+        <Button
+          variant={isActive ? "medical" : "ghost"}
           onClick={() => handleItemClick(item)}
           className={cn(
             "flex items-center gap-2 px-4 lg:px-5 py-2.5 text-sm",
@@ -401,7 +401,7 @@ const HeaderNavigation = ({
               isOpen && "rotate-180"
             )} />
           )}
-        </GlassButton>
+        </Button>
 
         {/* Dropdown Menu for children */}
         {hasChildren && isOpen && (
@@ -443,7 +443,7 @@ const HeaderNavigation = ({
       {/* More menu for low priority items */}
       {lowPriorityItems.length > 0 && (
         <div className="relative" data-more-menu>
-          <GlassButton
+          <Button
             variant="ghost"
             onClick={() => setMoreMenuOpen(!moreMenuOpen)}
             onKeyDown={(e) => {
@@ -462,7 +462,7 @@ const HeaderNavigation = ({
               "h-3 w-3 transition-transform duration-200",
               moreMenuOpen && "rotate-180"
             )} />
-          </GlassButton>
+          </Button>
 
           {/* More dropdown */}
           {moreMenuOpen && (

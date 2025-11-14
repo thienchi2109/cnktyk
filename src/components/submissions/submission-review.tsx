@@ -21,7 +21,6 @@ import {
 } from 'lucide-react';
 
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -227,13 +226,13 @@ export function SubmissionReview({
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           {onBack && (
-            <GlassButton
+            <Button
               variant="ghost"
               onClick={onBack}
               className="text-gray-600 hover:text-gray-800"
             >
               <ArrowLeft className="h-4 w-4" />
-            </GlassButton>
+            </Button>
           )}
           {showHeading && (
             <div>
@@ -247,13 +246,13 @@ export function SubmissionReview({
           {(canEdit() || canDelete()) && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <GlassButton
+                <Button
                   variant="outline"
                   className="border-gray-300"
                   size="sm"
                 >
                   <MoreHorizontal className="h-4 w-4" />
-                </GlassButton>
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {canEdit() && (
@@ -425,7 +424,7 @@ export function SubmissionReview({
             </div>
 
             <div className="flex items-center gap-2">
-              <GlassButton
+              <Button
                 size="sm"
                 variant="outline"
                 aria-label="Xem minh chứng"
@@ -439,11 +438,11 @@ export function SubmissionReview({
                   <Eye className="h-4 w-4" />
                 )}
                 <span className="ml-2">Xem</span>
-              </GlassButton>
+              </Button>
 
-              <GlassButton
+              <Button
                 size="sm"
-                className="bg-medical-green text-white hover:bg-medical-green/90"
+                variant="medical-secondary"
                 aria-label="Tải xuống minh chứng"
                 title="Tải xuống minh chứng"
                 disabled={evidenceFile.isLoading}
@@ -455,7 +454,7 @@ export function SubmissionReview({
                   <Download className="h-4 w-4" />
                 )}
                 <span className="ml-2">Tải xuống</span>
-              </GlassButton>
+              </Button>
             </div>
           </div>
         </GlassCard>
@@ -507,30 +506,30 @@ export function SubmissionReview({
 
           {!reviewAction ? (
             <div className="flex flex-wrap gap-3">
-              <GlassButton
+              <Button
                 onClick={() => setReviewAction('approve')}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                variant="medical-secondary"
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Phê duyệt
-              </GlassButton>
+              </Button>
               
-              <GlassButton
+              <Button
                 onClick={() => setReviewAction('reject')}
-                className="bg-red-600 hover:bg-red-700 text-white"
+                variant="destructive"
               >
                 <XCircle className="h-4 w-4 mr-2" />
                 Từ chối
-              </GlassButton>
+              </Button>
               
-              <GlassButton
+              <Button
                 onClick={() => setReviewAction('request_info')}
                 variant="outline"
                 className="border-yellow-500 text-yellow-700 hover:bg-yellow-50"
               >
                 <Info className="h-4 w-4 mr-2" />
                 Yêu cầu bổ sung
-              </GlassButton>
+              </Button>
             </div>
           ) : (
             <div className="space-y-4">

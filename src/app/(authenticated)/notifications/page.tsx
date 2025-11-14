@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { Bell, Settings, Filter, Search } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { NotificationList } from '@/components/notifications/notification-list';
@@ -203,14 +203,14 @@ useEffect(() => {
 
             <div className="flex items-center gap-2">
               {canGenerateAlerts && (
-                <GlassButton
+                <Button
                   onClick={toggleAlertGenerator}
-                  variant={state.showAlertGenerator ? "default" : "outline"}
+                  variant={state.showAlertGenerator ? "medical" : "outline"}
                   className="bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700"
                 >
                   <Settings className="h-4 w-4 mr-2" />
                   {state.showAlertGenerator ? 'Ẩn' : 'Tạo'} cảnh báo
-                </GlassButton>
+                </Button>
               )}
             </div>
           </div>
