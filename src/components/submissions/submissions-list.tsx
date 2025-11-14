@@ -500,13 +500,13 @@ export function SubmissionsList({
                     )}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[250px]">Hoạt động</th>
                     {userRole !== 'NguoiHanhNghe' && (
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[180px] max-w-[180px]">Người hành nghề</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[220px] max-w-[220px]">Người hành nghề</th>
                     )}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thời gian</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tín chỉ</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày gửi</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[80px]">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200/50">
@@ -574,7 +574,7 @@ export function SubmissionsList({
                       </td>
                       
                       {userRole !== 'NguoiHanhNghe' && (
-                        <td className="px-6 py-4 max-w-[180px]">
+                        <td className="px-6 py-4 max-w-[220px]">
                           <div className="space-y-1">
                             <div
                               className="font-medium text-gray-900 truncate"
@@ -633,80 +633,72 @@ export function SubmissionsList({
                         )}
                       </td>
                       
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end gap-2">
-                          <GlassButton
-                            size="sm"
-                            variant="secondary"
-                            aria-label="Xem chi tiết hoạt động"
-                            title="Xem chi tiết hoạt động"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleViewSubmission(submission.MaGhiNhan);
-                            }}
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </GlassButton>
+                      <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <GlassButton
+                              size="sm"
+                              variant="secondary"
+                              aria-label="Thao tác"
+                              title="Thao tác"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <EllipsisVertical className="h-4 w-4" />
+                            </GlassButton>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewSubmission(submission.MaGhiNhan);
+                              }}
+                            >
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                              Xem chi tiết
+                            </DropdownMenuItem>
 
-                          {submission.FileMinhChungUrl && (
-                            <>
-                              <GlassButton
-                                size="sm"
-                                variant="secondary"
-                                aria-label="Xem minh chứng"
-                                title="Xem minh chứng"
-                                disabled={evidenceFile.isLoading}
-                                onClick={(event) => handleViewEvidence(event, submission)}
-                              >
-                                {isViewingEvidence ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <FileSearch className="h-4 w-4" />
-                                )}
-                              </GlassButton>
-
-                              <GlassButton
-                                size="sm"
-                                className="bg-medical-green text-white hover:bg-medical-green/90"
-                                aria-label="Tải xuống minh chứng"
-                                title="Tải xuống minh chứng"
-                                disabled={evidenceFile.isLoading}
-                                onClick={(event) => handleDownloadEvidence(event, submission)}
-                              >
-                                {isDownloadingEvidence ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <DownloadCloud className="h-4 w-4" />
-                                )}
-                              </GlassButton>
-                            </>
-                          )}
-
-                          {canDelete(submission) && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <GlassButton
-                                  size="sm"
-                                  variant="secondary"
-                                  aria-label="Tuỳ chọn khác"
-                                  title="Tuỳ chọn khác"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <EllipsisVertical className="h-4 w-4" />
-                                </GlassButton>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
+                            {submission.FileMinhChungUrl && (
+                              <>
                                 <DropdownMenuItem
-                                  onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(submission.MaGhiNhan); }}
-                                  destructive
+                                  onClick={(event) => handleViewEvidence(event, submission)}
+                                  disabled={evidenceFile.isLoading && isActiveEvidenceRow}
                                 >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Xóa
+                                  {isViewingEvidence ? (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  ) : (
+                                    <FileSearch className="h-4 w-4 mr-2" />
+                                  )}
+                                  Xem minh chứng
                                 </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
-                        </div>
+
+                                <DropdownMenuItem
+                                  onClick={(event) => handleDownloadEvidence(event, submission)}
+                                  disabled={evidenceFile.isLoading && isActiveEvidenceRow}
+                                >
+                                  {isDownloadingEvidence ? (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  ) : (
+                                    <DownloadCloud className="h-4 w-4 mr-2" />
+                                  )}
+                                  Tải xuống minh chứng
+                                </DropdownMenuItem>
+                              </>
+                            )}
+
+                            {canDelete(submission) && (
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteConfirmId(submission.MaGhiNhan);
+                                }}
+                                destructive
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Xóa
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
 
                     </tr>
