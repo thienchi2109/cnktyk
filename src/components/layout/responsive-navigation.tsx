@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from "react";
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Home,
   Users,
@@ -57,6 +57,44 @@ type NavCounts = { submissionsPending?: number };
 
 type FeatureFlags = {
   donViAccountManagementEnabled?: boolean;
+};
+
+const matchesPath = (href: string | undefined, pathname: string | null) => {
+  if (!href || !pathname) return false;
+  if (href === "/") {
+    return pathname === "/";
+  }
+  return pathname === href || pathname.startsWith(`${href}/`);
+};
+
+const findActiveItemId = (
+  items: NavigationItem[],
+  pathname: string | null
+): string | undefined => {
+  for (const item of items) {
+    if (matchesPath(item.href, pathname)) {
+      return item.id;
+    }
+    if (item.children) {
+      const childMatch = findActiveItemId(item.children, pathname);
+      if (childMatch) {
+        return childMatch;
+      }
+    }
+  }
+
+  return undefined;
+};
+
+const itemIncludesActive = (
+  item: NavigationItem,
+  activeId?: string
+): boolean => {
+  if (!activeId) return false;
+  if (item.id === activeId) return true;
+  return item.children
+    ? item.children.some((child) => itemIncludesActive(child, activeId))
+    : false;
 };
 
 // Navigation items based on user roles
@@ -374,17 +412,22 @@ const HeaderNavigation = ({
   }, [moreMenuOpen]);
 
   const renderNavigationItem = (item: NavigationItem) => {
-    const isActive = activeItem === item.id;
+    const isActive = itemIncludesActive(item, activeItem);
     const hasChildren = item.children && item.children.length > 0;
     const isOpen = openDropdown === item.id;
 
     return (
       <div key={item.id} className="relative">
         <Button
+          type="button"
           variant={isActive ? "medical" : "ghost"}
           onClick={() => handleItemClick(item)}
+          aria-current={isActive ? "page" : undefined}
           className={cn(
-            "flex items-center gap-2 px-4 lg:px-5 py-2.5 text-sm",
+            "relative flex items-center gap-2 px-4 lg:px-5 py-2.5 text-sm font-medium transition-colors duration-200 backdrop-blur-md",
+            isActive
+              ? "shadow-[0_8px_28px_rgba(46,165,255,0.3)]"
+              : "text-slate-600 hover:bg-white/20 hover:text-slate-900 focus-visible:ring-medical-blue/30",
             hasChildren && "pr-2"
           )}
         >
@@ -442,8 +485,9 @@ const HeaderNavigation = ({
 
       {/* More menu for low priority items */}
       {lowPriorityItems.length > 0 && (
-        <div className="relative" data-more-menu>
+        <div className="relative flex-shrink-0" data-more-menu>
           <Button
+            type="button"
             variant="ghost"
             onClick={() => setMoreMenuOpen(!moreMenuOpen)}
             onKeyDown={(e) => {
@@ -467,13 +511,13 @@ const HeaderNavigation = ({
           {/* More dropdown */}
           {moreMenuOpen && (
             <div
-              className="absolute top-full right-0 mt-1 min-w-56 backdrop-blur-md bg-white/90 border border-white/30 rounded-lg shadow-lg z-[100]"
+              className="absolute top-full right-0 mt-1 min-w-56 origin-top-right backdrop-blur-md bg-white/90 border border-white/30 rounded-lg shadow-lg z-[100]"
               role="menu"
               aria-label="Additional navigation items"
             >
               <div className="py-1">
                 {lowPriorityItems.map((item) => {
-                  const isActive = activeItem === item.id;
+                  const isActive = itemIncludesActive(item, activeItem);
                   const hasChildren = item.children && item.children.length > 0;
 
                   return (
@@ -588,7 +632,7 @@ const FooterNavigation = ({
       <div className="flex items-center justify-around px-2 py-2 pb-safe">
         {/* Visible footer items */}
         {visibleItems.map((item) => {
-          const isActive = activeItem === item.id;
+          const isActive = itemIncludesActive(item, activeItem);
 
           return (
             <button
@@ -647,7 +691,7 @@ const FooterNavigation = ({
               >
                 <div className="py-2">
                   {moreItems.map((item) => {
-                    const isActive = activeItem === item.id;
+                    const isActive = itemIncludesActive(item, activeItem);
 
                     return (
                       <button
@@ -703,6 +747,7 @@ export const ResponsiveNavigation = React.forwardRef<HTMLDivElement, ResponsiveN
     ref,
   ) => {
     const router = useRouter();
+    const pathname = usePathname();
     const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
 
@@ -715,6 +760,12 @@ export const ResponsiveNavigation = React.forwardRef<HTMLDivElement, ResponsiveN
       () => getNavigationItems(user?.role, navCounts, featureFlags || {}),
       [user?.role, navCounts, featureFlags],
     );
+
+    const derivedActiveItem = React.useMemo(
+      () => findActiveItemId(navigationItems, pathname),
+      [navigationItems, pathname]
+    );
+    const currentActiveItem = activeItem ?? derivedActiveItem;
 
 
     const handleItemClick = (item: NavigationItem) => {
@@ -760,7 +811,7 @@ export const ResponsiveNavigation = React.forwardRef<HTMLDivElement, ResponsiveN
             {/* Center - Navigation (Desktop) */}
             <HeaderNavigation 
               items={navigationItems}
-              activeItem={activeItem}
+              activeItem={currentActiveItem}
               onNavigate={handleItemClick}
             />
 
@@ -777,7 +828,7 @@ export const ResponsiveNavigation = React.forwardRef<HTMLDivElement, ResponsiveN
             <div className="xl:hidden border-t border-white/20 bg-white/95 backdrop-blur-lg">
               <nav className="px-4 py-3 space-y-1 max-h-[calc(100vh-4rem)] overflow-y-auto">
                 {navigationItems.map((item) => {
-                  const isActive = activeItem === item.id;
+                    const isActive = itemIncludesActive(item, currentActiveItem);
                   const hasChildren = item.children && item.children.length > 0;
 
                   return (
@@ -809,7 +860,7 @@ export const ResponsiveNavigation = React.forwardRef<HTMLDivElement, ResponsiveN
                               onClick={() => handleItemClick(child)}
                               className={cn(
                                 "w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-colors",
-                                activeItem === child.id
+                                currentActiveItem === child.id
                                   ? "bg-medical-blue/10 text-medical-blue"
                                   : "text-gray-600 hover:bg-white/50"
                               )}
@@ -845,7 +896,7 @@ export const ResponsiveNavigation = React.forwardRef<HTMLDivElement, ResponsiveN
         {/* Footer Navigation (Mobile/Tablet) */}
         <FooterNavigation 
           items={navigationItems}
-          activeItem={activeItem}
+          activeItem={currentActiveItem}
           onNavigate={handleItemClick}
         />
 
