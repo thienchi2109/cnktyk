@@ -40,6 +40,7 @@ interface CohortBuilderProps {
 }
 
 export function CohortBuilder({ initialStatus = 'DangLamViec', onChange }: CohortBuilderProps) {
+  const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
   const [chucDanh, setChucDanh] = useState<string>('');
@@ -124,6 +125,13 @@ export function CohortBuilder({ initialStatus = 'DangLamViec', onChange }: Cohor
     fetchList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, statusFilter, chucDanh, khoaPhong]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setSearchTerm((prev) => (prev === searchInput ? prev : searchInput));
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchInput]);
 
   const toggleRow = (id: string) => {
     if (selectAllFiltered) {
@@ -217,7 +225,7 @@ export function CohortBuilder({ initialStatus = 'DangLamViec', onChange }: Cohor
             <Label htmlFor="search" className="text-sm text-gray-700">Tìm kiếm</Label>
             <div className="relative mt-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input id="search" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" placeholder="Họ và tên..." />
+              <Input id="search" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} className="pl-10" placeholder="Họ và tên..." />
             </div>
           </div>
           {/* Trạng thái */}
@@ -263,7 +271,9 @@ export function CohortBuilder({ initialStatus = 'DangLamViec', onChange }: Cohor
                 const json = await res.json();
                 if (!res.ok) return;
                 const f = json.preset?.BoLoc || {};
-                setSearchTerm(f.search || '');
+                const presetSearch = f.search || '';
+                setSearchInput(presetSearch);
+                setSearchTerm(presetSearch);
                 setStatusFilter(f.trangThai || 'DangLamViec');
                 setChucDanh(f.chucDanh || '');
                 setKhoaPhong(f.khoaPhong || '');
