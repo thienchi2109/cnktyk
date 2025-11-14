@@ -1256,7 +1256,7 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
                   type="button"
                   size="sm"
                   variant={
-                    deleteActivePreset === preset.id ? 'danger' : 'ghost'
+                    deleteActivePreset === preset.id ? 'medical' : 'ghost'
                   }
                   onClick={() => applyDeletePreset(preset.id, preset.months)}
                   disabled={isDeleting}
@@ -1272,7 +1272,7 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
             </div>
             <Button
               size="lg"
-              variant="danger"
+              variant="destructive"
               className="min-w-[240px]"
               onClick={openDeleteDialog}
               disabled={isDeleting || !hasConfirmedBackup}

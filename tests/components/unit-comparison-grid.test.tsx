@@ -21,20 +21,26 @@ const DropdownMenuTrigger = ({ children }: { children: React.ReactElement }) => 
     </div>
   );
 
-  const DropdownMenuItem = React.forwardRef<HTMLButtonElement, any>(
-    ({ children, onSelect, ...props }, ref) => (
-      <button
-        ref={ref}
-        role="menuitem"
-        onClick={(event) => {
-          event.preventDefault();
-          onSelect?.(event);
-        }}
-        {...props}
-      >
-        {children}
-      </button>
-    ),
+  interface DropdownMenuItemProps
+    extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+    onSelect?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  }
+
+  const DropdownMenuItem = ({
+    children,
+    onSelect,
+    ...props
+  }: DropdownMenuItemProps) => (
+    <button
+      role="menuitem"
+      onClick={(event) => {
+        event.preventDefault();
+        onSelect?.(event);
+      }}
+      {...props}
+    >
+      {children}
+    </button>
   );
 
   return {
