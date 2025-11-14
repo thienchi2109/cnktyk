@@ -8,6 +8,51 @@ import {
   UnitComparisonRow,
 } from '@/components/dashboard/unit-comparison-grid';
 
+vi.mock('@/components/ui/dropdown-menu', () => {
+  const React = require('react');
+
+  const DropdownMenu = ({ children }: { children: React.ReactNode }) => <>{children}</>;
+
+  const DropdownMenuTrigger = ({ children }: { children: React.ReactElement }) => children;
+
+  const DropdownMenuContent = ({ children, ...props }: { children: React.ReactNode }) => (
+    <div role="menu" {...props}>
+      {children}
+    </div>
+  );
+
+  const DropdownMenuItem = React.forwardRef(
+    (
+      {
+        children,
+        onSelect,
+        ...props
+      }: { children: React.ReactNode; onSelect?: (event: React.MouseEvent<HTMLButtonElement>) => void } &
+        Record<string, unknown>,
+      ref,
+    ) => (
+      <button
+        ref={ref as React.Ref<HTMLButtonElement>}
+        role="menuitem"
+        onClick={(event) => {
+          event.preventDefault();
+          onSelect?.(event);
+        }}
+        {...props}
+      >
+        {children}
+      </button>
+    ),
+  );
+
+  return {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+  };
+});
+
 const makeUnit = (index: number): UnitComparisonRow => ({
   id: `unit-${index + 1}`,
   name: `Đơn vị ${index + 1}`,
@@ -163,11 +208,11 @@ describe('UnitComparisonGrid', () => {
       );
     });
 
-    const detailButton = container.querySelector('button[aria-label="Xem chi tiết Đơn vị 1"]');
-    expect(detailButton).toBeTruthy();
+    const actionTrigger = container.querySelector('button[aria-label="Thao tác Đơn vị 1"]');
+    expect(actionTrigger).toBeTruthy();
 
     act(() => {
-      detailButton?.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      actionTrigger?.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
     });
 
     act(() => {
@@ -178,14 +223,23 @@ describe('UnitComparisonGrid', () => {
     expect(hoverSpy).toHaveBeenCalledWith(rows[0].id);
 
     act(() => {
-      detailButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      actionTrigger?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const menuItem = Array.from(document.querySelectorAll('[role="menuitem"]')).find((el) =>
+      el.textContent?.includes('Xem chi tiết'),
+    );
+    expect(menuItem).toBeTruthy();
+
+    act(() => {
+      menuItem?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
     expect(clickSpy).toHaveBeenCalledTimes(1);
     const [unitId, payload, trigger] = clickSpy.mock.calls[0];
     expect(unitId).toBe(rows[0].id);
     expect(payload).toEqual(rows[0]);
-    expect(trigger).toBeInstanceOf(HTMLButtonElement);
+    expect(trigger).toBe(actionTrigger);
   });
 
   it('triggers pagination handlers', () => {

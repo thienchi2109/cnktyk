@@ -8,6 +8,13 @@ import {
 } from '@/components/dashboard/dashboard-skeletons';
 import { cn } from '@/lib/utils';
 import type { UnitComparisonSummary } from '@/types/dashboard';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { EllipsisVertical, Eye } from 'lucide-react';
 
 export type UnitSortField = 'name' | 'compliance' | 'practitioners' | 'pending' | 'totalCredits';
 
@@ -69,7 +76,7 @@ const headerColumns: Array<{
   },
   { id: 'pendingApprovals', label: 'Chờ duyệt', field: 'pending', align: 'right' },
   { id: 'totalCredits', label: 'Tổng tín chỉ', field: 'totalCredits', align: 'right' },
-  { id: 'actions', label: 'Thao tác', align: 'right', className: 'w-[130px]' },
+  { id: 'actions', label: 'Thao tác', align: 'right', className: 'w-[80px]' },
 ];
 
 function toggleSortState(
@@ -150,6 +157,7 @@ const UnitComparisonGridComponent = ({
         )} trên tổng ${formatNumber(totalItems, numberFormatter)} đơn vị.`;
 
   const hoverTimeoutsRef = useRef<Record<string, number>>({});
+  const actionTriggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   useEffect(() => {
     return () => {
@@ -177,12 +185,9 @@ const UnitComparisonGridComponent = ({
     }
   };
 
-  const handleDetailClick = (
-    row: UnitComparisonRow,
-    event: React.MouseEvent<HTMLButtonElement>,
-  ) => {
+  const handleDetailClick = (row: UnitComparisonRow, trigger: HTMLButtonElement) => {
     cancelDetailHover(row.id);
-    onUnitDetailClick(row.id, row, event.currentTarget);
+    onUnitDetailClick(row.id, row, trigger);
   };
 
   const handleSort = (field: UnitSortField, multi: boolean) => {
@@ -350,18 +355,41 @@ const UnitComparisonGridComponent = ({
                         {formatNumber(Math.round(row.totalCredits), numberFormatter)}
                       </td>
                       <td className="px-4 py-4 text-right">
-                        <GlassButton asChild size="sm" variant="outline" className="whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={(event) => handleDetailClick(row, event)}
-                            onMouseEnter={() => handleDetailHover(row.id)}
-                            onMouseLeave={() => cancelDetailHover(row.id)}
-                            onFocus={() => handleDetailHover(row.id)}
-                            aria-label={`Xem chi tiết ${row.name}`}
-                          >
-                            Xem chi tiết
-                          </button>
-                        </GlassButton>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <GlassButton
+                              ref={(node) => {
+                                if (node) {
+                                  actionTriggerRefs.current[row.id] = node;
+                                } else {
+                                  delete actionTriggerRefs.current[row.id];
+                                }
+                              }}
+                              size="icon"
+                              variant="ghost"
+                              aria-label={`Thao tác ${row.name}`}
+                              onMouseEnter={() => handleDetailHover(row.id)}
+                              onMouseLeave={() => cancelDetailHover(row.id)}
+                              onFocus={() => handleDetailHover(row.id)}
+                            >
+                              <EllipsisVertical className="h-4 w-4" />
+                            </GlassButton>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="min-w-[180px]">
+                            <DropdownMenuItem
+                              onSelect={(event) => {
+                                event.preventDefault();
+                                const trigger = actionTriggerRefs.current[row.id];
+                                if (trigger) {
+                                  handleDetailClick(row, trigger);
+                                }
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              Xem chi tiết
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   ))}
