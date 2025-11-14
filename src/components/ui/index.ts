@@ -1,6 +1,5 @@
-// Base Glass Components
+// Base Components
 export { GlassCard } from './glass-card';
-export { GlassButton } from './glass-button';
 
 // Form Components
 export { Input } from './input';

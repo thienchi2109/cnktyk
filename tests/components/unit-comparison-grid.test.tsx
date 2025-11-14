@@ -11,9 +11,9 @@ import {
 vi.mock('@/components/ui/dropdown-menu', () => {
   const React = require('react');
 
-  const DropdownMenu = ({ children }: { children: React.ReactNode }) => <>{children}</>;
+const DropdownMenu = ({ children }: { children: React.ReactNode }) => <>{children}</>;
 
-  const DropdownMenuTrigger = ({ children }: { children: React.ReactElement }) => children;
+const DropdownMenuTrigger = ({ children }: { children: React.ReactElement }) => children;
 
   const DropdownMenuContent = ({ children, ...props }: { children: React.ReactNode }) => (
     <div role="menu" {...props}>
@@ -21,18 +21,10 @@ vi.mock('@/components/ui/dropdown-menu', () => {
     </div>
   );
 
-  const DropdownMenuItem = React.forwardRef(
-    (
-      {
-        children,
-        onSelect,
-        ...props
-      }: { children: React.ReactNode; onSelect?: (event: React.MouseEvent<HTMLButtonElement>) => void } &
-        Record<string, unknown>,
-      ref,
-    ) => (
+  const DropdownMenuItem = React.forwardRef<HTMLButtonElement, any>(
+    ({ children, onSelect, ...props }, ref) => (
       <button
-        ref={ref as React.Ref<HTMLButtonElement>}
+        ref={ref}
         role="menuitem"
         onClick={(event) => {
           event.preventDefault();

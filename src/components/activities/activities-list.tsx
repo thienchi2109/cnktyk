@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   useActivitiesCatalog,
@@ -10,9 +9,10 @@ import {
   ActivitiesCatalogStatusFilter,
   ActivitiesCatalogTypeFilter,
   getActivityLifecycleStatus,
+  DEFAULT_ACTIVITIES_PAGE_SIZE,
 } from '@/hooks/use-activities';
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -46,7 +46,9 @@ import {
   ArchiveRestore,
   Upload,
   UserPlus,
-  EllipsisVertical
+  EllipsisVertical,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 interface ActivitiesListProps {
@@ -88,6 +90,8 @@ const unitLabels = {
   tiet: 'Tiết',
   tin_chi: 'Tín chỉ',
 };
+
+const PAGE_SIZE_OPTIONS = [25, 50, 100, 200];
 
 // Get scope badge for activity
 const getScopeBadge = (activity: ActivityCatalogItem, userRole: string) => {
@@ -150,15 +154,22 @@ export function ActivitiesList({
   const rawType = (searchParams.get('type') as ActivitiesCatalogTypeFilter | null) ?? 'all';
   const rawStatus = (searchParams.get('status') as ActivitiesCatalogStatusFilter | null) ?? 'all';
   const searchParam = searchParams.get('search') ?? '';
-  const limitParam = parseInt(searchParams.get('limit') ?? '50', 10);
-  const pageParam = parseInt(searchParams.get('page') ?? '1', 10);
+  const limitParam = Number.parseInt(searchParams.get('limit') ?? DEFAULT_ACTIVITIES_PAGE_SIZE.toString(), 10);
+  const pageParam = Number.parseInt(searchParams.get('page') ?? '1', 10);
+  const normalizedLimitParam = Number.isFinite(limitParam) && limitParam > 0 ? limitParam : DEFAULT_ACTIVITIES_PAGE_SIZE;
+  const normalizedPageParam = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
 
   const [searchTerm, setSearchTerm] = useState(searchParam);
+  const [pageInput, setPageInput] = useState(normalizedPageParam.toString());
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setSearchTerm(searchParam);
   }, [searchParam]);
+
+  useEffect(() => {
+    setPageInput(normalizedPageParam.toString());
+  }, [normalizedPageParam]);
 
   const updateQueryParams = useCallback(
     (
@@ -245,8 +256,8 @@ export function ActivitiesList({
     search: searchParam,
     type: typeFilter,
     status: statusFilter,
-    page: Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1,
-    limit: Number.isFinite(limitParam) && limitParam > 0 ? limitParam : 50,
+    page: normalizedPageParam,
+    limit: normalizedLimitParam,
   });
   const { data, isLoading, isError, error, isFetching } = activitiesQuery;
   const [selectedActivity, setSelectedActivity] = useState<ActivityCatalogItem | null>(null);
@@ -267,11 +278,49 @@ export function ActivitiesList({
   }, [activeScope, globalActivities, unitActivities]);
 
   const pagination = data?.pagination;
+  const currentPage = pagination?.page ?? normalizedPageParam;
+  const currentLimit = pagination?.limit ?? normalizedLimitParam;
   const totalGlobal = pagination?.totalGlobal ?? globalActivities.length;
   const totalUnit = pagination?.totalUnit ?? unitActivities.length;
   const totalAll = totalGlobal + totalUnit;
   const hasFilters =
     (searchParam?.trim().length ?? 0) > 0 || typeFilter !== 'all' || statusFilter !== 'all';
+
+  const totalItemsForScope = useMemo(() => {
+    if (activeScope === 'global') {
+      return totalGlobal;
+    }
+    if (activeScope === 'unit') {
+      return totalUnit;
+    }
+    return totalAll;
+  }, [activeScope, totalAll, totalGlobal, totalUnit]);
+
+  const totalPagesForScope = useMemo(() => {
+    const fallback = totalItemsForScope > 0 ? Math.max(1, Math.ceil(totalItemsForScope / currentLimit)) : 1;
+    if (!pagination) {
+      return fallback;
+    }
+    if (activeScope === 'global') {
+      return pagination.totalPages.global || fallback;
+    }
+    if (activeScope === 'unit') {
+      return pagination.totalPages.unit || fallback;
+    }
+    const combined = Math.max(
+      pagination.totalPages.global ?? 0,
+      pagination.totalPages.unit ?? 0,
+      fallback
+    );
+    return combined === 0 ? 1 : combined;
+  }, [activeScope, currentLimit, pagination, totalItemsForScope]);
+
+  const lastAvailablePage = Math.max(totalPagesForScope, 1);
+  const isOutOfRangePage = totalItemsForScope > 0 && currentPage > lastAvailablePage;
+  const firstRowIndex = totalItemsForScope === 0 ? 0 : (currentPage - 1) * currentLimit + 1;
+  const lastRowIndex = totalItemsForScope === 0
+    ? 0
+    : Math.min(firstRowIndex + displayedActivities.length - 1, totalItemsForScope);
 
   useEffect(() => {
     if (data?.permissions && onPermissionsLoaded) {
@@ -289,6 +338,26 @@ export function ActivitiesList({
 
   const handleStatusFilter = (value: string) => {
     updateQueryParams({ status: value }, { resetPage: true });
+  };
+
+  const handlePageChange = (nextPage: number) => {
+    const safeTarget = Math.max(1, Math.min(nextPage, lastAvailablePage));
+    updateQueryParams({ page: safeTarget.toString() }, { resetPage: false });
+  };
+
+  const handlePageSizeChange = (value: string) => {
+    const numeric = Number.parseInt(value, 10);
+    const safeLimit = PAGE_SIZE_OPTIONS.includes(numeric) ? numeric : normalizedLimitParam;
+    updateQueryParams({ limit: safeLimit.toString(), page: '1' }, { resetPage: false });
+  };
+
+  const commitPageInput = () => {
+    const parsed = Number.parseInt(pageInput, 10);
+    if (!Number.isFinite(parsed)) {
+      setPageInput(currentPage.toString());
+      return;
+    }
+    handlePageChange(parsed);
   };
 
   // Check if user can edit this specific activity
@@ -327,14 +396,15 @@ export function ActivitiesList({
         </div>
         
         {(permissions.canCreateGlobal || permissions.canCreateUnit) && onCreateActivity && (
-          <GlassButton
+          <Button
             onClick={onCreateActivity}
             className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6"
             size="lg"
+            variant="medical"
           >
             <Plus className="h-5 w-5" />
             Thêm hoạt động
-          </GlassButton>
+          </Button>
         )}
       </div>
 
@@ -414,15 +484,43 @@ export function ActivitiesList({
             <LoadingNotice message="Đang tải danh mục hoạt động..." />
           </div>
         ) : displayedActivities.length === 0 ? (
-          <div className="p-8 text-center">
-            <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Không có hoạt động nào</h3>
-            <p className="text-gray-500">
-              {hasFilters
-                ? 'Không tìm thấy hoạt động phù hợp với bộ lọc'
-                : 'Chưa có hoạt động nào được tạo'}
-            </p>
-          </div>
+          isOutOfRangePage ? (
+            <div className="p-8 text-center">
+              <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Trang {currentPage} vượt quá tổng {lastAvailablePage} trang hiện có
+              </h3>
+              <p className="text-gray-500 mb-4">
+                Bộ lọc hiện tại chỉ có {lastAvailablePage} trang dữ liệu. Hãy quay lại trang hợp lệ để xem các hoạt động.
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <Button
+                  onClick={() => handlePageChange(lastAvailablePage)}
+                  disabled={lastAvailablePage === 0}
+                  className="px-6"
+                >
+                  Về trang {lastAvailablePage}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => handlePageChange(1)}
+                  className="px-6"
+                >
+                  Về trang đầu
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="p-8 text-center">
+              <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Không có hoạt động nào</h3>
+              <p className="text-gray-500">
+                {hasFilters
+                  ? 'Không tìm thấy hoạt động phù hợp với bộ lọc'
+                  : 'Chưa có hoạt động nào được tạo'}
+              </p>
+            </div>
+          )
         ) : (
           <div className="overflow-x-auto">
             <Table>
@@ -521,18 +619,18 @@ export function ActivitiesList({
                       
                       {(permissions.canEditGlobal || permissions.canEditUnit) && (
                         <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <GlassButton
-                                variant="secondary"
-                                size="sm"
-                                aria-label="Thao tác"
-                                title="Thao tác"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <EllipsisVertical className="h-4 w-4" />
-                              </GlassButton>
-                            </DropdownMenuTrigger>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            aria-label="Thao tác"
+                            title="Thao tác"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <EllipsisVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               {['DonVi', 'SoYTe'].includes(userRole) && (
                                 <DropdownMenuItem
@@ -593,6 +691,80 @@ export function ActivitiesList({
       </GlassCard>
         </TabsContent>
       </Tabs>
+
+      {!isLoading && (
+        <GlassCard className="p-0 border border-slate-200 shadow-sm">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between px-4 py-3">
+            <div className="text-sm text-gray-600">
+              {totalItemsForScope === 0 ? (
+                'Không có hoạt động để hiển thị'
+              ) : (
+                <span>
+                  Hiển thị {firstRowIndex.toLocaleString('vi-VN')} - {lastRowIndex.toLocaleString('vi-VN')} trên tổng{' '}
+                  {totalItemsForScope.toLocaleString('vi-VN')} hoạt động
+                </span>
+              )}
+              {isFetching && (
+                <span className="ml-2 text-xs text-blue-600 animate-pulse">Đang tải trang...</span>
+              )}
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <span>Hiển thị</span>
+                <Select value={currentLimit.toString()} onValueChange={handlePageSizeChange}>
+                  <SelectTrigger className="w-28">
+                    <SelectValue placeholder="Kích thước" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAGE_SIZE_OPTIONS.map((size) => (
+                      <SelectItem key={size} value={size.toString()}>
+                        {size} / trang
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage <= 1}
+                  aria-label="Trang trước"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Input
+                    value={pageInput}
+                    onChange={(e) => setPageInput(e.target.value)}
+                    onBlur={commitPageInput}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        commitPageInput();
+                      }
+                    }}
+                    className="w-16 text-center"
+                    inputMode="numeric"
+                    aria-label="Trang hiện tại"
+                  />
+                  <span className="text-sm text-gray-500">/ {lastAvailablePage}</span>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage >= lastAvailablePage}
+                  aria-label="Trang sau"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </GlassCard>
+      )}
 
       {/* Activity Detail Sheet */}
       <ActivityDetailSheet

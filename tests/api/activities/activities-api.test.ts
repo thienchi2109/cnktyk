@@ -764,7 +764,7 @@ describe('Pagination Tests', () => {
     );
   });
 
-  it('handles pagination without limit parameter (uses default 50)', async () => {
+  it('handles pagination without limit parameter (uses default 25)', async () => {
     const user = { id: 'soyte-1', username: 'soyte@admin.vn', role: 'SoYTe', unitId: undefined };
     (getCurrentUser as any).mockResolvedValueOnce(user);
 
@@ -773,7 +773,7 @@ describe('Pagination Tests', () => {
     await makeGetRequest({ scope: 'global', page: '1' });
 
     expect(danhMucHoatDongRepo.filterGlobalCatalog).toHaveBeenCalledWith(
-      expect.objectContaining({ limit: 50, offset: 0 })
+      expect.objectContaining({ limit: 25, offset: 0 })
     );
   });
 

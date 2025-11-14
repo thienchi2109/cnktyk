@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const querySchema = z.object({
       scope: z.enum(['all', 'global', 'unit']).default('all'),
       page: z.coerce.number().int().min(1).default(1),
-      limit: z.coerce.number().int().min(1).max(200).default(50),
+      limit: z.coerce.number().int().min(1).max(200).default(25),
       search: z.string().optional(),
       type: z.enum(['all', 'KhoaHoc', 'HoiThao', 'NghienCuu', 'BaoCao']).optional(),
       status: z.enum(['all', 'active', 'pending', 'expired']).optional(),

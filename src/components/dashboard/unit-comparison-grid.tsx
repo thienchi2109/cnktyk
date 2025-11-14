@@ -1,7 +1,7 @@
 'use client';
 
 import React, { memo, useEffect, useMemo, useRef } from 'react';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import {
   DashboardTableSkeleton,
   DashboardErrorPanel,
@@ -250,9 +250,9 @@ const UnitComparisonGridComponent = ({
         <div className="space-y-3">
           <DashboardErrorPanel message={error} />
           <div>
-            <GlassButton variant="outline" onClick={onRetry}>
+            <Button variant="outline" onClick={onRetry}>
               Thử lại
-            </GlassButton>
+            </Button>
           </div>
         </div>
       ) : null}
@@ -267,9 +267,9 @@ const UnitComparisonGridComponent = ({
               <p className="text-sm text-gray-500">
                 Điều chỉnh bộ lọc hoặc từ khóa tìm kiếm để xem dữ liệu khác.
               </p>
-              <GlassButton variant="outline" onClick={() => onSortChange([])}>
+              <Button variant="outline" onClick={() => onSortChange([])}>
                 Đặt lại sắp xếp
-              </GlassButton>
+              </Button>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -357,7 +357,7 @@ const UnitComparisonGridComponent = ({
                       <td className="px-4 py-4 text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <GlassButton
+                            <Button
                               ref={(node) => {
                                 if (node) {
                                   actionTriggerRefs.current[row.id] = node;
@@ -373,7 +373,7 @@ const UnitComparisonGridComponent = ({
                               onFocus={() => handleDetailHover(row.id)}
                             >
                               <EllipsisVertical className="h-4 w-4" />
-                            </GlassButton>
+                            </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="min-w-[180px]">
                             <DropdownMenuItem
@@ -420,25 +420,25 @@ const UnitComparisonGridComponent = ({
             </select>
           </label>
           <div className="flex items-center gap-2">
-            <GlassButton
+            <Button
               variant="outline"
               size="sm"
               onClick={() => handlePageChange(page - 1)}
               disabled={page <= 1 || totalPages === 0}
             >
               Trước
-            </GlassButton>
+            </Button>
             <span className="text-sm text-gray-600">
               Trang {totalPages === 0 ? 0 : page} / {totalPages}
             </span>
-            <GlassButton
+            <Button
               variant="outline"
               size="sm"
               onClick={() => handlePageChange(page + 1)}
               disabled={totalPages === 0 || page >= totalPages}
             >
               Sau
-            </GlassButton>
+            </Button>
           </div>
         </div>
       </div>
