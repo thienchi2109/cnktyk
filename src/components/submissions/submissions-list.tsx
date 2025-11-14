@@ -263,7 +263,7 @@ export function SubmissionsList({
   };
 
   const handleViewEvidence = async (
-    event: MouseEvent<HTMLButtonElement>,
+    event: MouseEvent<HTMLElement>,
     submission: Submission
   ) => {
     event.stopPropagation();
@@ -278,7 +278,7 @@ export function SubmissionsList({
   };
 
   const handleDownloadEvidence = async (
-    event: MouseEvent<HTMLButtonElement>,
+    event: MouseEvent<HTMLElement>,
     submission: Submission
   ) => {
     event.stopPropagation();
