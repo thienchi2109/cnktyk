@@ -78,16 +78,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ created: 0, skipped: 0, total: 0, insertedIds: [] });
     }
 
-    // Insert with ON CONFLICT DO NOTHING, relying on a unique index (see migration SQL)
     const rows = await db.query<{ inserted: number }>(
       `WITH data AS (
-         SELECT unnest($1::uuid[]) AS MaNhanVien
+         SELECT unnest($1::uuid[]) AS "MaNhanVien"
+       ), filtered AS (
+         SELECT d."MaNhanVien"
+         FROM data d
+         WHERE NOT EXISTS (
+           SELECT 1
+           FROM "GhiNhanHoatDong" g
+           WHERE g."MaNhanVien" = d."MaNhanVien"
+             AND (
+               ($2::uuid IS NOT NULL AND g."MaDanhMuc" = $2::uuid)
+               OR ($2::uuid IS NULL AND LOWER(g."TenHoatDong") = LOWER($3::text))
+             )
+         )
        ), ins AS (
          INSERT INTO "GhiNhanHoatDong" (
            "MaNhanVien", "MaDanhMuc", "TenHoatDong", "NgayBatDau", "NgayKetThuc", "SoGioTinChiQuyDoi", "NguoiNhap", "TrangThaiDuyet", "NgayGhiNhan"
          )
          SELECT 
-           d.MaNhanVien,
+           f."MaNhanVien",
            $2::uuid,
            $3::text,
            COALESCE($4::timestamptz, NULL),
@@ -96,12 +107,19 @@ export async function POST(request: NextRequest) {
            $7::uuid,
            'ChoDuyet',
            NOW()
-         FROM data d
-         ON CONFLICT ("MaNhanVien", "TenHoatDong") DO NOTHING
+         FROM filtered f
          RETURNING 1
        )
        SELECT COUNT(*)::int AS inserted FROM ins`,
-      [candidateIds, parsed.activity.MaDanhMuc ?? null, parsed.activity.TenHoatDong, parsed.activity.NgayBatDau ?? null, parsed.activity.NgayKetThuc ?? null, parsed.activity.SoGioTinChiQuyDoi, user.id]
+      [
+        candidateIds,
+        parsed.activity.MaDanhMuc ?? null,
+        parsed.activity.TenHoatDong,
+        parsed.activity.NgayBatDau ?? null,
+        parsed.activity.NgayKetThuc ?? null,
+        parsed.activity.SoGioTinChiQuyDoi,
+        user.id,
+      ]
     );
 
     const created = rows[0]?.inserted || 0;

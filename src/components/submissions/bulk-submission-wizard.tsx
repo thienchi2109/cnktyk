@@ -187,6 +187,11 @@ export function BulkSubmissionWizard() {
         totalFiltered: selection.totalFiltered,
         filters: selection.filters,
       };
+      const conversionRate =
+        typeof selectedActivity.TyLeQuyDoi === 'number'
+          ? selectedActivity.TyLeQuyDoi
+          : Number(selectedActivity.TyLeQuyDoi ?? 0) || 0;
+
       const activityPayload = {
         MaDanhMuc: selectedActivity.MaDanhMuc,
         TenHoatDong: selectedActivity.TenDanhMuc,
@@ -194,7 +199,7 @@ export function BulkSubmissionWizard() {
         YeuCauMinhChung: selectedActivity.YeuCauMinhChung,
         NgayBatDau: eventStart ? new Date(eventStart).toISOString() : null,
         NgayKetThuc: eventEnd ? new Date(eventEnd).toISOString() : null,
-        SoGioTinChiQuyDoi: selectedActivity.TyLeQuyDoi ?? 0,
+        SoGioTinChiQuyDoi: conversionRate,
       };
 
       const res = await fetch('/api/cohorts/apply', {
