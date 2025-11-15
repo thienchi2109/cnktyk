@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { MouseEvent } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -25,7 +25,6 @@ import {
 
 import { GlassCard } from '@/components/ui/glass-card';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/glass-select';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -36,7 +35,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn, formatDate } from '@/lib/utils';
 import { LoadingNotice } from '@/components/ui/loading-notice';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useSubmissions, useBulkApproveSubmissions, useBulkDeleteSubmissions } from '@/hooks/use-submissions';
+import { useDebounce } from '@/hooks/use-debounce';
 import { useDeleteSubmissionMutation } from '@/hooks/use-submission';
 import { useEvidenceFile } from '@/hooks/use-evidence-file';
 
@@ -121,8 +128,11 @@ export function SubmissionsList({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const searchParamsString = useMemo(() => searchParams.toString(), [searchParams]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [unitFilter, setUnitFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -134,6 +144,13 @@ export function SubmissionsList({
   const deleteMutation = useDeleteSubmissionMutation();
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const evidenceFile = useEvidenceFile();
+  const [unitOptions, setUnitOptions] = useState<Array<{ id: string; name: string }>>([]);
+  const [unitOptionsLoading, setUnitOptionsLoading] = useState(false);
+  const [unitOptionsError, setUnitOptionsError] = useState<string | null>(null);
+  const [unitSearchInput, setUnitSearchInput] = useState('');
+
+  const debouncedSearchInput = useDebounce(searchInput, 400);
+  const effectiveUnitFilter = userRole === 'SoYTe' && unitFilter !== 'all' ? unitFilter : undefined;
 
   const { data, isLoading, error } = useSubmissions({
     page,
@@ -141,6 +158,7 @@ export function SubmissionsList({
     status: statusFilter,
     search: searchTerm,
     refreshKey,
+    unitId: effectiveUnitFilter,
   });
 
   const totalPages = data?.pagination?.totalPages ?? 1;
@@ -149,20 +167,87 @@ export function SubmissionsList({
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, searchTerm]);
+  }, [statusFilter, searchTerm, effectiveUnitFilter]);
 
   useEffect(() => {
-    const activityName = searchParams.get('activityName');
-    const resolved = activityName ?? '';
-    if (resolved !== searchTerm) {
-      setSearchTerm(resolved);
+    const params = new URLSearchParams(searchParamsString);
+    const activityName = params.get('activityName') ?? '';
+    setSearchTerm((prev) => (prev === activityName ? prev : activityName));
+    setSearchInput((prev) => (prev === activityName ? prev : activityName));
+    if (userRole === 'SoYTe') {
+      const paramUnitId = params.get('unitId') ?? 'all';
+      setUnitFilter((prev) => (prev === paramUnitId ? prev : paramUnitId));
     }
-  }, [searchParams, searchTerm]);
+  }, [searchParamsString, userRole]);
+
+  useEffect(() => {
+    if (userRole !== 'SoYTe') return;
+    let cancelled = false;
+    setUnitOptionsLoading(true);
+    setUnitOptionsError(null);
+
+    const fetchUnits = async () => {
+      try {
+        const response = await fetch('/api/units');
+        if (!response.ok) {
+          throw new Error('Không thể tải danh sách đơn vị');
+        }
+        const payload = await response.json();
+        if (cancelled) return;
+        const units = Array.isArray(payload?.units)
+          ? payload.units.map((unit: any) => ({
+              id: unit.MaDonVi,
+              name: unit.TenDonVi,
+            }))
+          : [];
+        setUnitOptions(units);
+      } catch (unitError) {
+        console.error('Failed to load units for submissions filter:', unitError);
+        if (!cancelled) {
+          setUnitOptionsError(
+            unitError instanceof Error ? unitError.message : 'Không thể tải danh sách đơn vị',
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setUnitOptionsLoading(false);
+        }
+      }
+    };
+
+    void fetchUnits();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userRole]);
+
+  const syncSearchQuery = useCallback(
+    (value: string) => {
+      const params = new URLSearchParams(searchParamsString);
+      if (value) {
+        params.set('activityName', value);
+      } else {
+        params.delete('activityName');
+      }
+      const queryString = params.toString();
+      router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParamsString],
+  );
+
+  useEffect(() => {
+    if (debouncedSearchInput === searchTerm) {
+      return;
+    }
+    setSearchTerm(debouncedSearchInput);
+    syncSearchQuery(debouncedSearchInput);
+  }, [debouncedSearchInput, searchTerm, syncSearchQuery]);
 
   // Clear selection when data changes or page/filter changes
   useEffect(() => {
     setSelectedIds([]);
-  }, [page, statusFilter, searchTerm, data?.data]);
+  }, [page, statusFilter, searchTerm, effectiveUnitFilter, data?.data]);
 
   const filteredSubmissions = ((data?.data as Submission[]) ?? []);
   const safePage = Math.max(1, page);
@@ -178,16 +263,29 @@ export function SubmissionsList({
   const allPendingSelected = pendingIdsOnPage.length > 0 && pendingIdsOnPage.every((id) => selectedIds.includes(id));
 
   const handleSearchTermChange = (value: string) => {
-    setSearchTerm(value);
-    const params = new URLSearchParams(searchParams.toString());
-    if (value) {
-      params.set('activityName', value);
+    setSearchInput(value);
+  };
+
+  const handleUnitFilterChange = (value: string) => {
+    setUnitFilter(value);
+    const params = new URLSearchParams(searchParamsString);
+    if (value === 'all') {
+      params.delete('unitId');
     } else {
-      params.delete('activityName');
+      params.set('unitId', value);
     }
     const queryString = params.toString();
     router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
   };
+
+  const filterGridCols = userRole === 'SoYTe' ? 'md:grid-cols-3' : 'md:grid-cols-2';
+  const debouncedUnitSearch = useDebounce(unitSearchInput, 250);
+
+  const filteredUnitOptions = useMemo(() => {
+    if (!debouncedUnitSearch.trim()) return unitOptions;
+    const term = debouncedUnitSearch.trim().toLowerCase();
+    return unitOptions.filter((unit) => unit.name.toLowerCase().includes(term));
+  }, [unitOptions, debouncedUnitSearch]);
 
   const handleViewSubmission = (submissionId: string) => {
     if (onViewSubmission) {
@@ -442,7 +540,7 @@ export function SubmissionsList({
           <Filter className="h-5 w-5 text-medical-blue" />
           <h3 className="font-semibold text-gray-900">Bộ Lọc & Tìm Kiếm</h3>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className={cn('grid grid-cols-1 gap-4', filterGridCols)}>
           {/* Search */}
           <div>
             <Label htmlFor="search" className="text-sm font-medium text-gray-700">Tìm kiếm</Label>
@@ -451,7 +549,7 @@ export function SubmissionsList({
               <Input
                 id="search"
                 placeholder="Nhập tên hoạt động, người hành nghề..."
-                value={searchTerm}
+                value={searchInput}
                 onChange={(e) => handleSearchTermChange(e.target.value)}
                 className="pl-10"
               />
@@ -460,18 +558,98 @@ export function SubmissionsList({
 
           {/* Status Filter */}
           <div>
-            <Label htmlFor="status-filter" className="text-sm font-medium text-gray-700">Trạng thái</Label>
-            <Select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="mt-1"
-            >
-              <option value="all">Tất cả trạng thái</option>
-              <option value="ChoDuyet">Chờ duyệt</option>
-              <option value="DaDuyet">Đã duyệt</option>
-              <option value="TuChoi">Từ chối</option>
+            <Label htmlFor="status-filter" className="text-sm font-medium text-gray-700">
+              Trạng thái
+            </Label>
+            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value)}>
+              <SelectTrigger
+                id="status-filter"
+                className="mt-1 w-full border border-gray-200 bg-white text-gray-900 focus:ring-medical-blue/30"
+              >
+                <SelectValue placeholder="Tất cả trạng thái" />
+              </SelectTrigger>
+                <SelectContent className="bg-white text-gray-900 border border-gray-200 shadow-xl [&_[data-radix-select-viewport]]:bg-white">
+                <SelectItem
+                  value="all"
+                  className="whitespace-normal break-words text-left leading-snug text-gray-900 data-[highlighted]:bg-medical-blue/10 data-[state=checked]:text-medical-blue h-auto py-2"
+                >
+                  Tất cả trạng thái
+                </SelectItem>
+                <SelectItem
+                  value="ChoDuyet"
+                  className="whitespace-normal break-words text-left leading-snug text-gray-900 data-[highlighted]:bg-medical-blue/10 data-[state=checked]:text-medical-blue h-auto py-2"
+                >
+                  Chờ duyệt
+                </SelectItem>
+                <SelectItem
+                  value="DaDuyet"
+                  className="whitespace-normal break-words text-left leading-snug text-gray-900 data-[highlighted]:bg-medical-blue/10 data-[state=checked]:text-medical-blue h-auto py-2"
+                >
+                  Đã duyệt
+                </SelectItem>
+                <SelectItem
+                  value="TuChoi"
+                  className="whitespace-normal break-words text-left leading-snug text-gray-900 data-[highlighted]:bg-medical-blue/10 data-[state=checked]:text-medical-blue h-auto py-2"
+                >
+                  Từ chối
+                </SelectItem>
+              </SelectContent>
             </Select>
           </div>
+
+          {userRole === 'SoYTe' && (
+            <div>
+              <Label htmlFor="unit-filter" className="text-sm font-medium text-gray-700">
+                Đơn vị
+              </Label>
+              <Select
+                value={unitFilter}
+                onValueChange={handleUnitFilterChange}
+                disabled={unitOptionsLoading}
+              >
+                <SelectTrigger
+                  className="mt-1 w-full border border-gray-200 bg-white text-gray-900 focus:ring-medical-blue/30"
+                >
+                  <SelectValue placeholder="Tất cả đơn vị" />
+                </SelectTrigger>
+                <SelectContent className="w-[420px] bg-white text-gray-900 border border-gray-200 shadow-xl [&_[data-radix-select-viewport]]:bg-white">
+                  <div className="p-2 border-b border-gray-100 bg-white">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                      <Input
+                        placeholder="Tìm kiếm đơn vị..."
+                        value={unitSearchInput}
+                        onChange={(event) => setUnitSearchInput(event.target.value)}
+                        className="pl-9 pr-3 h-9 bg-white text-gray-900 border border-gray-200 focus:ring-medical-blue/30"
+                        autoFocus
+                        onKeyDown={(event) => event.stopPropagation()}
+                      />
+                    </div>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto bg-white">
+                    <SelectItem
+                      value="all"
+                      className="whitespace-normal break-words text-left leading-snug text-gray-900 data-[highlighted]:bg-medical-blue/10 data-[state=checked]:text-medical-blue h-auto py-2"
+                    >
+                      Tất cả đơn vị
+                    </SelectItem>
+                    {filteredUnitOptions.map((unit) => (
+                      <SelectItem
+                        key={unit.id}
+                        value={unit.id}
+                        className="whitespace-normal break-words text-left leading-snug text-gray-900 data-[highlighted]:bg-medical-blue/10 data-[state=checked]:text-medical-blue h-auto py-2"
+                      >
+                        {unit.name}
+                      </SelectItem>
+                    ))}
+                  </div>
+                </SelectContent>
+              </Select>
+              {unitOptionsError && (
+                <p className="text-xs text-red-600 mt-1">{unitOptionsError}</p>
+              )}
+            </div>
+          )}
         </div>
       </GlassCard>
 

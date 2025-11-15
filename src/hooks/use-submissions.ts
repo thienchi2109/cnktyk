@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useQuery, useQueryClient, keepPreviousData, useMutation } from "@tanstack/react-query";
 
 export interface UseSubmissionsOptions {
@@ -8,6 +9,7 @@ export interface UseSubmissionsOptions {
   status?: string; // ChoDuyet | DaDuyet | TuChoi | 'all'
   search?: string;
   refreshKey?: number;
+  unitId?: string;
 }
 
 export function submissionsQueryKey(o: UseSubmissionsOptions) {
@@ -18,6 +20,7 @@ export function submissionsQueryKey(o: UseSubmissionsOptions) {
     o.status ?? "all",
     o.search ?? "",
     o.refreshKey ?? 0,
+    o.unitId ?? "all-unit",
   ] as const;
 }
 
@@ -30,6 +33,7 @@ export async function fetchSubmissionsApi(o: UseSubmissionsOptions): Promise<Sub
   const params = new URLSearchParams({ page: String(o.page), limit: String(o.limit) });
   if (o.status && o.status !== "all") params.append("status", o.status);
   if (o.search) params.append("search", o.search);
+  if (o.unitId) params.append("unitId", o.unitId);
 
   const res = await fetch(`/api/submissions?${params.toString()}`);
   if (!res.ok) {
@@ -50,11 +54,28 @@ export function useSubmissions(o: UseSubmissionsOptions) {
     refetchOnWindowFocus: false,
   });
 
-  // Prefetch next page for smoother UX
-  if (query.data && query.data.pagination && o.page < query.data.pagination.totalPages) {
-    const nextOpts = { ...o, page: o.page + 1 };
-    qc.prefetchQuery({ queryKey: submissionsQueryKey(nextOpts), queryFn: () => fetchSubmissionsApi(nextOpts) });
-  }
+  useEffect(() => {
+    if (!query.isSuccess) return;
+    const totalPages = query.data?.pagination?.totalPages ?? 0;
+    if (!totalPages || o.page >= totalPages) return;
+
+    const nextOpts: UseSubmissionsOptions = { ...o, page: o.page + 1 };
+    qc.prefetchQuery({
+      queryKey: submissionsQueryKey(nextOpts),
+      queryFn: () => fetchSubmissionsApi(nextOpts),
+      staleTime: 30_000,
+    });
+  }, [
+    qc,
+    o.page,
+    o.limit,
+    o.search,
+    o.status,
+    o.refreshKey,
+    o.unitId,
+    query.isSuccess,
+    query.data?.pagination?.totalPages,
+  ]);
 
   return query;
 }

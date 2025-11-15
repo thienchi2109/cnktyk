@@ -201,9 +201,9 @@ export function DohDashboard({ userId, initialUnitId = null }: DohDashboardProps
   const handleUnitDetailClick = (
     unitId: string,
     unitData: UnitComparisonRow,
-    trigger: HTMLButtonElement,
+    trigger: HTMLButtonElement | null,
   ) => {
-    detailTriggerRef.current = trigger;
+    detailTriggerRef.current = trigger ?? null;
     setSelectedUnitId(unitId);
     setSelectedUnit(unitData);
     setSheetOpen(true);

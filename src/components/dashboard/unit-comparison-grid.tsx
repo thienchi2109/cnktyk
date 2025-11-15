@@ -36,7 +36,7 @@ interface UnitComparisonGridProps {
   onUnitDetailClick: (
     unitId: string,
     unitData: UnitComparisonRow,
-    trigger: HTMLButtonElement,
+    trigger: HTMLButtonElement | null,
   ) => void;
   onUnitDetailHover: (unitId: string) => void;
   onEditUnit?: (unit: UnitComparisonRow) => void;
@@ -183,9 +183,23 @@ const UnitComparisonGridComponent = ({
     }
   };
 
-  const handleDetailClick = (row: UnitComparisonRow, trigger: HTMLButtonElement) => {
+  const handleDetailClick = (row: UnitComparisonRow, trigger: HTMLButtonElement | null) => {
     cancelDetailHover(row.id);
     onUnitDetailClick(row.id, row, trigger);
+  };
+
+  const handleRowActivate = (row: UnitComparisonRow) => {
+    onUnitDetailClick(row.id, row, null);
+  };
+
+  const handleRowKeyDown = (
+    event: React.KeyboardEvent<HTMLTableRowElement>,
+    row: UnitComparisonRow,
+  ) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleRowActivate(row);
+    }
   };
 
   const handleSort = (field: UnitSortField, multi: boolean) => {
@@ -321,8 +335,12 @@ const UnitComparisonGridComponent = ({
                   {safeRows.map((row, index) => (
                     <tr
                       key={row.id}
+                      tabIndex={0}
+                      aria-label={`Xem chi tiết ${row.name}`}
+                      onClick={() => handleRowActivate(row)}
+                      onKeyDown={(event) => handleRowKeyDown(event, row)}
                       className={cn(
-                        'border-t border-white/10 transition-colors hover:bg-white/30 focus-within:bg-white/40',
+                        'border-t border-white/10 transition-colors hover:bg-white/30 focus-within:bg-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-medical-blue/30 cursor-pointer',
                         index % 2 === 1 ? 'bg-white/10' : 'bg-transparent',
                       )}
                     >
@@ -364,7 +382,10 @@ const UnitComparisonGridComponent = ({
                                 onMouseEnter={() => handleDetailHover(row.id)}
                                 onMouseLeave={() => cancelDetailHover(row.id)}
                                 onFocus={() => handleDetailHover(row.id)}
-                                onClick={(event) => handleDetailClick(row, event.currentTarget)}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleDetailClick(row, event.currentTarget);
+                                }}
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
@@ -378,7 +399,10 @@ const UnitComparisonGridComponent = ({
                                   size="icon"
                                   variant="ghost"
                                   aria-label={`Chỉnh sửa ${row.name}`}
-                                  onClick={() => onEditUnit(row)}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    onEditUnit?.(row);
+                                  }}
                                 >
                                   <PencilLine className="h-4 w-4" />
                                 </Button>
@@ -394,7 +418,10 @@ const UnitComparisonGridComponent = ({
                                   variant="ghost"
                                   aria-label={`Vô hiệu hóa ${row.name}`}
                                   className="text-red-600 hover:text-red-700"
-                                  onClick={() => onDeleteUnit(row)}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    onDeleteUnit?.(row);
+                                  }}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>

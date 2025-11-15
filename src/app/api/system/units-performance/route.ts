@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/server';
 import { getDohUnitComparisonPage } from '@/lib/db/repositories';
+import { CapQuanLySchema } from '@/lib/db/schemas';
 
 type SortField = 'name' | 'compliance' | 'practitioners' | 'pending' | 'totalCredits';
 
@@ -69,6 +70,12 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
+    const capQuanLyParam = searchParams.get('capQuanLy');
+    const parsedCapQuanLy = capQuanLyParam ? CapQuanLySchema.safeParse(capQuanLyParam) : null;
+    const capQuanLyFilter =
+      parsedCapQuanLy?.success && parsedCapQuanLy.data !== 'SoYTe'
+        ? parsedCapQuanLy.data
+        : undefined;
     const requestedSorts = parseSortParams(searchParams);
     const effectiveSorts =
       requestedSorts.length > 0
@@ -88,6 +95,7 @@ export async function GET(request: NextRequest) {
       page: parsedPage,
       pageSize: parsedPageSize,
       sort: effectiveSorts,
+      capQuanLy: capQuanLyFilter,
     });
 
     return NextResponse.json({
@@ -96,6 +104,7 @@ export async function GET(request: NextRequest) {
         ...result,
         filters: {
           search: search.trim(),
+          capQuanLy: capQuanLyFilter ?? null,
         },
         sort: effectiveSorts,
       },

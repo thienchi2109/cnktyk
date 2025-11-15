@@ -21,6 +21,7 @@ import {
   UpdateThongBao,
   NhatKyHeThong,
   CreateNhatKyHeThong,
+  CapQuanLySchema,
 } from './schemas';
 import bcrypt from 'bcryptjs';
 import type {
@@ -2265,6 +2266,7 @@ export interface DohUnitComparisonQuery {
   page?: number;
   pageSize?: number;
   sort?: Array<{ field: 'name' | 'compliance' | 'practitioners' | 'pending' | 'totalCredits'; direction: 'asc' | 'desc' }>;
+  capQuanLy?: Exclude<(typeof CapQuanLySchema)['options'][number], 'SoYTe'>;
 }
 
 const DEFAULT_UNITS_PAGE_SIZE = 20;
@@ -2304,6 +2306,7 @@ export async function getDohUnitComparisonPage({
     { field: 'compliance', direction: 'desc' },
     { field: 'name', direction: 'asc' },
   ],
+  capQuanLy,
 }: DohUnitComparisonQuery): Promise<DohUnitComparisonPage> {
   const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
   const boundedPageSize = Math.min(
@@ -2314,6 +2317,11 @@ export async function getDohUnitComparisonPage({
 
   const queryParams: any[] = [];
   const whereParts = [`dv."TrangThai" = 'HoatDong'`, `dv."CapQuanLy" != 'SoYTe'`];
+
+  if (capQuanLy) {
+    queryParams.push(capQuanLy);
+    whereParts.push(`dv."CapQuanLy" = $${queryParams.length}`);
+  }
 
   if (search && search.trim()) {
     queryParams.push(`%${search.trim().toLowerCase()}%`);
