@@ -23,6 +23,9 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 **CNKTYKLT Compliance Management Platform** - Healthcare compliance tracking system for managing CPD credits for Vietnamese healthcare practitioners. Multi-tenant role-based system with 4 user roles: SoYTe (Department of Health), DonVi (Unit Admin), NguoiHanhNghe (Practitioner), Auditor.
 
 ## Commands
+- **Superpowers bootstrap (run first every session)**:
+  - In WSL run `node ~/.codex/superpowers/.codex/superpowers-codex bootstrap`
+  - In Git Bash / PowerShell / CMD run `~/.codex/superpowers/.codex/superpowers-codex bootstrap`
 - **Build**: `npm run build` (uses Turbopack)
 - **Lint**: `npm run lint` (ESLint with Next.js config) — skip running this command after finishing tasks per current workflow
 - **Type check**: `npm run typecheck` (TypeScript strict mode)
@@ -30,7 +33,6 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - **Test all**: `npm run test` (Vitest, tests in `tests/` directory)
 - **Dev server**: `npm run dev` (Next.js with Turbopack)
 - **Database tests**: `npx tsx scripts/test-complete-system.ts`
-- **Superpowers**: Run `~/.codex/superpowers/.codex/superpowers-codex bootstrap` at session start and follow any instructions the tool emits
 
 ## Code Style
 - **Imports**: Use `@/*` path aliases for src imports, external imports first
@@ -84,5 +86,8 @@ For full details see WARP.md; this section captures the essential rules for assi
 ## Superpowers System
 
 <EXTREMELY_IMPORTANT>
-You have superpowers. Superpowers teach you new skills and capabilities. RIGHT NOW run: `~/.codex/superpowers/.codex/superpowers-codex bootstrap` and follow the instructions it returns.
+You have superpowers. Superpowers teach you new skills and capabilities. RIGHT NOW run (before any other command):
+- WSL: `node ~/.codex/superpowers/.codex/superpowers-codex bootstrap`
+- Git Bash / PowerShell / CMD: `~/.codex/superpowers/.codex/superpowers-codex bootstrap`
+Then follow the instructions it returns.
 </EXTREMELY_IMPORTANT>

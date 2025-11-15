@@ -215,6 +215,15 @@ export async function POST(req: NextRequest) {
       rawFiles.map((file) => ({ id: file.MaGhiNhan, url: file.FileMinhChungUrl })),
     );
 
+    if (!sizeResolution.r2Configured) {
+      return NextResponse.json(
+        {
+          error: 'Hệ thống chưa cấu hình kho lưu trữ minh chứng (Cloudflare R2). Vui lòng hoàn tất cấu hình trước khi tạo bản sao lưu.',
+        },
+        { status: 503 },
+      );
+    }
+
     const files = rawFiles.map((file, index) => ({
       ...file,
       FileMinhChungSize: sizeResolution.files[index]?.size ?? null,
@@ -431,6 +440,10 @@ export async function POST(req: NextRequest) {
         try {
           // Finalise once all workers finish piping their streams into the archive.
           await Promise.all(workers);
+
+          if (addedFiles === 0) {
+            throw new Error('Không thể tải bất kỳ minh chứng nào từ kho lưu trữ. Vui lòng kiểm tra Cloudflare R2 và thử lại.');
+          }
 
           const manifest = {
             backupDate: new Date().toISOString(),

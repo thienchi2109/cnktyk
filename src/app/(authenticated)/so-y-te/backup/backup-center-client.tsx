@@ -21,6 +21,7 @@ import {
 import { GlassCard } from '@/components/ui/glass-card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import LoadingNotice from '@/components/ui/loading-notice';
 import { Input } from '@/components/ui/input';
 import { GlassProgress } from '@/components/ui/glass-progress';
@@ -45,6 +46,8 @@ const datePresets = [
   { id: '6mo', label: '6 tháng', months: 6 },
   { id: '12mo', label: '1 năm', months: 12 },
 ] as const;
+
+const BACKUP_FILE_LIMIT = 2000;
 
 const formatBytesReadable = (bytes: number) => {
   if (bytes <= 0 || Number.isNaN(bytes)) {
@@ -543,9 +546,41 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
           typeof payload?.details === 'string' && payload.details.trim().length > 0
             ? payload.details
             : null;
-        throw new Error(
-          detailMessage ? `${errorMessage} (${detailMessage})` : errorMessage,
-        );
+        const totalFiles =
+          typeof payload?.totalFiles === 'number' && payload.totalFiles >= 0
+            ? payload.totalFiles
+            : null;
+
+        const combinedMessage = detailMessage
+          ? `${errorMessage} (${detailMessage})`
+          : errorMessage;
+        const limitHint =
+          totalFiles && totalFiles > BACKUP_FILE_LIMIT
+            ? `${combinedMessage} (Có ${totalFiles.toLocaleString(
+                'vi-VN',
+              )} minh chứng. Vui lòng chia nhỏ phạm vi để dưới ${BACKUP_FILE_LIMIT.toLocaleString(
+                'vi-VN',
+              )} tệp mỗi lần.)`
+            : combinedMessage;
+
+        setStatusTone('error');
+        setStatusMessage(limitHint);
+        if (totalFiles !== null) {
+          setDownloadTotalFiles(totalFiles);
+        }
+        if (totalFiles && totalFiles > BACKUP_FILE_LIMIT) {
+          setValidationError(
+            `Khoảng thời gian này chứa ${totalFiles.toLocaleString(
+              'vi-VN',
+            )} minh chứng. Giới hạn mỗi lần sao lưu là ${BACKUP_FILE_LIMIT.toLocaleString(
+              'vi-VN',
+            )} tệp, vui lòng điều chỉnh ngày.`,
+          );
+        }
+        setDownloadTotalBytes(null);
+        setDownloadProgress(0);
+        setDownloadedBytes(0);
+        return;
       }
 
       if (!response.body) {
@@ -756,15 +791,28 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
             <div className="text-sm text-slate-600">
               Chọn phạm vi thời gian để tải xuống bản sao lưu minh chứng đã được duyệt. Mỗi tệp chứa manifest chi tiết và các minh chứng trong khoảng thời gian đã chọn.
             </div>
-            <Button
-              size="lg"
-              className="min-w-[220px]"
-              onClick={handleDownload}
-              disabled={isDownloading}
-            >
-              <DownloadCloud className="mr-2 h-5 w-5" />
-              {isDownloading ? 'Đang tạo sao lưu...' : 'Tải xuống sao lưu'}
-            </Button>
+            <div className="flex flex-col items-stretch gap-2 sm:items-end">
+              <Badge variant="outline" className="border-medical-blue/40 bg-medical-blue/5 text-medical-blue">
+                Bước 1 · Tải bản sao lưu
+              </Badge>
+              <Button
+                size="lg"
+                variant="default"
+                className={cn(
+                  'group relative min-w-[240px] justify-center overflow-hidden rounded-2xl border-0 bg-gradient-to-r from-medical-blue to-emerald-500 text-base font-semibold text-white shadow-[0_15px_35px_-15px_rgba(14,116,144,0.9)] transition-all duration-300',
+                  'focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-medical-blue/80',
+                  !isDownloading && 'hover:from-medical-blue/95 hover:to-emerald-500/95 hover:shadow-[0_20px_45px_-20px_rgba(16,185,129,0.9)]',
+                  isDownloading && 'cursor-progress opacity-80'
+                )}
+                onClick={handleDownload}
+                disabled={isDownloading}
+              >
+                <span className="flex items-center">
+                  <DownloadCloud className="mr-2 h-5 w-5 transition-transform group-hover:translate-x-0.5" />
+                  {isDownloading ? 'Đang tạo sao lưu...' : 'Tải xuống sao lưu'}
+                </span>
+              </Button>
+            </div>
           </div>
 
           {isDownloading && (
@@ -1084,16 +1132,38 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
             <div className="text-sm text-slate-600">
               Chỉ nên xóa sau khi đã sao lưu và kiểm tra tệp an toàn. Tác vụ sẽ loại bỏ hoàn toàn minh chứng khỏi Cloudflare R2 và ẩn liên kết tải xuống trong hệ thống.
             </div>
-            <Button
-              size="lg"
-              variant="destructive"
-              className="min-w-[240px]"
-              onClick={openDeleteDialog}
-              disabled={isDeleting || !hasConfirmedBackup}
-            >
-              <Trash2 className="mr-2 h-5 w-5" />
-              {isDeleting ? 'Đang xóa minh chứng...' : 'Xóa minh chứng đã sao lưu'}
-            </Button>
+            <div className="flex flex-col items-stretch gap-2 sm:items-end">
+              <Badge
+                variant="outline"
+                className="border-red-400/50 bg-red-50/70 text-red-700"
+              >
+                Bước 2 · Dọn dẹp kho minh chứng
+              </Badge>
+              <Button
+                size="lg"
+                variant="destructive"
+                className={cn(
+                  'group relative min-w-[260px] justify-center overflow-hidden rounded-2xl border-0 bg-gradient-to-r from-red-600 via-rose-500 to-amber-500 text-base font-semibold text-white shadow-[0_15px_35px_-15px_rgba(220,38,38,0.9)] transition-all duration-300',
+                  'focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-500/70',
+                  !(isDeleting || !hasConfirmedBackup) &&
+                    'hover:from-red-600/95 hover:via-rose-500/95 hover:to-amber-500/95 hover:shadow-[0_20px_45px_-20px_rgba(249,115,22,0.85)]',
+                  (isDeleting || !hasConfirmedBackup) &&
+                    'cursor-not-allowed opacity-80'
+                )}
+                onClick={openDeleteDialog}
+                disabled={isDeleting || !hasConfirmedBackup}
+              >
+                <span className="flex items-center">
+                  <Trash2 className="mr-2 h-5 w-5 transition-transform group-hover:-translate-x-0.5" />
+                  {isDeleting ? 'Đang xóa minh chứng...' : 'Xóa minh chứng đã sao lưu'}
+                </span>
+              </Button>
+              {!hasConfirmedBackup && (
+                <p className="text-xs text-slate-500">
+                  Cần đánh dấu đã hoàn tất sao lưu trước khi xóa.
+                </p>
+              )}
+            </div>
           </div>
 
           {isDeleting && (
