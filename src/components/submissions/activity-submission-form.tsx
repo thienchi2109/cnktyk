@@ -333,7 +333,7 @@ export function ActivitySubmissionForm({
                 <SelectTrigger className="relative z-10 data-[state=open]:z-50">
                   <SelectValue placeholder="Chọn hoạt động từ danh mục..." />
                 </SelectTrigger>
-                <SelectContent className="z-[9999] bg-white">
+                <SelectContent className="z-[9999] !bg-white dark:!bg-white">
                   <SelectItem value="__none__">Hoạt động tự do (không từ danh mục)</SelectItem>
                   {activityCatalog.map((activity) => (
                     <SelectItem key={activity.MaDanhMuc} value={activity.MaDanhMuc}>
