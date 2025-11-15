@@ -398,7 +398,7 @@ export function ActivitiesList({
         {(permissions.canCreateGlobal || permissions.canCreateUnit) && onCreateActivity && (
           <Button
             onClick={onCreateActivity}
-            className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6"
+            className="gap-2"
             size="lg"
             variant="medical"
           >

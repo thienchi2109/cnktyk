@@ -59,31 +59,43 @@ type FeatureFlags = {
   donViAccountManagementEnabled?: boolean;
 };
 
-const matchesPath = (href: string | undefined, pathname: string | null) => {
-  if (!href || !pathname) return false;
+const getMatchScore = (href: string | undefined, pathname: string | null) => {
+  if (!href || !pathname) return -1;
   if (href === "/") {
-    return pathname === "/";
+    return pathname === "/" ? Infinity : -1;
   }
-  return pathname === href || pathname.startsWith(`${href}/`);
+
+  if (pathname === href) {
+    return href.length + 100; // prefer exact matches
+  }
+
+  if (pathname.startsWith(`${href}/`)) {
+    return href.length;
+  }
+
+  return -1;
 };
 
 const findActiveItemId = (
   items: NavigationItem[],
   pathname: string | null
 ): string | undefined => {
-  for (const item of items) {
-    if (matchesPath(item.href, pathname)) {
-      return item.id;
-    }
-    if (item.children) {
-      const childMatch = findActiveItemId(item.children, pathname);
-      if (childMatch) {
-        return childMatch;
+  let bestMatch: { id: string; score: number } | undefined;
+
+  const evaluateItems = (navItems: NavigationItem[]) => {
+    for (const item of navItems) {
+      const score = getMatchScore(item.href, pathname);
+      if (score > (bestMatch?.score ?? -1)) {
+        bestMatch = { id: item.id, score };
+      }
+      if (item.children) {
+        evaluateItems(item.children);
       }
     }
-  }
+  };
 
-  return undefined;
+  evaluateItems(items);
+  return bestMatch?.id;
 };
 
 const itemIncludesActive = (
@@ -383,6 +395,7 @@ const HeaderNavigation = ({
 }) => {
   const [openDropdown, setOpenDropdown] = React.useState<string | null>(null);
   const [moreMenuOpen, setMoreMenuOpen] = React.useState(false);
+  const navRef = React.useRef<HTMLDivElement>(null);
 
   // Separate high and low priority items
   const highPriorityItems = items.filter(item => item.priority !== 'low');
@@ -405,11 +418,14 @@ const HeaderNavigation = ({
       if (moreMenuOpen && !target.closest('[data-more-menu]')) {
         setMoreMenuOpen(false);
       }
+      if (openDropdown && navRef.current && !navRef.current.contains(target)) {
+        setOpenDropdown(null);
+      }
     };
 
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
-  }, [moreMenuOpen]);
+  }, [moreMenuOpen, openDropdown]);
 
   const renderNavigationItem = (item: NavigationItem) => {
     const isActive = itemIncludesActive(item, activeItem);
@@ -479,7 +495,7 @@ const HeaderNavigation = ({
   };
 
   return (
-    <nav className="hidden xl:flex items-center space-x-2 lg:space-x-3">
+    <nav ref={navRef} className="hidden xl:flex items-center space-x-2 lg:space-x-3">
       {/* High priority items */}
       {highPriorityItems.map(renderNavigationItem)}
 

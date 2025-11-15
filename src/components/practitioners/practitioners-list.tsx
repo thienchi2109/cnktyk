@@ -235,7 +235,7 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
               <Button
                 onClick={() => setShowBulkImportSheet(true)}
                 variant="medical-secondary"
-                className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6"
+                className="gap-2"
                 size="lg"
               >
                 <Upload className="h-5 w-5" />
@@ -246,7 +246,7 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
             {/* Add Single Practitioner */}
             <Button
               onClick={() => setShowCreateDialog(true)}
-              className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6"
+              className="gap-2"
               size="lg"
               variant="medical"
             >

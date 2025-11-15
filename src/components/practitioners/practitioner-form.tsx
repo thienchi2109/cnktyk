@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Save, X } from 'lucide-react';
 import { CreateNhanVienSchema, type CreateNhanVien } from '@/lib/db/schemas';
+import { SheetFooter } from '@/components/ui/sheet';
 
 // Form schema with additional client-side validation
 // Must omit MaDonVi from CreateNhanVienSchema first, then re-add with custom validation
@@ -363,68 +364,60 @@ export function PractitionerForm({
   );
 
   // Form action buttons (for card variant)
-  const formActions = (
-    <div className="flex justify-end space-x-4 pt-6 border-t">
-      {onCancel && (
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          disabled={isLoading}
-        >
-          <X className="w-4 h-4 mr-2" />
-          Hủy
-        </Button>
-      )}
+  const renderCancelButton = (buttonSize: "default" | "sm" | "lg" = "default") => {
+    if (!onCancel) return null;
+    return (
       <Button
-        type="submit"
+        type="button"
+        variant="outline"
+        onClick={onCancel}
         disabled={isLoading}
-        onClick={form.handleSubmit(onSubmit as any)}
+        className="gap-2"
+        size={buttonSize}
       >
-        {isLoading ? (
-          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-        ) : (
-          <Save className="w-4 h-4 mr-2" />
-        )}
-        {mode === 'create' ? 'Đăng ký người hành nghề' : 'Cập nhật thông tin'}
+        <X className="w-4 h-4" />
+        Hủy
       </Button>
+    );
+  };
+
+  const renderSubmitButton = (
+    buttonSize: "default" | "sm" | "lg" = "default",
+    compactLabel = false,
+  ) => (
+    <Button
+      type="submit"
+      disabled={isLoading}
+      onClick={form.handleSubmit(onSubmit as any)}
+      variant="medical"
+      className="gap-2"
+      size={buttonSize}
+    >
+      {isLoading ? (
+        <Loader2 className="w-4 h-4 animate-spin" />
+      ) : (
+        <Save className="w-4 h-4" />
+      )}
+      {mode === 'create'
+        ? compactLabel ? 'Đăng ký' : 'Đăng ký người hành nghề'
+        : compactLabel ? 'Cập nhật' : 'Cập nhật thông tin'}
+    </Button>
+  );
+
+  const formActions = (
+    <div className="flex justify-end gap-3 pt-6 border-t">
+      {renderCancelButton()}
+      {renderSubmitButton()}
     </div>
   );
 
-  // Floating action buttons (for sheet variant)
-  const floatingActions = (
-    <div className="fixed bottom-6 right-6 flex gap-3 z-50">
-      {/* Secondary Action Button - Cancel (only if onCancel provided) */}
-      {onCancel && (
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={onCancel}
-          disabled={isLoading}
-          className="rounded-full shadow-lg hover:shadow-xl transition-shadow"
-          size="lg"
-        >
-          <X className="w-5 h-5 mr-2" />
-          Hủy
-        </Button>
-      )}
-      
-      {/* Primary Action Button - Save/Update */}
-      <Button
-        type="submit"
-        disabled={isLoading}
-        onClick={form.handleSubmit(onSubmit as any)}
-        className="rounded-full shadow-lg hover:shadow-xl transition-shadow"
-        size="lg"
-      >
-        {isLoading ? (
-          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-        ) : (
-          <Save className="w-5 h-5 mr-2" />
-        )}
-        {mode === 'create' ? 'Đăng ký' : 'Cập nhật'}
-      </Button>
-    </div>
+  const sheetActions = (
+    <SheetFooter className="-mx-6 px-6 py-4 mt-6 border-t bg-white sticky bottom-0">
+      <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-end">
+      {renderCancelButton("lg")}
+      {renderSubmitButton("lg", true)}
+      </div>
+    </SheetFooter>
   );
 
   // Render with Card wrapper for standalone pages
@@ -450,11 +443,10 @@ export function PractitionerForm({
     );
   }
 
-  // Render with floating action buttons for sheet/drawer context
   return (
     <>
       {formContent}
-      {floatingActions}
+      {sheetActions}
     </>
   );
 }

@@ -24,12 +24,13 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 
 ## Commands
 - **Build**: `npm run build` (uses Turbopack)
-- **Lint**: `npm run lint` (ESLint with Next.js config)
+- **Lint**: `npm run lint` (ESLint with Next.js config) — skip running this command after finishing tasks per current workflow
 - **Type check**: `npm run typecheck` (TypeScript strict mode)
 - **Test single file**: `npm run test -- path/to/test.test.ts`
 - **Test all**: `npm run test` (Vitest, tests in `tests/` directory)
 - **Dev server**: `npm run dev` (Next.js with Turbopack)
 - **Database tests**: `npx tsx scripts/test-complete-system.ts`
+- **Superpowers**: Run `~/.codex/superpowers/.codex/superpowers-codex bootstrap` at session start and follow any instructions the tool emits
 
 ## Code Style
 - **Imports**: Use `@/*` path aliases for src imports, external imports first

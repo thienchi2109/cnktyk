@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { X, Save, Plus, AlertTriangle, Globe, Building2, Upload } from 'lucide-react';
+import { X, Save, Plus, AlertTriangle, Globe, Building2, Upload, Loader2 } from 'lucide-react';
+import { SheetFooter } from '@/components/ui/sheet';
 
 // Form validation schema
 const ActivityFormSchema = z.object({
@@ -431,31 +432,67 @@ export function ActivityForm({
         </div>
 
         {/* Form Actions */}
-        <div className="flex justify-end space-x-3 pt-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            disabled={isLoading}
-          >
-            <X className="w-4 h-4 mr-2" />
-            Hủy
-          </Button>
-          <Button
-            type="submit"
-            disabled={isLoading || isSoftDeleted}
-            className="border border-primary/30"
-          >
-            {isLoading ? (
-              'Đang xử lý...'
-            ) : (
-              <>
-                {mode === 'create' ? <Plus className="w-4 h-4 mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+        {variant === 'sheet' ? (
+          <SheetFooter className="-mx-6 px-6 py-4 mt-6 border-t bg-white sticky bottom-0">
+            <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                disabled={isLoading}
+                className="gap-2"
+                size="lg"
+              >
+                <X className="w-4 h-4" />
+                Hủy
+              </Button>
+              <Button
+                type="submit"
+                disabled={isLoading || isSoftDeleted}
+                variant="medical"
+                className="gap-2"
+                size="lg"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : mode === 'create' ? (
+                  <Plus className="w-4 h-4" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
                 {mode === 'create' ? 'Thêm hoạt động' : 'Cập nhật'}
-              </>
-            )}
-          </Button>
-        </div>
+              </Button>
+            </div>
+          </SheetFooter>
+        ) : (
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              disabled={isLoading}
+              className="gap-2"
+            >
+              <X className="w-4 h-4" />
+              Hủy
+            </Button>
+            <Button
+              type="submit"
+              disabled={isLoading || isSoftDeleted}
+              variant="medical"
+              className="gap-2"
+            >
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : mode === 'create' ? (
+                <Plus className="w-4 h-4" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              {mode === 'create' ? 'Thêm hoạt động' : 'Cập nhật'}
+            </Button>
+          </div>
+        )}
         
         {isSoftDeleted && (
           <p className="text-sm text-orange-600 text-center pt-2">

@@ -346,7 +346,7 @@ export function SubmissionsList({
               <Button
                 asChild
                 variant="medical-secondary"
-                className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6"
+                className="gap-2"
                 size="lg"
               >
                 <Link href="/submissions/bulk">
@@ -361,7 +361,7 @@ export function SubmissionsList({
                     onClick={handleBulkApprove}
                     disabled={bulkApprove.isPending}
                     variant="medical"
-                    className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6"
+                    className="gap-2"
                     size="lg"
                   >
                     {bulkApprove.isPending ? (
@@ -380,7 +380,7 @@ export function SubmissionsList({
                     onClick={handleBulkDelete}
                     disabled={bulkDelete.isPending}
                     variant="destructive"
-                    className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6"
+                    className="gap-2"
                     size="lg"
                   >
                     {bulkDelete.isPending ? (
@@ -403,7 +403,7 @@ export function SubmissionsList({
             <Button
               onClick={onCreateSubmission}
               variant="medical"
-              className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6"
+              className="gap-2"
               size="lg"
             >
               <Plus className="h-5 w-5" />
