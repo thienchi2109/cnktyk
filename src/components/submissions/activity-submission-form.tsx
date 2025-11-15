@@ -167,7 +167,12 @@ export function ActivitySubmissionForm({
   // Optimization #4: Calculate credits with useMemo instead of useState
   const calculatedCredits = useMemo(() => {
     if (selectedActivity && SoTiet) {
-      return SoTiet * selectedActivity.TyLeQuyDoi;
+      // Convert TyLeQuyDoi to number (comes from DB as string)
+      const conversionRate = Number(selectedActivity.TyLeQuyDoi);
+      if (isNaN(conversionRate)) {
+        return 0;
+      }
+      return SoTiet * conversionRate;
     }
     return SoGioTinChiQuyDoi || 0;
   }, [selectedActivity, SoTiet, SoGioTinChiQuyDoi]);
@@ -337,7 +342,7 @@ export function ActivitySubmissionForm({
                       <div className="flex flex-col">
                         <span className="font-medium">{activity.TenDanhMuc}</span>
                         <span className="text-sm text-gray-500">
-                          {activityTypeLabels[activity.LoaiHoatDong]} • {activity.TyLeQuyDoi}x tín chỉ
+                          {activityTypeLabels[activity.LoaiHoatDong]} • {Number(activity.TyLeQuyDoi)}x tín chỉ
                         </span>
                       </div>
                     </SelectItem>
@@ -466,7 +471,7 @@ export function ActivitySubmissionForm({
 
               {selectedActivity && SoTiet && (
                 <p className="text-sm text-green-600 mt-1">
-                  Tự động tính: {SoTiet} tiết × {selectedActivity.TyLeQuyDoi} = {calculatedCredits} tín chỉ
+                  Tự động tính: {SoTiet} tiết × {Number(selectedActivity.TyLeQuyDoi)} = {calculatedCredits} tín chỉ
                 </p>
               )}
             </div>
