@@ -524,8 +524,8 @@ export function BulkImportSheet({ open, onOpenChange, onImportSuccess }: BulkImp
         </div>
 
         {(showPreviewActions || showImportActions) && (
-          <div className="border-t border-gray-200 bg-white/95 px-6 py-4 backdrop-blur-sm">
-            <div className="flex justify-end space-x-3 sm:space-x-4">
+          <div className="bg-white/95 px-6 py-4 backdrop-blur-sm">
+            <div className="flex w-full flex-col items-end gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-4">
               {showPreviewActions && (
                 <>
                   <Button

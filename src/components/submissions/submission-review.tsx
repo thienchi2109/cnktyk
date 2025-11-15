@@ -580,38 +580,40 @@ export function SubmissionReview({
 
       {/* Footer actions for review confirmation (sheet footer) */}
       {reviewAction && (
-        <SheetFooter className="-mx-6 px-6 py-4 mt-6 border-t bg-white">
-          <Button
-            type="button"
-            variant="outline-accent"
-            disabled={isProcessing}
-            onClick={() => {
-              setReviewAction(null);
-              setComments('');
-              setReason('');
-            }}
-          >
-            Hủy
-          </Button>
-          <Button
-            type="button"
-            disabled={isProcessing || (reviewAction === 'reject' && !reason) || (reviewAction === 'request_info' && !comments)}
-            onClick={() => handleReviewSubmission(reviewAction)}
-          >
-            {isProcessing ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : reviewAction === 'approve' ? (
-              <CheckCircle className="h-4 w-4 mr-2" />
-            ) : reviewAction === 'reject' ? (
-              <XCircle className="h-4 w-4 mr-2" />
-            ) : (
-              <Info className="h-4 w-4 mr-2" />
-            )}
-            {isProcessing ? 'Đang xử lý...' : 
-              reviewAction === 'approve' ? 'Xác nhận phê duyệt' :
-              reviewAction === 'reject' ? 'Xác nhận từ chối' :
-              'Xác nhận yêu cầu'}
-          </Button>
+        <SheetFooter className="-mx-6 px-6 py-4 mt-6 bg-white">
+          <div className="flex w-full flex-col items-end gap-2 sm:flex-row sm:items-center sm:justify-end">
+            <Button
+              type="button"
+              variant="outline-accent"
+              disabled={isProcessing}
+              onClick={() => {
+                setReviewAction(null);
+                setComments('');
+                setReason('');
+              }}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              disabled={isProcessing || (reviewAction === 'reject' && !reason) || (reviewAction === 'request_info' && !comments)}
+              onClick={() => handleReviewSubmission(reviewAction)}
+            >
+              {isProcessing ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : reviewAction === 'approve' ? (
+                <CheckCircle className="h-4 w-4 mr-2" />
+              ) : reviewAction === 'reject' ? (
+                <XCircle className="h-4 w-4 mr-2" />
+              ) : (
+                <Info className="h-4 w-4 mr-2" />
+              )}
+              {isProcessing ? 'Đang xử lý...' : 
+                reviewAction === 'approve' ? 'Xác nhận phê duyệt' :
+                reviewAction === 'reject' ? 'Xác nhận từ chối' :
+                'Xác nhận yêu cầu'}
+            </Button>
+          </div>
         </SheetFooter>
       )}
 

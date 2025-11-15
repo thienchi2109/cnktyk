@@ -232,7 +232,16 @@ export function UserForm({
           <Label htmlFor="status">Tài khoản hoạt động</Label>
         </div>
 
-        <div className="flex gap-3 pt-4">
+        <div className="flex w-full flex-col items-end gap-3 pt-4 sm:flex-row sm:items-center sm:justify-end">
+          <Button
+            type="button"
+            variant="outline-accent"
+            onClick={onCancel}
+            disabled={isLoading}
+          >
+            Hủy
+          </Button>
+          
           <Button
             type="submit"
             disabled={isLoading}
@@ -241,15 +250,6 @@ export function UserForm({
           >
             <Save className="h-4 w-4" />
             {isLoading ? 'Đang xử lý...' : mode === 'create' ? 'Tạo Tài Khoản' : 'Cập Nhật'}
-          </Button>
-          
-          <Button
-            type="button"
-            variant="outline-accent"
-            onClick={onCancel}
-            disabled={isLoading}
-          >
-            Hủy
           </Button>
         </div>
       </form>

@@ -405,15 +405,15 @@ export function PractitionerForm({
   );
 
   const formActions = (
-    <div className="flex justify-end gap-3 pt-6 border-t">
+    <div className="flex justify-end gap-3 pt-6">
       {renderCancelButton()}
       {renderSubmitButton()}
     </div>
   );
 
   const sheetActions = (
-    <SheetFooter className="-mx-6 px-6 py-4 mt-6 border-t bg-white sticky bottom-0">
-      <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-end">
+    <SheetFooter className="-mx-6 px-6 py-4 mt-6 bg-white sticky bottom-0">
+      <div className="flex w-full flex-col items-end gap-2 sm:flex-row sm:items-center sm:justify-end">
       {renderCancelButton("lg")}
       {renderSubmitButton("lg", true)}
       </div>

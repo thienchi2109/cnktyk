@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldError } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { GlassCard } from '@/components/ui/glass-card';
@@ -73,6 +73,29 @@ const unitOptions = [
   { value: 'tiet', label: 'Tiết' },
   { value: 'tin_chi', label: 'Tín chỉ' },
 ];
+
+const toNullableNumber = (value: string | number | null | undefined) => {
+  if (value === '' || value === null || typeof value === 'undefined') {
+    return null;
+  }
+
+  if (typeof value === 'number' && !Number.isNaN(value)) {
+    return value;
+  }
+
+  const numeric = Number(value);
+  return Number.isNaN(numeric) ? null : numeric;
+};
+
+const getFriendlyNumberError = (error?: FieldError, fallback?: string) => {
+  if (!error) return null;
+  const message = error.message || '';
+  const isInvalidType = error.type === 'invalid_type' || message.includes('Invalid input');
+  if (isInvalidType) {
+    return fallback ?? 'Vui lòng nhập giá trị số hợp lệ hoặc để trống nếu không áp dụng.';
+  }
+  return message;
+};
 
 export function ActivityForm({
   activity,
@@ -366,14 +389,19 @@ export function ActivityForm({
               id="GioToiThieu"
               type="number"
               min="0"
-              {...register('GioToiThieu', { 
-                setValueAs: (v: string) => v === '' ? null : parseFloat(v) 
+              {...register('GioToiThieu', {
+                setValueAs: (value) => toNullableNumber(value as string | number | null | undefined),
               })}
               placeholder="Không giới hạn"
               disabled={isSoftDeleted}
             />
             {errors.GioToiThieu && (
-              <p className="text-sm text-red-500">{errors.GioToiThieu.message}</p>
+              <p className="text-sm text-red-500">
+                {getFriendlyNumberError(
+                  errors.GioToiThieu,
+                  'Vui lòng nhập số giờ tối thiểu hợp lệ hoặc để trống nếu không giới hạn.'
+                )}
+              </p>
             )}
           </div>
 
@@ -383,15 +411,20 @@ export function ActivityForm({
               id="GioToiDa"
               type="number"
               min="0"
-              {...register('GioToiDa', { 
-                setValueAs: (v: string) => v === '' ? null : parseFloat(v) 
+              {...register('GioToiDa', {
+                setValueAs: (value) => toNullableNumber(value as string | number | null | undefined),
               })}
               placeholder="Không giới hạn"
               className={errors.GioToiDa ? 'border-red-300' : ''}
               disabled={isSoftDeleted}
             />
             {errors.GioToiDa && (
-              <p className="text-sm text-red-500">{errors.GioToiDa.message}</p>
+              <p className="text-sm text-red-500">
+                {getFriendlyNumberError(
+                  errors.GioToiDa,
+                  'Vui lòng nhập số giờ tối đa hợp lệ hoặc để trống nếu không giới hạn.'
+                )}
+              </p>
             )}
           </div>
         </div>
@@ -433,8 +466,8 @@ export function ActivityForm({
 
         {/* Form Actions */}
         {variant === 'sheet' ? (
-          <SheetFooter className="-mx-6 px-6 py-4 mt-6 border-t bg-white sticky bottom-0">
-            <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-end">
+          <SheetFooter className="-mx-6 px-6 py-4 mt-6 bg-white sticky bottom-0">
+            <div className="flex w-full flex-col items-end gap-2 sm:flex-row sm:items-center sm:justify-end">
               <Button
                 type="button"
                 variant="outline-accent"

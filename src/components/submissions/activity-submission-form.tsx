@@ -507,7 +507,7 @@ export function ActivitySubmissionForm({
 
         {/* Form Actions */}
         {variant === 'page' ? (
-          <div className="flex justify-end gap-3 pt-6 border-t">
+          <div className="flex justify-end gap-3 pt-6">
             {onCancel && (
               <Button
                 type="button"
@@ -537,8 +537,8 @@ export function ActivitySubmissionForm({
             </Button>
           </div>
         ) : (
-          <SheetFooter className="-mx-6 px-6 py-4 mt-6 border-t bg-white sticky bottom-0">
-            <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-end">
+          <SheetFooter className="-mx-6 px-6 py-4 mt-6 bg-white sticky bottom-0">
+            <div className="flex w-full flex-col items-end gap-2 sm:flex-row sm:items-center sm:justify-end">
               {onCancel && (
                 <Button
                   type="button"
