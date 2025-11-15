@@ -16,3 +16,9 @@ export { Button } from './button';
 export { Label } from './label';
 export { Alert } from './alert';
 export { Toaster } from './toaster';
+export {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from './tooltip';

@@ -8,13 +8,8 @@ import {
 } from '@/components/dashboard/dashboard-skeletons';
 import { cn } from '@/lib/utils';
 import type { UnitComparisonSummary } from '@/types/dashboard';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { EllipsisVertical, Eye } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Eye, PencilLine, Trash2 } from 'lucide-react';
 
 export type UnitSortField = 'name' | 'compliance' | 'practitioners' | 'pending' | 'totalCredits';
 
@@ -44,6 +39,8 @@ interface UnitComparisonGridProps {
     trigger: HTMLButtonElement,
   ) => void;
   onUnitDetailHover: (unitId: string) => void;
+  onEditUnit?: (unit: UnitComparisonRow) => void;
+  onDeleteUnit?: (unit: UnitComparisonRow) => void;
 }
 
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 50] as const;
@@ -130,6 +127,8 @@ const UnitComparisonGridComponent = ({
   onRetry,
   onUnitDetailClick,
   onUnitDetailHover,
+  onEditUnit,
+  onDeleteUnit,
 }: UnitComparisonGridProps) => {
   const numberFormatter = useMemo(() => new Intl.NumberFormat('vi-VN'), []);
   const percentFormatter = useMemo(
@@ -157,7 +156,6 @@ const UnitComparisonGridComponent = ({
         )} trên tổng ${formatNumber(totalItems, numberFormatter)} đơn vị.`;
 
   const hoverTimeoutsRef = useRef<Record<string, number>>({});
-  const actionTriggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   useEffect(() => {
     return () => {
@@ -245,6 +243,7 @@ const UnitComparisonGridComponent = ({
   };
 
   return (
+    <TooltipProvider delayDuration={150}>
     <div className="space-y-4" aria-busy={isLoading || undefined}>
       {error && !isLoading ? (
         <div className="space-y-3">
@@ -355,41 +354,55 @@ const UnitComparisonGridComponent = ({
                         {formatNumber(Math.round(row.totalCredits), numberFormatter)}
                       </td>
                       <td className="px-4 py-4 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              ref={(node) => {
-                                if (node) {
-                                  actionTriggerRefs.current[row.id] = node;
-                                } else {
-                                  delete actionTriggerRefs.current[row.id];
-                                }
-                              }}
-                              size="icon"
-                              variant="ghost"
-                              aria-label={`Thao tác ${row.name}`}
-                              onMouseEnter={() => handleDetailHover(row.id)}
-                              onMouseLeave={() => cancelDetailHover(row.id)}
-                              onFocus={() => handleDetailHover(row.id)}
-                            >
-                              <EllipsisVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="min-w-[180px]">
-                            <DropdownMenuItem
-                              onSelect={(event) => {
-                                event.preventDefault();
-                                const trigger = actionTriggerRefs.current[row.id];
-                                if (trigger) {
-                                  handleDetailClick(row, trigger);
-                                }
-                              }}
-                            >
-                              <Eye className="h-4 w-4 mr-2" />
-                              Xem chi tiết
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <div className="flex items-center justify-end gap-2">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                aria-label={`Xem chi tiết ${row.name}`}
+                                onMouseEnter={() => handleDetailHover(row.id)}
+                                onMouseLeave={() => cancelDetailHover(row.id)}
+                                onFocus={() => handleDetailHover(row.id)}
+                                onClick={(event) => handleDetailClick(row, event.currentTarget)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Xem chi tiết</TooltipContent>
+                          </Tooltip>
+                          {onEditUnit && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  aria-label={`Chỉnh sửa ${row.name}`}
+                                  onClick={() => onEditUnit(row)}
+                                >
+                                  <PencilLine className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Chỉnh sửa đơn vị</TooltipContent>
+                            </Tooltip>
+                          )}
+                          {onDeleteUnit && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  aria-label={`Vô hiệu hóa ${row.name}`}
+                                  className="text-red-600 hover:text-red-700"
+                                  onClick={() => onDeleteUnit(row)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Vô hiệu hóa đơn vị</TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -443,6 +456,7 @@ const UnitComparisonGridComponent = ({
         </div>
       </div>
     </div>
+    </TooltipProvider>
   );
 };
 

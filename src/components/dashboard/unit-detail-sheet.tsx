@@ -12,7 +12,8 @@ import {
 import { GlassCard } from '@/components/ui/glass-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Users, CheckCircle, Clock, AlertTriangle, Award, TrendingUp, XCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Users, CheckCircle, Clock, AlertTriangle, Award, TrendingUp, XCircle, PencilLine, Trash2 } from 'lucide-react';
 import { fetchUnitMetrics, unitMetricsQueryKey } from '@/lib/dashboard/unit-metrics';
 import type { UnitComparisonSummary, UnitMetrics } from '@/types/dashboard';
 
@@ -22,6 +23,8 @@ interface UnitDetailSheetProps {
   onOpenChange: (open: boolean) => void;
   unitSummary?: UnitComparisonSummary;
   initialData?: UnitMetrics;
+  onEditUnit?: (unitId: string) => void;
+  onDeleteUnit?: (unitId: string, unitName?: string) => void;
 }
 
 export default function UnitDetailSheet({
@@ -30,6 +33,8 @@ export default function UnitDetailSheet({
   onOpenChange,
   unitSummary,
   initialData,
+  onEditUnit,
+  onDeleteUnit,
 }: UnitDetailSheetProps) {
   const hasUnit = Boolean(unitId);
   const fallback: UnitMetrics = {
@@ -87,6 +92,34 @@ export default function UnitDetailSheet({
             <SheetDescription>
             {unitSummary?.type ? `Cấp quản lý: ${unitSummary.type}` : 'Thông tin hiệu suất chi tiết của đơn vị.'}
           </SheetDescription>
+          {(onEditUnit || onDeleteUnit) && unitId ? (
+            <div className="flex gap-2 justify-end pt-2">
+              {onEditUnit && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => onEditUnit(unitId)}
+                >
+                  <PencilLine className="h-4 w-4" />
+                  Chỉnh sửa
+                </Button>
+              )}
+              {onDeleteUnit && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 text-red-600 border-red-200 hover:bg-red-50"
+                  onClick={() => onDeleteUnit(unitId, unitSummary?.name)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Vô hiệu hóa
+                </Button>
+              )}
+            </div>
+          ) : null}
         </SheetHeader>
 
           <div className="mt-6 space-y-6">

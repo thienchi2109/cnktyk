@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { useQueryClient } from '@tanstack/react-query';
 import { GlassCard } from '@/components/ui/glass-card';
 import { Button } from '@/components/ui/button';
-import { Building2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Building2, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { useDebounce } from '@/hooks/use-debounce';
 import {
   DashboardTableSkeleton,
@@ -15,6 +15,8 @@ import { UnitComparisonGrid } from '@/components/dashboard/unit-comparison-grid'
 import type { UnitComparisonSummary, UnitMetrics } from '@/types/dashboard';
 import type { UnitSortState } from '@/components/dashboard/unit-comparison-grid';
 import { fetchUnitMetrics, unitMetricsQueryKey } from '@/lib/dashboard/unit-metrics';
+import { UnitFormSheet, type ManagedUnitRecord } from '@/components/units/unit-form-sheet';
+import { UnitDeleteDialog } from '@/components/units/unit-delete-dialog';
 
 const UnitDetailSheet = dynamic(() => import('@/components/dashboard/unit-detail-sheet'), {
   ssr: false,
@@ -81,6 +83,11 @@ export function DohUnitsClient({ userId, initialUnitId }: DohUnitsClientProps) {
   const [pendingInitialUnitId, setPendingInitialUnitId] = useState<string | null>(
     initialUnitId ?? null,
   );
+  const [unitFormOpen, setUnitFormOpen] = useState(false);
+  const [unitFormMode, setUnitFormMode] = useState<'create' | 'edit'>('create');
+  const [unitFormUnitId, setUnitFormUnitId] = useState<string | null>(null);
+  const [unitDeleteOpen, setUnitDeleteOpen] = useState(false);
+  const [unitDeleteTarget, setUnitDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const detailTriggerRef = useRef<HTMLButtonElement | null>(null);
   const initialUnitLookupRef = useRef<string | null>(null);
 
@@ -90,6 +97,39 @@ export function DohUnitsClient({ userId, initialUnitId }: DohUnitsClientProps) {
       detailTriggerRef.current = null;
     }
   }, [sheetOpen]);
+
+  const handleUnitMutationSuccess = useCallback(
+    (
+      unit?: Pick<ManagedUnitRecord, 'MaDonVi' | 'TenDonVi' | 'CapQuanLy'>,
+      options?: { closeSheet?: boolean },
+    ) => {
+      setUnitsRefreshKey((prev) => prev + 1);
+      if (!unit?.MaDonVi) {
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: unitMetricsQueryKey(unit.MaDonVi) });
+
+      if (options?.closeSheet && selectedUnitId === unit.MaDonVi) {
+        setSheetOpen(false);
+        setSelectedUnitId(null);
+        setSelectedUnit(null);
+        return;
+      }
+
+      if (selectedUnitId === unit.MaDonVi) {
+        setSelectedUnit((prev) =>
+          prev
+            ? {
+                ...prev,
+                name: unit.TenDonVi ?? prev.name,
+                type: unit.CapQuanLy ?? prev.type,
+              }
+            : prev,
+        );
+      }
+    },
+    [queryClient, selectedUnitId, setSheetOpen],
+  );
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
@@ -213,6 +253,14 @@ export function DohUnitsClient({ userId, initialUnitId }: DohUnitsClientProps) {
     initialUnitLookupRef.current = null;
   }, [pendingInitialUnitId, prefetchMetrics, units]);
 
+  useEffect(() => {
+    if (!selectedUnitId) return;
+    const match = units.find((row) => row.id === selectedUnitId);
+    if (match) {
+      setSelectedUnit(match);
+    }
+  }, [units, selectedUnitId]);
+
   const handleUnitDetailClick = (
     unitId: string,
     unitData: UnitComparisonSummary,
@@ -305,15 +353,16 @@ export function DohUnitsClient({ userId, initialUnitId }: DohUnitsClientProps) {
   }, [debouncedSearchTerm, unitPage, unitPageSize, unitSorts, unitsRefreshKey]);
 
   return (
-    <div className="min-h-screen p-6 space-y-6">
-      <div className="max-w-7xl mx-auto">
+    <>
+      <div className="min-h-screen p-6 space-y-6">
+        <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-800 page-title mb-2">Quản lý đơn vị</h1>
           <p className="text-gray-600">Theo dõi và đánh giá hiệu suất các đơn vị y tế</p>
         </div>
 
         <GlassCard className="p-6" aria-busy={unitsLoading || undefined}>
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-blue-100/50">
                 <Building2 className="w-5 h-5 text-medical-blue" />
@@ -325,17 +374,32 @@ export function DohUnitsClient({ userId, initialUnitId }: DohUnitsClientProps) {
                 </span>
               )}
             </div>
-            <button
-              onClick={() => toggleSection('units')}
-              className="p-2 hover:bg-gray-100/50 rounded-lg transition-colors"
-              aria-label={expandedSections.units ? 'Thu gọn' : 'Mở rộng'}
-            >
-              {expandedSections.units ? (
-                <ChevronUp className="w-5 h-5 text-gray-600" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-gray-600" />
-              )}
-            </button>
+            <div className="flex items-center gap-3 self-end md:self-auto">
+              <Button
+                variant="medical"
+                size="sm"
+                className="gap-2"
+                onClick={() => {
+                  setUnitFormMode('create');
+                  setUnitFormUnitId(null);
+                  setUnitFormOpen(true);
+                }}
+              >
+                <Plus className="h-4 w-4" />
+                Thêm đơn vị
+              </Button>
+              <button
+                onClick={() => toggleSection('units')}
+                className="p-2 hover:bg-gray-100/50 rounded-lg transition-colors"
+                aria-label={expandedSections.units ? 'Thu gọn' : 'Mở rộng'}
+              >
+                {expandedSections.units ? (
+                  <ChevronUp className="w-5 h-5 text-gray-600" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-gray-600" />
+                )}
+              </button>
+            </div>
           </div>
 
           {expandedSections.units && (
@@ -407,19 +471,87 @@ export function DohUnitsClient({ userId, initialUnitId }: DohUnitsClientProps) {
                 onRetry={() => setUnitsRefreshKey((prev) => prev + 1)}
                 onUnitDetailClick={handleUnitDetailClick}
                 onUnitDetailHover={handleUnitDetailHover}
+                onEditUnit={(row) => {
+                  setUnitFormMode('edit');
+                  setUnitFormUnitId(row.id);
+                  setUnitFormOpen(true);
+                }}
+                onDeleteUnit={(row) => {
+                  setUnitDeleteTarget({ id: row.id, name: row.name });
+                  setUnitDeleteOpen(true);
+                }}
               />
             </div>
           )}
         </GlassCard>
 
-        <UnitDetailSheet
-          open={sheetOpen && Boolean(selectedUnitId)}
-          onOpenChange={handleSheetOpenChange}
-          unitId={selectedUnitId}
-          unitSummary={selectedUnit ?? undefined}
-          initialData={initialMetrics}
-        />
+          <UnitDetailSheet
+            open={sheetOpen && Boolean(selectedUnitId)}
+            onOpenChange={handleSheetOpenChange}
+            unitId={selectedUnitId}
+            unitSummary={selectedUnit ?? undefined}
+            initialData={initialMetrics}
+            onEditUnit={(unitId) => {
+              if (!unitId) return;
+              setUnitFormMode('edit');
+              setUnitFormUnitId(unitId);
+              setUnitFormOpen(true);
+            }}
+            onDeleteUnit={(unitId, name) => {
+              if (!unitId) return;
+              setUnitDeleteTarget({ id: unitId, name: name ?? selectedUnit?.name ?? '' });
+              setUnitDeleteOpen(true);
+            }}
+          />
+        </div>
       </div>
-    </div>
+
+      <UnitFormSheet
+        open={unitFormOpen}
+        mode={unitFormMode}
+        unitId={unitFormUnitId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setUnitFormOpen(false);
+            setUnitFormUnitId(null);
+            return;
+          }
+          setUnitFormOpen(true);
+        }}
+        onCompleted={(unit: ManagedUnitRecord) => {
+          handleUnitMutationSuccess(unit);
+          setUnitFormOpen(false);
+          setUnitFormUnitId(null);
+        }}
+      />
+
+      <UnitDeleteDialog
+        open={unitDeleteOpen}
+        unitId={unitDeleteTarget?.id}
+        unitName={unitDeleteTarget?.name}
+        onOpenChange={(open) => {
+          if (!open) {
+            setUnitDeleteOpen(false);
+            setUnitDeleteTarget(null);
+          } else {
+            setUnitDeleteOpen(true);
+          }
+        }}
+        onCompleted={() => {
+          handleUnitMutationSuccess(
+            unitDeleteTarget
+              ? {
+                  MaDonVi: unitDeleteTarget.id,
+                  TenDonVi: unitDeleteTarget.name,
+                  CapQuanLy: selectedUnit?.type ?? 'BenhVien',
+                }
+              : undefined,
+            { closeSheet: true },
+          );
+          setUnitDeleteOpen(false);
+          setUnitDeleteTarget(null);
+        }}
+      />
+    </>
   );
 }

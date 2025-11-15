@@ -411,17 +411,21 @@ export function DohDashboard({ userId, initialUnitId = null }: DohDashboardProps
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="medical"
+                size="sm"
                 className="flex items-center gap-2"
-                onClick={() => window.location.href = '/dashboard/doh/units'}
+                onClick={() => (window.location.href = '/dashboard/doh/units')}
               >
                 <Building2 className="w-4 h-4" />
                 Quản lý đơn vị
                 <ExternalLink className="w-3 h-3" />
               </Button>
-              <Button variant="outline" size="sm" className="hidden md:flex items-center gap-2">
+              <Button
+                variant="outline-accent"
+                size="sm"
+                className="hidden md:flex items-center gap-2"
+              >
                 <Download className="w-4 h-4" />
                 Xuất báo cáo
               </Button>
