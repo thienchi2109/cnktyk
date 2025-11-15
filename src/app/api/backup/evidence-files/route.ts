@@ -77,6 +77,9 @@ function sanitizeFilename(str: string): string {
  * @param date - Date instance to format.
  */
 function formatDate(date: Date): string {
+  if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+    return 'unknown-date';
+  }
   return date.toISOString().split('T')[0];
 }
 
@@ -377,7 +380,9 @@ export async function POST(req: NextRequest) {
           activityName: file.TenHoatDong,
           practitioner: file.practitioner_HoVaTen,
           cchn: file.practitioner_SoCCHN,
-          date: file.NgayGhiNhan.toISOString(),
+          date: file.NgayGhiNhan instanceof Date && !isNaN(file.NgayGhiNhan.getTime())
+            ? file.NgayGhiNhan.toISOString()
+            : new Date().toISOString(),
           filename: objectPath,
           path: zipPath,
           size: resolvedSize ?? undefined,

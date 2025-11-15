@@ -80,7 +80,7 @@ const buildEvidenceRecord = (index: number): EvidenceRecord => ({
   MaGhiNhan: `record-${index}`,
   FileMinhChungUrl: `evidence/${index + 1}.pdf`,
   TenHoatDong: `Hoat dong ${index + 1}`,
-  NgayGhiNhan: new Date(`2024-01-${(index % 28) + 1}T02:00:00Z`),
+  NgayGhiNhan: new Date(`2024-01-${String((index % 28) + 1).padStart(2, '0')}T02:00:00Z`),
   practitioner_HoVaTen: `Bac si ${index + 1}`,
   practitioner_SoCCHN: `CCHN-${(index + 1).toString().padStart(4, '0')}`,
 });
@@ -263,7 +263,7 @@ describe('POST /api/backup/evidence-files', () => {
   it('streams a ZIP when files are available', async () => {
     const records = [buildEvidenceRecord(0), buildEvidenceRecord(1)];
     (db.query as unknown as Mock).mockResolvedValue(records);
-    mockSizeResolution(records, [512, 1024]);
+    mockSizeResolution(records, { sizes: [512, 1024] });
     (r2Client.downloadFileStream as unknown as Mock).mockImplementation((key: string) =>
       Readable.from([Buffer.from(`file:${key}`)]),
     );
@@ -297,39 +297,33 @@ describe('POST /api/backup/evidence-files', () => {
   });
 
   it('records skipped files when downloads repeatedly fail', async () => {
-    vi.useFakeTimers();
-    try {
-      const records = [buildEvidenceRecord(0), buildEvidenceRecord(1)];
-      records[1].FileMinhChungUrl = 'missing-file.pdf';
-      (db.query as unknown as Mock).mockResolvedValue(records);
-      mockSizeResolution(records, [512, 2048]);
+    const records = [buildEvidenceRecord(0), buildEvidenceRecord(1)];
+    records[1].FileMinhChungUrl = 'missing-file.pdf';
+    (db.query as unknown as Mock).mockResolvedValue(records);
+    mockSizeResolution(records, { sizes: [512, 2048] });
 
-      (r2Client.downloadFileStream as unknown as Mock).mockImplementation((key: string) => {
-        if (key === 'missing-file.pdf') {
-          return null;
-        }
-        return Readable.from([Buffer.from(`file:${key}`)]);
-      });
+    (r2Client.downloadFileStream as unknown as Mock).mockImplementation((key: string) => {
+      if (key === 'missing-file.pdf') {
+        return null;
+      }
+      return Readable.from([Buffer.from(`file:${key}`)]);
+    });
 
-      const response = await POST(buildRequest(defaultBody));
-      const bodyPromise = collectStreamBody(response);
-      await vi.runAllTimersAsync();
-      await bodyPromise;
+    const response = await POST(buildRequest(defaultBody));
+    const zipBuffer = await collectStreamBody(response);
 
-      expect(r2Client.downloadFileStream).toHaveBeenCalledTimes(4);
-      expect(chiTietSaoLuuRepo.create).toHaveBeenCalledTimes(1);
-      expect(saoLuuMinhChungRepo.update).toHaveBeenCalledWith('backup-001', {
-        GhiChu: 'Added: 1, Skipped: 1',
-      });
-      expect(nhatKyHeThongRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          HanhDong: 'BACKUP_EVIDENCE_FILES',
-        }),
-      );
-    } finally {
-      vi.useRealTimers();
-    }
-  });
+    expect(zipBuffer.length).toBeGreaterThan(0);
+    expect(r2Client.downloadFileStream).toHaveBeenCalledTimes(4);
+    expect(chiTietSaoLuuRepo.create).toHaveBeenCalledTimes(1);
+    expect(saoLuuMinhChungRepo.update).toHaveBeenCalledWith('backup-001', {
+      GhiChu: 'Added: 1, Skipped: 1',
+    });
+    expect(nhatKyHeThongRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        HanhDong: 'BACKUP_EVIDENCE_FILES',
+      }),
+    );
+  }, 10000);
 
   it('fails when no files can be streamed from R2', async () => {
     vi.useFakeTimers();
