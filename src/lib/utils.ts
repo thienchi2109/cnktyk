@@ -26,7 +26,7 @@ export function validateFileType(file: File): boolean {
   return allowedTypes.includes(file.type);
 }
 
-export function validateFileSize(file: File, maxSizeMB: number = 10): boolean {
+export function validateFileSize(file: File, maxSizeMB: number = 5): boolean {
   const maxSize = maxSizeMB * 1024 * 1024;
   return file.size <= maxSize;
 }
