@@ -148,7 +148,7 @@ export function PractitionerDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-3xl overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-5xl lg:max-w-6xl xl:max-w-7xl overflow-y-auto">
         <SheetHeader>
           <SheetTitle>{isEditing ? 'Chỉnh sửa người hành nghề' : 'Chi tiết người hành nghề'}</SheetTitle>
           <SheetDescription>

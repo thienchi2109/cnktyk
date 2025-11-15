@@ -102,7 +102,7 @@ export function PractitionerSelector({
           </div>
         </SelectTrigger>
 
-        <SelectContent className="w-[480px] bg-white text-gray-900 border border-gray-200 shadow-xl">
+        <SelectContent className="w-full min-w-[320px] bg-white text-gray-900 border border-gray-200 shadow-xl">
           {/* Search input inside dropdown */}
           <div className="p-2 border-b border-gray-100 bg-white sticky top-0 z-10">
             <div className="relative">
