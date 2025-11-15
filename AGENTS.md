@@ -56,7 +56,7 @@ Keep this managed block so 'openspec update' can refresh the instructions.
   - `openspec/changes/add-evidence-backup-and-cleanup/docs/user-guide.md`
   - `openspec/changes/add-evidence-backup-and-cleanup/docs/admin-guide.md`
   - `openspec/changes/add-evidence-backup-and-cleanup/design.md`
-- Reference `src/app/api/backup/*` for the latest endpoints (streaming ZIP creation, estimation, dashboard metrics, deletion safeguards).
+- Reference `src/app/api/backup/*` for the latest endpoints (streaming ZIP creation, dashboard metrics, deletion safeguards).
 
 ## WARP Integration Guidelines (from WARP.md)
 

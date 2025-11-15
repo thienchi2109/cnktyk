@@ -11,7 +11,6 @@ import {
   AlertTriangle,
   CalendarRange,
   DownloadCloud,
-  GaugeCircle,
   History,
   Info,
   ShieldAlert,
@@ -63,32 +62,6 @@ const formatBytesReadable = (bytes: number) => {
   return `${value.toFixed(precision)} ${units[exponent]}`;
 };
 
-const formatDuration = (seconds: number) => {
-  if (!Number.isFinite(seconds) || seconds <= 0) {
-    return 'Dưới 1 phút';
-  }
-
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-
-  if (minutes === 0) {
-    return `${remainingSeconds} giây`;
-  }
-
-  if (minutes < 60) {
-    return remainingSeconds
-      ? `${minutes} phút ${remainingSeconds} giây`
-      : `${minutes} phút`;
-  }
-
-  const hours = Math.floor(minutes / 60);
-  const minutesPart = minutes % 60;
-
-  return minutesPart
-    ? `${hours} giờ ${minutesPart} phút`
-    : `${hours} giờ`;
-};
-
 const formatDateTime = (value: string | null | undefined) => {
   if (!value) {
     return '—';
@@ -123,16 +96,6 @@ type DeleteDialogStep = 'overview' | 'confirmation' | 'final';
 
 interface BackupCenterClientProps {
   adminName: string;
-}
-
-interface BackupEstimate {
-  totalFiles: number;
-  totalSizeBytes: number;
-  missingSizeCount: number;
-  averageFileSizeBytes: number;
-  estimatedCompressedSizeBytes: number;
-  estimatedDurationSeconds: number;
-  warnings: string[];
 }
 
 interface BackupHistoryItem {
@@ -193,9 +156,6 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
   const [downloadedBytes, setDownloadedBytes] = useState(0);
   const [downloadTotalBytes, setDownloadTotalBytes] = useState<number | null>(null);
   const [downloadTotalFiles, setDownloadTotalFiles] = useState<number | null>(null);
-  const [isEstimating, setIsEstimating] = useState(false);
-  const [estimateError, setEstimateError] = useState<string | null>(null);
-  const [estimate, setEstimate] = useState<BackupEstimate | null>(null);
 
   const [deleteStartDate, setDeleteStartDate] = useState<Date | null>(
     initialDeletionRange.start,
@@ -432,79 +392,6 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
     void fetchMetrics();
   }, [fetchMetrics]);
 
-  useEffect(() => {
-    if (!startDate || !endDate) {
-      setIsEstimating(false);
-      setEstimate(null);
-      setEstimateError(null);
-      return;
-    }
-
-    if (startDate > endDate || !isRangeWithinYear(startDate, endDate)) {
-      setIsEstimating(false);
-      setEstimate(null);
-      setEstimateError(null);
-      return;
-    }
-
-    setIsEstimating(true);
-    setEstimateError(null);
-
-    let isCancelled = false;
-    const controller = new AbortController();
-
-    const timer = setTimeout(async () => {
-      try {
-        const response = await fetch('/api/backup/evidence-files/estimate', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            startDate: formatISODate(startDate),
-            endDate: formatISODate(endDate),
-          }),
-          signal: controller.signal,
-        });
-
-        const payload = await response.json().catch(() => ({}));
-
-        if (!response.ok) {
-          const message =
-            typeof payload?.error === 'string' && payload.error.trim().length > 0
-              ? payload.error
-              : 'Không thể ước tính dung lượng sao lưu. Vui lòng thử lại.';
-          throw new Error(message);
-        }
-
-        if (!isCancelled) {
-          setEstimate(payload);
-        }
-      } catch (error) {
-        if (controller.signal.aborted || isCancelled) {
-          return;
-        }
-
-        console.error('Backup estimate error:', error);
-        setEstimate(null);
-        setEstimateError(
-          error instanceof Error
-            ? error.message
-            : 'Không thể ước tính dung lượng sao lưu. Vui lòng thử lại sau.',
-        );
-      } finally {
-        if (!isCancelled) {
-          setIsEstimating(false);
-        }
-      }
-    }, 350);
-
-    return () => {
-      isCancelled = true;
-      controller.abort();
-      clearTimeout(timer);
-    };
-  }, [endDate, startDate]);
 
   const openDeleteDialog = useCallback(() => {
     if (!hasConfirmedBackup) {
@@ -626,16 +513,13 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
       return;
     }
 
-    const optimisticTotalBytes = estimate?.totalSizeBytes ?? null;
-    const optimisticTotalFiles = estimate?.totalFiles ?? null;
-
     setIsDownloading(true);
     setStatusTone('info');
     setStatusMessage('Đang tạo tệp sao lưu, vui lòng đợi...');
     setDownloadProgress(0);
     setDownloadedBytes(0);
-    setDownloadTotalBytes(optimisticTotalBytes);
-    setDownloadTotalFiles(optimisticTotalFiles);
+    setDownloadTotalBytes(null);
+    setDownloadTotalFiles(null);
 
     try {
       const response = await fetch('/api/backup/evidence-files', {
@@ -758,7 +642,7 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
       setDownloadTotalBytes(null);
       setDownloadTotalFiles(null);
     }
-  }, [endDate, estimate, fetchMetrics, startDate, validateRange]);
+  }, [endDate, fetchMetrics, startDate, validateRange]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-6">
@@ -856,94 +740,18 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
                   variant={activePreset === preset.id ? 'default' : 'ghost'}
                   onClick={() => applyPreset(preset.id, preset.months)}
                   disabled={isDownloading}
+                  className={cn(
+                    'transition-colors duration-200',
+                    activePreset === preset.id
+                      ? 'bg-medical-blue text-white shadow-lg shadow-medical-blue/30 hover:bg-medical-blue/90 focus-visible:ring-medical-blue'
+                      : 'text-slate-600 hover:bg-white/70'
+                  )}
                 >
                   {preset.label}
                 </Button>
               ))}
             </div>
           </div>
-
-        {(estimate || estimateError || isEstimating) && (
-          <div className="space-y-3 rounded-lg border border-slate-200 bg-white/70 p-4 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-medical-blue/15 p-2">
-                <GaugeCircle className="h-5 w-5 text-medical-blue" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-700">Ước tính sao lưu</p>
-                <p className="text-xs text-slate-500">
-                  Tự động cập nhật theo phạm vi ngày đã chọn
-                </p>
-              </div>
-            </div>
-
-            {isEstimating ? (
-              <LoadingNotice message="Đang tính toán dung lượng và thời gian dự kiến..." />
-            ) : estimate ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-500">
-                    Dung lượng dự kiến
-                  </p>
-                  <p className="text-sm font-semibold text-slate-700">
-                    {formatBytesReadable(estimate.estimatedCompressedSizeBytes)}
-                    {estimate.estimatedCompressedSizeBytes !== estimate.totalSizeBytes && (
-                      <span className="ml-1 text-xs font-normal text-slate-500">
-                        (nén từ {formatBytesReadable(estimate.totalSizeBytes)})
-                      </span>
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-500">
-                    Thời gian tải xuống ước tính
-                  </p>
-                  <p className="text-sm font-semibold text-slate-700">
-                    {formatDuration(estimate.estimatedDurationSeconds)}
-                    <span className="ml-1 text-xs font-normal text-slate-500">
-                      (tốc độ ~5 MB/s)
-                    </span>
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-500">
-                    Số lượng minh chứng
-                  </p>
-                  <p className="text-sm font-semibold text-slate-700">
-                    {estimate.totalFiles.toLocaleString('vi-VN')}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-slate-500">
-                    Dung lượng trung bình / tệp
-                  </p>
-                  <p className="text-sm font-semibold text-slate-700">
-                    {formatBytesReadable(estimate.averageFileSizeBytes)}
-                  </p>
-                </div>
-              </div>
-            ) : estimateError ? (
-              <Alert variant="destructive" className="border-l-4 border-red-400 bg-red-50">
-                <AlertDescription>{estimateError}</AlertDescription>
-              </Alert>
-            ) : null}
-
-            {estimate?.warnings?.length ? (
-              <ul className="space-y-2 text-sm text-amber-700">
-                {estimate.warnings.map((warning) => (
-                  <li
-                    key={warning}
-                    className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50/80 p-2"
-                  >
-                    <Info className="mt-0.5 h-4 w-4 text-amber-500" />
-                    <span>{warning}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        )}
-
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-sm text-slate-600">
               Chọn phạm vi thời gian để tải xuống bản sao lưu minh chứng đã được duyệt. Mỗi tệp chứa manifest chi tiết và các minh chứng trong khoảng thời gian đã chọn.
@@ -1260,6 +1068,12 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
                   }
                   onClick={() => applyDeletePreset(preset.id, preset.months)}
                   disabled={isDeleting}
+                  className={cn(
+                    'transition-colors duration-200',
+                    deleteActivePreset === preset.id
+                      ? 'bg-red-500 text-white shadow-lg shadow-red-300/60 hover:bg-red-500/90 focus-visible:ring-red-500'
+                      : 'text-slate-600 hover:bg-white/70'
+                  )}
                 >
                   {preset.label}
                 </Button>

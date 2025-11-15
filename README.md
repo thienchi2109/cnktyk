@@ -18,7 +18,7 @@ A modern web-based system for healthcare practitioner compliance tracking across
 SoYTe administrators can access the backup hub at `/so-y-te/backup` to export and clean up evidence files.
 
 - **Streaming backups:** `POST /api/backup/evidence-files` packages approved evidence into a ZIP using concurrent R2 downloads, sends progress headers (`X-Backup-Total-Files`, `X-Backup-Total-Bytes`), and emits a manifest describing every file processed.
-- **Size & duration estimates:** `POST /api/backup/evidence-files/estimate` returns file counts, compressed size projections, and warnings when approaching the 2,000 file limit or long runtimes.
+- **Limit safeguards:** The streaming endpoint enforces the 2,000-file cap server-side and surfaces warnings plus manifest stats so admins can split ranges when needed.
 - **Operational metrics:** `GET /api/backup/dashboard` summarizes recent backups/deletions and surfaces storage savings to the UI.
 - **Secure cleanup:** `POST /api/backup/delete-archived` enforces confirmation tokens, recent-backup checks, and deletion cooldowns before removing evidence from R2.
 
