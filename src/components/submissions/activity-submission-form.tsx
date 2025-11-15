@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
@@ -28,7 +28,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { FileUpload, UploadedFile } from '@/components/ui/file-upload';
 import { LoadingNotice } from '@/components/ui/loading-notice';
 import { SheetFooter } from '@/components/ui/sheet';
-import { useActivities } from '@/hooks/use-activities';
+import { useActivitiesCatalog } from '@/hooks/use-activities';
 import { PractitionerSelector } from '@/components/ui/practitioner-selector';
 import { useUnitPractitioners } from '@/hooks/use-unit-practitioners';
 
@@ -100,11 +100,12 @@ export function ActivitySubmissionForm({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [activityCatalog, setActivityCatalog] = useState<ActivityCatalog[]>([]);
-  const [selectedActivity, setSelectedActivity] = useState<ActivityCatalog | null>(null);
-  const { data: activitiesData, isLoading: isActivitiesLoading } = useActivities();
+  const { data: activitiesData, isLoading: isActivitiesLoading } = useActivitiesCatalog({
+    scope: 'all',
+    status: 'active',
+    limit: 200,
+  });
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
-  const [calculatedCredits, setCalculatedCredits] = useState<number>(0);
 
   // Use TanStack Query for practitioner caching (with server data as initialData)
   const { data: cachedPractitioners, isLoading: isPractitionersLoading } = useUnitPractitioners({
@@ -128,7 +129,48 @@ export function ActivitySubmissionForm({
     },
   });
 
-  const watchedValues = watch();
+  // Optimization #1: Only watch specific fields instead of all fields
+  const MaDanhMuc = watch('MaDanhMuc');
+  const SoTiet = watch('SoTiet');
+  const SoGioTinChiQuyDoi = watch('SoGioTinChiQuyDoi');
+
+  // Optimization #2: Process activity catalog with useMemo instead of useEffect + setState
+  const activityCatalog = useMemo(() => {
+    if (!activitiesData) {
+      return [];
+    }
+
+    // useActivitiesCatalog returns { global: [], unit: [], permissions: {} }
+    const global = Array.isArray(activitiesData.global) ? activitiesData.global : [];
+    const unit = Array.isArray(activitiesData.unit) ? activitiesData.unit : [];
+
+    // Combine global and unit activities, filtering out soft-deleted ones
+    const dedupedMap = new Map<string, ActivityCatalog>();
+    for (const activity of [...global, ...unit]) {
+      if (!activity || activity.DaXoaMem) {
+        continue;
+      }
+      dedupedMap.set(activity.MaDanhMuc, activity);
+    }
+
+    return Array.from(dedupedMap.values());
+  }, [activitiesData]);
+
+  // Optimization #3: Derive selectedActivity with useMemo instead of useEffect + setState
+  const selectedActivity = useMemo(() => {
+    if (!MaDanhMuc) {
+      return null;
+    }
+    return activityCatalog.find((a: ActivityCatalog) => a.MaDanhMuc === MaDanhMuc) || null;
+  }, [MaDanhMuc, activityCatalog]);
+
+  // Optimization #4: Calculate credits with useMemo instead of useState
+  const calculatedCredits = useMemo(() => {
+    if (selectedActivity && SoTiet) {
+      return SoTiet * selectedActivity.TyLeQuyDoi;
+    }
+    return SoGioTinChiQuyDoi || 0;
+  }, [selectedActivity, SoTiet, SoGioTinChiQuyDoi]);
 
   // Prefill practitioner id for practitioner role
   useEffect(() => {
@@ -140,62 +182,19 @@ export function ActivitySubmissionForm({
     }
   }, [userRole, initialPractitionerId, setValue]);
 
-  // Load activity catalog via React Query
+  // Auto-fill activity name when catalog item is selected
   useEffect(() => {
-    if (!activitiesData) {
-      return;
+    if (selectedActivity) {
+      setValue('TenHoatDong', selectedActivity.TenDanhMuc);
     }
+  }, [selectedActivity, setValue]);
 
-    const fromFlat = (activitiesData as { activities?: ActivityCatalog[] }).activities;
-    if (Array.isArray(fromFlat)) {
-      setActivityCatalog(fromFlat.filter((activity) => !activity?.DaXoaMem));
-      return;
-    }
-
-    const maybeGlobal = (activitiesData as { global?: ActivityCatalog[] }).global;
-    const maybeUnit = (activitiesData as { unit?: ActivityCatalog[] }).unit;
-    const global = Array.isArray(maybeGlobal) ? maybeGlobal : [];
-    const unit = Array.isArray(maybeUnit) ? maybeUnit : [];
-
-    if (global.length === 0 && unit.length === 0) {
-      return;
-    }
-
-    const dedupedMap = new Map<string, ActivityCatalog>();
-    for (const activity of [...global, ...unit]) {
-      if (!activity || activity.DaXoaMem) {
-        continue;
-      }
-      dedupedMap.set(activity.MaDanhMuc, activity);
-    }
-
-    setActivityCatalog(Array.from(dedupedMap.values()));
-  }, [activitiesData]);
-
-  // Handle activity catalog selection
+  // Auto-sync calculated credits to form field
   useEffect(() => {
-    if (watchedValues.MaDanhMuc) {
-      const activity = activityCatalog.find(a => a.MaDanhMuc === watchedValues.MaDanhMuc);
-      setSelectedActivity(activity || null);
-      
-      if (activity) {
-        setValue('TenHoatDong', activity.TenDanhMuc);
-      }
-    } else {
-      setSelectedActivity(null);
+    if (selectedActivity && SoTiet) {
+      setValue('SoGioTinChiQuyDoi', calculatedCredits);
     }
-  }, [watchedValues.MaDanhMuc, activityCatalog, setValue]);
-
-  // Calculate credits automatically
-  useEffect(() => {
-    if (selectedActivity && watchedValues.SoTiet) {
-      const credits = watchedValues.SoTiet * selectedActivity.TyLeQuyDoi;
-      setCalculatedCredits(credits);
-      setValue('SoGioTinChiQuyDoi', credits);
-    } else if (!selectedActivity && watchedValues.SoGioTinChiQuyDoi !== undefined) {
-      setCalculatedCredits(watchedValues.SoGioTinChiQuyDoi);
-    }
-  }, [selectedActivity, watchedValues.SoTiet, watchedValues.SoGioTinChiQuyDoi, setValue]);
+  }, [selectedActivity, SoTiet, calculatedCredits, setValue]);
 
   const handleFileUpload = (files: UploadedFile[]) => {
     setUploadedFiles(files);
@@ -234,12 +233,10 @@ export function ActivitySubmissionForm({
       }
 
       setSuccess('Hoạt động đã được gửi thành công và đang chờ phê duyệt');
-      
+
       // Reset form
       reset();
       setUploadedFiles([]);
-      setSelectedActivity(null);
-      setCalculatedCredits(0);
 
       // Notify parent component
       if (onSubmit) {
@@ -461,15 +458,15 @@ export function ActivitySubmissionForm({
                 min="0"
                 {...register('SoGioTinChiQuyDoi', { valueAsNumber: true })}
                 placeholder="0"
-                disabled={!!selectedActivity && !!watchedValues.SoTiet}
+                disabled={!!selectedActivity && !!SoTiet}
               />
               {errors.SoGioTinChiQuyDoi && (
                 <p className="text-sm text-red-600 mt-1">{errors.SoGioTinChiQuyDoi.message}</p>
               )}
-              
-              {selectedActivity && watchedValues.SoTiet && (
+
+              {selectedActivity && SoTiet && (
                 <p className="text-sm text-green-600 mt-1">
-                  Tự động tính: {watchedValues.SoTiet} tiết × {selectedActivity.TyLeQuyDoi} = {calculatedCredits} tín chỉ
+                  Tự động tính: {SoTiet} tiết × {selectedActivity.TyLeQuyDoi} = {calculatedCredits} tín chỉ
                 </p>
               )}
             </div>
