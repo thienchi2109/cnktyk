@@ -6,7 +6,7 @@ import { FileManager } from '@/components/ui/file-manager';
 import { FileViewer } from '@/components/ui/file-viewer';
 import { StorageMetrics } from '@/components/storage/storage-metrics';
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth/hooks';
 import { Upload, FileText, Shield } from 'lucide-react';
 
@@ -131,13 +131,13 @@ export default function FileUploadDemo() {
             </h2>
             
             {uploadedFiles.length > 0 && (
-              <GlassButton
+              <Button
                 variant="outline"
                 size="sm"
                 onClick={clearFiles}
               >
                 Xóa tất cả
-              </GlassButton>
+              </Button>
             )}
           </div>
 

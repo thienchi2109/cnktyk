@@ -124,7 +124,7 @@ The platform uses a custom glassmorphism design system with healthcare-focused c
 ### Glass Components
 
 - `GlassCard`: Semi-transparent cards with backdrop blur
-- `GlassButton`: Interactive buttons with glass effects
+- `Button`: Interactive buttons with glass effects
 - `GlassInput`: Form inputs with glass styling
 
 ## Development Workflow

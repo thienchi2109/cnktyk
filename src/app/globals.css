@@ -19,8 +19,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter, "Inter"), "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
   
   /* Healthcare colors */
   --color-medical-blue: var(--medical-blue);
@@ -57,6 +57,12 @@
   
   /* Glass animation */
   --animate-glass-shimmer: glass-shimmer 2s ease-in-out infinite alternate;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--foreground);
+  background-color: var(--background);
 }
 
 /* Force light mode - disable dark mode preference */
@@ -382,6 +388,5 @@ html, body {
 }
 
 .page-title {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.015em;
 }

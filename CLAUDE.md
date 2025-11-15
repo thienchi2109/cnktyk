@@ -188,6 +188,8 @@ cnktyk/
 
 **Always follow this checklist:**
 
+0. **Bootstrap superpowers:** Run `~/.codex/superpowers/.codex/superpowers-codex bootstrap` at the start of the session and apply any instructions it outputs before proceeding.
+
 1. **Read relevant documentation:**
    - Check `openspec/specs/[capability]/spec.md` for requirements
    - Review `openspec/changes/` for pending changes
@@ -793,11 +795,13 @@ npm start
 
 ### Code Quality
 
+Skip running `npm run lint` after finishing tasks unless explicitly requested; rely on other validators instead per the current workflow.
+
 ```bash
 # Run TypeScript type checking
 npm run typecheck
 
-# Run ESLint
+# Run ESLint (skip at the end of tasks unless specifically required)
 npm run lint
 
 # Run ESLint with auto-fix
@@ -1323,6 +1327,7 @@ When working with this codebase:
 
 ### DO ✅
 
+- Bootstrap superpowers each session by running `~/.codex/superpowers/.codex/superpowers-codex bootstrap` and applying its guidance
 - Use TodoWrite tool for multi-step tasks
 - Follow OpenSpec workflow for significant changes
 - Use repositories - never raw SQL in components
@@ -1344,6 +1349,7 @@ When working with this codebase:
 
 - Don't use `any` types
 - Don't concatenate strings in SQL queries
+- Don't run `npm run lint` after finishing tasks unless it is explicitly requested
 - Don't use native bcrypt (use bcryptjs)
 - Don't skip authentication checks
 - Don't forget tenant filtering for DonVi role

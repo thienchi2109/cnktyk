@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from "react";
-import { GlassCard, GlassButton } from "@/components/ui";
+import { GlassCard, Button } from "@/components/ui";
 import { ResponsiveNavigation } from "@/components/layout";
 import { 
   Palette, 
@@ -86,15 +86,15 @@ export const SignInShowcase = () => {
 
         {/* Preview Button */}
         <div className="text-center">
-          <GlassButton
-            variant="default"
+          <Button
+            variant="medical"
             size="lg"
             className="shadow-xl hover:shadow-2xl transition-all duration-300"
             onClick={() => window.open('/auth/signin', '_blank')}
           >
             <Eye className="mr-2 h-5 w-5" />
             View New Sign-In Page
-          </GlassButton>
+          </Button>
         </div>
 
         {/* Features Grid */}

@@ -193,9 +193,9 @@ export function PractitionerDetailSheet({
                     variant="secondary" 
                     size="lg" 
                     onClick={() => setIsEditing(true)}
-                    className="rounded-full shadow-lg hover:shadow-xl transition-shadow px-6"
+                    className="gap-2"
                   >
-                    <Edit className="w-5 h-5 mr-2" />
+                    <Edit className="w-5 h-5" />
                     Chỉnh sửa
                   </Button>
                 )}

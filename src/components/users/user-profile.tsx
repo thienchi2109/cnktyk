@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -268,14 +268,14 @@ export function UserProfile({ profile, onUpdateProfile, isLoading = false }: Use
                 <p className="text-gray-600 mb-4">
                   Để đảm bảo an toàn cho tài khoản, bạn nên thay đổi mật khẩu định kỳ và sử dụng mật khẩu mạnh.
                 </p>
-                <GlassButton
+                <Button
                   onClick={() => setIsChangingPassword(true)}
                   className="flex items-center gap-2"
-                  variant="secondary"
+                  variant="medical-secondary"
                 >
                   <Key className="h-4 w-4" />
                   Đổi Mật Khẩu
-                </GlassButton>
+                </Button>
               </div>
             </div>
           </div>
@@ -312,18 +312,19 @@ export function UserProfile({ profile, onUpdateProfile, isLoading = false }: Use
             </div>
 
             <div className="flex gap-3">
-              <GlassButton
+              <Button
                 type="submit"
                 disabled={isLoading}
                 className="flex items-center gap-2"
+                variant="medical"
               >
                 <Save className="h-4 w-4" />
                 {isLoading ? 'Đang cập nhật...' : 'Cập Nhật Mật Khẩu'}
-              </GlassButton>
+              </Button>
               
-              <GlassButton
+              <Button
                 type="button"
-                variant="secondary"
+                variant="outline-accent"
                 onClick={() => {
                   setIsChangingPassword(false);
                   setPasswordData({ newPassword: '', confirmPassword: '' });
@@ -332,7 +333,7 @@ export function UserProfile({ profile, onUpdateProfile, isLoading = false }: Use
                 disabled={isLoading}
               >
                 Hủy
-              </GlassButton>
+              </Button>
             </div>
           </form>
         )}

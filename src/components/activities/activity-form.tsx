@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldError } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { GlassCard } from '@/components/ui/glass-card';
@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { X, Save, Plus, AlertTriangle, Globe, Building2, Upload } from 'lucide-react';
+import { X, Save, Plus, AlertTriangle, Globe, Building2, Upload, Loader2 } from 'lucide-react';
+import { SheetFooter } from '@/components/ui/sheet';
 
 // Form validation schema
 const ActivityFormSchema = z.object({
@@ -72,6 +73,29 @@ const unitOptions = [
   { value: 'tiet', label: 'Tiết' },
   { value: 'tin_chi', label: 'Tín chỉ' },
 ];
+
+const toNullableNumber = (value: string | number | null | undefined) => {
+  if (value === '' || value === null || typeof value === 'undefined') {
+    return null;
+  }
+
+  if (typeof value === 'number' && !Number.isNaN(value)) {
+    return value;
+  }
+
+  const numeric = Number(value);
+  return Number.isNaN(numeric) ? null : numeric;
+};
+
+const getFriendlyNumberError = (error?: FieldError, fallback?: string) => {
+  if (!error) return null;
+  const message = error.message || '';
+  const isInvalidType = error.type === 'invalid_type' || message.includes('Invalid input');
+  if (isInvalidType) {
+    return fallback ?? 'Vui lòng nhập giá trị số hợp lệ hoặc để trống nếu không áp dụng.';
+  }
+  return message;
+};
 
 export function ActivityForm({
   activity,
@@ -365,14 +389,19 @@ export function ActivityForm({
               id="GioToiThieu"
               type="number"
               min="0"
-              {...register('GioToiThieu', { 
-                setValueAs: (v: string) => v === '' ? null : parseFloat(v) 
+              {...register('GioToiThieu', {
+                setValueAs: (value) => toNullableNumber(value as string | number | null | undefined),
               })}
               placeholder="Không giới hạn"
               disabled={isSoftDeleted}
             />
             {errors.GioToiThieu && (
-              <p className="text-sm text-red-500">{errors.GioToiThieu.message}</p>
+              <p className="text-sm text-red-500">
+                {getFriendlyNumberError(
+                  errors.GioToiThieu,
+                  'Vui lòng nhập số giờ tối thiểu hợp lệ hoặc để trống nếu không giới hạn.'
+                )}
+              </p>
             )}
           </div>
 
@@ -382,15 +411,20 @@ export function ActivityForm({
               id="GioToiDa"
               type="number"
               min="0"
-              {...register('GioToiDa', { 
-                setValueAs: (v: string) => v === '' ? null : parseFloat(v) 
+              {...register('GioToiDa', {
+                setValueAs: (value) => toNullableNumber(value as string | number | null | undefined),
               })}
               placeholder="Không giới hạn"
               className={errors.GioToiDa ? 'border-red-300' : ''}
               disabled={isSoftDeleted}
             />
             {errors.GioToiDa && (
-              <p className="text-sm text-red-500">{errors.GioToiDa.message}</p>
+              <p className="text-sm text-red-500">
+                {getFriendlyNumberError(
+                  errors.GioToiDa,
+                  'Vui lòng nhập số giờ tối đa hợp lệ hoặc để trống nếu không giới hạn.'
+                )}
+              </p>
             )}
           </div>
         </div>
@@ -431,31 +465,67 @@ export function ActivityForm({
         </div>
 
         {/* Form Actions */}
-        <div className="flex justify-end space-x-3 pt-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            disabled={isLoading}
-          >
-            <X className="w-4 h-4 mr-2" />
-            Hủy
-          </Button>
-          <Button
-            type="submit"
-            disabled={isLoading || isSoftDeleted}
-            className="border border-primary/30"
-          >
-            {isLoading ? (
-              'Đang xử lý...'
-            ) : (
-              <>
-                {mode === 'create' ? <Plus className="w-4 h-4 mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+        {variant === 'sheet' ? (
+          <SheetFooter className="-mx-6 px-6 py-4 mt-6 bg-white sticky bottom-0">
+            <div className="flex w-full flex-col items-end gap-2 sm:flex-row sm:items-center sm:justify-end">
+              <Button
+                type="button"
+                variant="outline-accent"
+                onClick={onCancel}
+                disabled={isLoading}
+                className="gap-2"
+                size="lg"
+              >
+                <X className="w-4 h-4" />
+                Hủy
+              </Button>
+              <Button
+                type="submit"
+                disabled={isLoading || isSoftDeleted}
+                variant="medical"
+                className="gap-2"
+                size="lg"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : mode === 'create' ? (
+                  <Plus className="w-4 h-4" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
                 {mode === 'create' ? 'Thêm hoạt động' : 'Cập nhật'}
-              </>
-            )}
-          </Button>
-        </div>
+              </Button>
+            </div>
+          </SheetFooter>
+        ) : (
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              type="button"
+              variant="outline-accent"
+              onClick={onCancel}
+              disabled={isLoading}
+              className="gap-2"
+            >
+              <X className="w-4 h-4" />
+              Hủy
+            </Button>
+            <Button
+              type="submit"
+              disabled={isLoading || isSoftDeleted}
+              variant="medical"
+              className="gap-2"
+            >
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : mode === 'create' ? (
+                <Plus className="w-4 h-4" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              {mode === 'create' ? 'Thêm hoạt động' : 'Cập nhật'}
+            </Button>
+          </div>
+        )}
         
         {isSoftDeleted && (
           <p className="text-sm text-orange-600 text-center pt-2">

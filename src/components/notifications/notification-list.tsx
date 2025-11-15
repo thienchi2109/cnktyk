@@ -3,7 +3,7 @@
 import React from 'react';
 import { Bell, Check, X, ExternalLink, Clock, AlertCircle, CheckCircle, Info } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { LoadingNotice } from '@/components/ui/loading-notice';
 import { cn } from '@/lib/utils';
@@ -112,7 +112,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({
               {unreadCount} thông báo mới
             </Badge>
           </div>
-          <GlassButton
+          <Button
             variant="ghost"
             size="sm"
             onClick={onMarkAllRead}
@@ -120,7 +120,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({
           >
             <Check className="h-4 w-4 mr-1" />
             Đánh dấu tất cả đã đọc
-          </GlassButton>
+          </Button>
         </div>
       )}
 
@@ -169,7 +169,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({
 
                     <div className="flex items-center gap-2">
                       {notification.LienKet && (
-                        <GlassButton
+                        <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => {
@@ -182,11 +182,11 @@ export const NotificationList: React.FC<NotificationListProps> = ({
                         >
                           <ExternalLink className="h-3 w-3 mr-1" />
                           Xem
-                        </GlassButton>
+                        </Button>
                       )}
                       
                       {isUnread && (
-                        <GlassButton
+                        <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => onMarkAsRead(notification.MaThongBao)}
@@ -194,7 +194,7 @@ export const NotificationList: React.FC<NotificationListProps> = ({
                         >
                           <Check className="h-3 w-3 mr-1" />
                           Đánh dấu đã đọc
-                        </GlassButton>
+                        </Button>
                       )}
                     </div>
                   </div>

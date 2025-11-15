@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Bell, Check, ExternalLink, Settings } from 'lucide-react';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { ThongBao } from '@/lib/db/schemas';
@@ -80,14 +80,14 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
         </div>
         
         {unreadCount > 0 && (
-          <GlassButton
+          <Button
             variant="ghost"
             size="sm"
             onClick={onMarkAllRead}
             className="text-blue-600 hover:text-blue-700 h-7 px-2"
           >
             <Check className="h-3 w-3" />
-          </GlassButton>
+          </Button>
         )}
       </div>
 
@@ -171,22 +171,22 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
 
       {/* Footer */}
       <div className="flex items-center justify-between p-3 border-t border-white/20 bg-white/10">
-        <GlassButton
+        <Button
           variant="ghost"
           size="sm"
           onClick={onViewAll}
           className="text-blue-600 hover:text-blue-700"
         >
           Xem tất cả
-        </GlassButton>
+        </Button>
         
-        <GlassButton
+        <Button
           variant="ghost"
           size="sm"
           className="text-slate-600 hover:text-slate-700"
         >
           <Settings className="h-4 w-4" />
-        </GlassButton>
+        </Button>
       </div>
     </div>
   );

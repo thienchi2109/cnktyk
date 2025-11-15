@@ -5,16 +5,24 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useQueryClient } from '@tanstack/react-query';
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
-import { Building2, ChevronDown, ChevronUp } from 'lucide-react';
-import { useDebounce } from '@/hooks/use-debounce';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import {
-  DashboardTableSkeleton,
-} from '@/components/dashboard/dashboard-skeletons';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Building2, ChevronDown, ChevronUp, Plus } from 'lucide-react';
+import { useDebounce } from '@/hooks/use-debounce';
+import { LoadingNotice } from '@/components/ui/loading-notice';
 import { UnitComparisonGrid } from '@/components/dashboard/unit-comparison-grid';
 import type { UnitComparisonSummary, UnitMetrics } from '@/types/dashboard';
 import type { UnitSortState } from '@/components/dashboard/unit-comparison-grid';
 import { fetchUnitMetrics, unitMetricsQueryKey } from '@/lib/dashboard/unit-metrics';
+import { UnitFormSheet, type ManagedUnitRecord } from '@/components/units/unit-form-sheet';
+import { UnitDeleteDialog } from '@/components/units/unit-delete-dialog';
 
 const UnitDetailSheet = dynamic(() => import('@/components/dashboard/unit-detail-sheet'), {
   ssr: false,
@@ -24,6 +32,17 @@ const DEFAULT_UNIT_SORTS: ReadonlyArray<UnitSortState> = [
   { field: 'compliance', direction: 'desc' },
   { field: 'name', direction: 'asc' },
 ] as const;
+
+const CAP_QUAN_LY_FILTER_OPTIONS = [
+  { value: 'BenhVien', label: 'Bệnh viện' },
+  { value: 'TrungTam', label: 'Trung tâm' },
+  { value: 'PhongKham', label: 'Phòng khám' },
+] as const;
+
+type CapQuanLyFilterValue = (typeof CAP_QUAN_LY_FILTER_OPTIONS)[number]['value'];
+const CAP_QUAN_LY_FILTER_SET = new Set<CapQuanLyFilterValue>(
+  CAP_QUAN_LY_FILTER_OPTIONS.map((option) => option.value),
+);
 
 interface DohUnitsClientProps {
   userId: string;
@@ -66,6 +85,13 @@ export function DohUnitsClient({ userId, initialUnitId }: DohUnitsClientProps) {
     }
     return parsed.length > 0 ? parsed : DEFAULT_UNIT_SORTS.map((s) => ({ ...s }));
   });
+  const [capQuanLyFilter, setCapQuanLyFilter] = useState<CapQuanLyFilterValue | null>(() => {
+    const initial = searchParams.get('capQuanLy');
+    if (!initial) return null;
+    return CAP_QUAN_LY_FILTER_SET.has(initial as CapQuanLyFilterValue)
+      ? (initial as CapQuanLyFilterValue)
+      : null;
+  });
 
   const [units, setUnits] = useState<UnitComparisonSummary[]>([]);
   const [unitsLoading, setUnitsLoading] = useState(true);
@@ -81,6 +107,11 @@ export function DohUnitsClient({ userId, initialUnitId }: DohUnitsClientProps) {
   const [pendingInitialUnitId, setPendingInitialUnitId] = useState<string | null>(
     initialUnitId ?? null,
   );
+  const [unitFormOpen, setUnitFormOpen] = useState(false);
+  const [unitFormMode, setUnitFormMode] = useState<'create' | 'edit'>('create');
+  const [unitFormUnitId, setUnitFormUnitId] = useState<string | null>(null);
+  const [unitDeleteOpen, setUnitDeleteOpen] = useState(false);
+  const [unitDeleteTarget, setUnitDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const detailTriggerRef = useRef<HTMLButtonElement | null>(null);
   const initialUnitLookupRef = useRef<string | null>(null);
 
@@ -90,6 +121,39 @@ export function DohUnitsClient({ userId, initialUnitId }: DohUnitsClientProps) {
       detailTriggerRef.current = null;
     }
   }, [sheetOpen]);
+
+  const handleUnitMutationSuccess = useCallback(
+    (
+      unit?: Pick<ManagedUnitRecord, 'MaDonVi' | 'TenDonVi' | 'CapQuanLy'>,
+      options?: { closeSheet?: boolean },
+    ) => {
+      setUnitsRefreshKey((prev) => prev + 1);
+      if (!unit?.MaDonVi) {
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: unitMetricsQueryKey(unit.MaDonVi) });
+
+      if (options?.closeSheet && selectedUnitId === unit.MaDonVi) {
+        setSheetOpen(false);
+        setSelectedUnitId(null);
+        setSelectedUnit(null);
+        return;
+      }
+
+      if (selectedUnitId === unit.MaDonVi) {
+        setSelectedUnit((prev) =>
+          prev
+            ? {
+                ...prev,
+                name: unit.TenDonVi ?? prev.name,
+                type: unit.CapQuanLy ?? prev.type,
+              }
+            : prev,
+        );
+      }
+    },
+    [queryClient, selectedUnitId, setSheetOpen],
+  );
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
@@ -102,6 +166,7 @@ export function DohUnitsClient({ userId, initialUnitId }: DohUnitsClientProps) {
       pageSize?: number;
       sort?: UnitSortState[];
       unit?: string | null;
+      capQuanLy?: CapQuanLyFilterValue | null;
     }) => {
       const newParams = new URLSearchParams();
 
@@ -124,17 +189,23 @@ export function DohUnitsClient({ userId, initialUnitId }: DohUnitsClientProps) {
       const unit = params.unit !== undefined ? params.unit : selectedUnitId;
       if (unit) newParams.set('unit', unit);
 
+      const capQuanLy =
+        params.capQuanLy !== undefined ? params.capQuanLy : capQuanLyFilter;
+      if (capQuanLy) {
+        newParams.set('capQuanLy', capQuanLy);
+      }
+
       const queryString = newParams.toString();
       router.replace(queryString ? `/dashboard/doh/units?${queryString}` : '/dashboard/doh/units', {
         scroll: false,
       });
     },
-    [router, searchTerm, unitPage, unitPageSize, unitSorts, selectedUnitId],
+    [router, searchTerm, unitPage, unitPageSize, unitSorts, selectedUnitId, capQuanLyFilter],
   );
 
   useEffect(() => {
     updateURL({});
-  }, [debouncedSearchTerm, unitPage, unitPageSize, unitSorts, selectedUnitId]);
+  }, [debouncedSearchTerm, unitPage, unitPageSize, unitSorts, selectedUnitId, capQuanLyFilter]);
 
   const prefetchMetrics = useCallback(
     (unitId: string) => {
@@ -213,12 +284,20 @@ export function DohUnitsClient({ userId, initialUnitId }: DohUnitsClientProps) {
     initialUnitLookupRef.current = null;
   }, [pendingInitialUnitId, prefetchMetrics, units]);
 
+  useEffect(() => {
+    if (!selectedUnitId) return;
+    const match = units.find((row) => row.id === selectedUnitId);
+    if (match) {
+      setSelectedUnit(match);
+    }
+  }, [units, selectedUnitId]);
+
   const handleUnitDetailClick = (
     unitId: string,
     unitData: UnitComparisonSummary,
-    trigger: HTMLButtonElement,
+    trigger: HTMLButtonElement | null,
   ) => {
-    detailTriggerRef.current = trigger;
+    detailTriggerRef.current = trigger ?? null;
     setSelectedUnitId(unitId);
     setSelectedUnit(unitData);
     setSheetOpen(true);
@@ -269,6 +348,9 @@ export function DohUnitsClient({ userId, initialUnitId }: DohUnitsClientProps) {
         unitSorts.forEach((sort) => {
           params.append('sort', `${sort.field}:${sort.direction}`);
         });
+        if (capQuanLyFilter) {
+          params.set('capQuanLy', capQuanLyFilter);
+        }
 
         console.log('[DOH Units] Fetching units with params:', params.toString());
         const response = await fetch(`/api/system/units-performance?${params.toString()}`);
@@ -302,49 +384,41 @@ export function DohUnitsClient({ userId, initialUnitId }: DohUnitsClientProps) {
     };
 
     void fetchUnits();
-  }, [debouncedSearchTerm, unitPage, unitPageSize, unitSorts, unitsRefreshKey]);
+  }, [debouncedSearchTerm, unitPage, unitPageSize, unitSorts, unitsRefreshKey, capQuanLyFilter]);
+
+  const showGridLoading = unitsLoading && units.length === 0 && !unitsError;
 
   return (
-    <div className="min-h-screen p-6 space-y-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-800 page-title mb-2">Quản lý đơn vị</h1>
-          <p className="text-gray-600">Theo dõi và đánh giá hiệu suất các đơn vị y tế</p>
-        </div>
-
-        <GlassCard className="p-6" aria-busy={unitsLoading || undefined}>
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-100/50">
-                <Building2 className="w-5 h-5 text-medical-blue" />
-              </div>
-              <h2 className="text-xl font-bold text-gray-800">Danh sách đơn vị</h2>
-              {!unitsLoading && !unitsError && unitTotalItems > 0 && (
-                <span className="px-3 py-1 rounded-full bg-medical-blue/20 text-medical-blue text-sm font-semibold">
-                  {unitTotalItems.toLocaleString('vi-VN')} đơn vị
-                </span>
-              )}
+    <>
+      <div className="min-h-screen p-6 space-y-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800 page-title mb-1">Quản lý đơn vị</h1>
+              <p className="text-gray-600">Theo dõi và đánh giá hiệu suất các đơn vị y tế</p>
             </div>
-            <button
-              onClick={() => toggleSection('units')}
-              className="p-2 hover:bg-gray-100/50 rounded-lg transition-colors"
-              aria-label={expandedSections.units ? 'Thu gọn' : 'Mở rộng'}
+            <Button
+              variant="medical"
+              size="sm"
+              className="gap-2 self-start md:self-auto"
+              onClick={() => {
+                setUnitFormMode('create');
+                setUnitFormUnitId(null);
+                setUnitFormOpen(true);
+              }}
             >
-              {expandedSections.units ? (
-                <ChevronUp className="w-5 h-5 text-gray-600" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-gray-600" />
-              )}
-            </button>
+              <Plus className="h-4 w-4" />
+              Thêm đơn vị
+            </Button>
           </div>
 
-          {expandedSections.units && (
-            <div className="space-y-4">
-              <div className="flex flex-col md:flex-row gap-3">
-                <div className="flex flex-1 gap-3">
-                  <label htmlFor="unit-search" className="sr-only">
-                    Tìm kiếm đơn vị
-                  </label>
+          <GlassCard className="p-6 space-y-4" aria-busy={unitsLoading || undefined}>
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_240px] lg:items-end">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="unit-search" className="text-sm font-semibold text-gray-700">
+                  Tìm kiếm đơn vị
+                </Label>
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <input
                     id="unit-search"
                     type="search"
@@ -357,7 +431,7 @@ export function DohUnitsClient({ userId, initialUnitId }: DohUnitsClientProps) {
                     className="flex-1 px-4 py-2 rounded-lg border border-gray-200 bg-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-medical-blue/50"
                   />
                   {searchTerm && (
-                    <GlassButton
+                    <Button
                       variant="outline"
                       size="sm"
                       onClick={() => {
@@ -367,59 +441,201 @@ export function DohUnitsClient({ userId, initialUnitId }: DohUnitsClientProps) {
                       aria-label="Xóa từ khóa tìm kiếm"
                     >
                       Xóa
-                    </GlassButton>
+                    </Button>
                   )}
                 </div>
-                <GlassButton
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSearchTerm('');
-                    setUnitSorts(DEFAULT_UNIT_SORTS.map((s) => ({ ...s })));
-                    setUnitPageSize(20);
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="cap-quan-ly-filter" className="text-sm font-semibold text-gray-700">
+                  Cấp quản lý
+                </Label>
+                <Select
+                  value={capQuanLyFilter ?? 'all'}
+                  onValueChange={(value) => {
+                    const normalized = value === 'all' ? null : (value as CapQuanLyFilterValue);
+                    setCapQuanLyFilter(normalized);
                     setUnitPage(1);
                   }}
                 >
-                  Đặt lại
-                </GlassButton>
+                  <SelectTrigger
+                    id="cap-quan-ly-filter"
+                    className="backdrop-blur-sm border-gray-200 bg-white/50 focus:ring-2 focus:ring-medical-blue/40"
+                  >
+                    <SelectValue placeholder="Tất cả cấp quản lý" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả cấp quản lý</SelectItem>
+                    {CAP_QUAN_LY_FILTER_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-
-              <UnitComparisonGrid
-                rows={units}
-                isLoading={unitsLoading}
-                error={unitsError}
-                page={unitPage}
-                pageSize={unitPageSize}
-                totalItems={unitTotalItems}
-                totalPages={unitTotalPages}
-                sort={unitSorts}
-                onSortChange={(next) => {
-                  const nextState =
-                    next.length > 0 ? next : DEFAULT_UNIT_SORTS.map((s) => ({ ...s }));
-                  setUnitSorts(nextState);
-                  setUnitPage(1);
-                }}
-                onPageChange={(next) => setUnitPage(next)}
-                onPageSizeChange={(size) => {
-                  setUnitPageSize(size);
-                  setUnitPage(1);
-                }}
-                onRetry={() => setUnitsRefreshKey((prev) => prev + 1)}
-                onUnitDetailClick={handleUnitDetailClick}
-                onUnitDetailHover={handleUnitDetailHover}
-              />
             </div>
-          )}
-        </GlassCard>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-gray-500">
+                Bộ lọc đang áp dụng:{' '}
+                <span className="font-medium text-gray-700">
+                  {capQuanLyFilter
+                    ? CAP_QUAN_LY_FILTER_OPTIONS.find((option) => option.value === capQuanLyFilter)
+                        ?.label ?? 'Tất cả'
+                    : 'Tất cả cấp quản lý'}
+                </span>
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearchTerm('');
+                  setUnitSorts(DEFAULT_UNIT_SORTS.map((s) => ({ ...s })));
+                  setUnitPageSize(20);
+                  setUnitPage(1);
+                  setCapQuanLyFilter(null);
+                }}
+              >
+                Đặt lại bộ lọc
+              </Button>
+            </div>
+          </GlassCard>
+          
+          <GlassCard className="p-6" aria-busy={unitsLoading || undefined}>
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-blue-100/50">
+                  <Building2 className="w-5 h-5 text-medical-blue" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-800">Danh sách đơn vị</h2>
+                {!unitsLoading && !unitsError && unitTotalItems > 0 && (
+                  <span className="px-3 py-1 rounded-full bg-medical-blue/20 text-medical-blue text-sm font-semibold">
+                    {unitTotalItems.toLocaleString('vi-VN')} đơn vị
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => toggleSection('units')}
+                className="self-end md:self-auto p-2 hover:bg-gray-100/50 rounded-lg transition-colors"
+                aria-label={expandedSections.units ? 'Thu gọn' : 'Mở rộng'}
+              >
+                {expandedSections.units ? (
+                  <ChevronUp className="w-5 h-5 text-gray-600" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-gray-600" />
+                )}
+              </button>
+            </div>
 
-        <UnitDetailSheet
-          open={sheetOpen && Boolean(selectedUnitId)}
-          onOpenChange={handleSheetOpenChange}
-          unitId={selectedUnitId}
-          unitSummary={selectedUnit ?? undefined}
-          initialData={initialMetrics}
-        />
+            {expandedSections.units && (
+              showGridLoading ? (
+                <div className="py-12 flex justify-center">
+                  <LoadingNotice message="Đang tải danh sách đơn vị..." />
+                </div>
+              ) : (
+                <UnitComparisonGrid
+                  rows={units}
+                  isLoading={unitsLoading}
+                  error={unitsError}
+                  page={unitPage}
+                  pageSize={unitPageSize}
+                  totalItems={unitTotalItems}
+                  totalPages={unitTotalPages}
+                  sort={unitSorts}
+                  onSortChange={(next) => {
+                    const nextState =
+                      next.length > 0 ? next : DEFAULT_UNIT_SORTS.map((s) => ({ ...s }));
+                    setUnitSorts(nextState);
+                    setUnitPage(1);
+                  }}
+                  onPageChange={(next) => setUnitPage(next)}
+                  onPageSizeChange={(size) => {
+                    setUnitPageSize(size);
+                    setUnitPage(1);
+                  }}
+                  onRetry={() => setUnitsRefreshKey((prev) => prev + 1)}
+                  onUnitDetailClick={handleUnitDetailClick}
+                  onUnitDetailHover={handleUnitDetailHover}
+                  onEditUnit={(row) => {
+                    setUnitFormMode('edit');
+                    setUnitFormUnitId(row.id);
+                    setUnitFormOpen(true);
+                  }}
+                  onDeleteUnit={(row) => {
+                    setUnitDeleteTarget({ id: row.id, name: row.name });
+                    setUnitDeleteOpen(true);
+                  }}
+                />
+              )
+            )}
+          </GlassCard>
+
+          <UnitDetailSheet
+            open={sheetOpen && Boolean(selectedUnitId)}
+            onOpenChange={handleSheetOpenChange}
+            unitId={selectedUnitId}
+            unitSummary={selectedUnit ?? undefined}
+            initialData={initialMetrics}
+            onEditUnit={(unitId) => {
+              if (!unitId) return;
+              setUnitFormMode('edit');
+              setUnitFormUnitId(unitId);
+              setUnitFormOpen(true);
+            }}
+            onDeleteUnit={(unitId, name) => {
+              if (!unitId) return;
+              setUnitDeleteTarget({ id: unitId, name: name ?? selectedUnit?.name ?? '' });
+              setUnitDeleteOpen(true);
+            }}
+          />
+        </div>
       </div>
-    </div>
+
+      <UnitFormSheet
+        open={unitFormOpen}
+        mode={unitFormMode}
+        unitId={unitFormUnitId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setUnitFormOpen(false);
+            setUnitFormUnitId(null);
+            return;
+          }
+          setUnitFormOpen(true);
+        }}
+        onCompleted={(unit: ManagedUnitRecord) => {
+          handleUnitMutationSuccess(unit);
+          setUnitFormOpen(false);
+          setUnitFormUnitId(null);
+        }}
+      />
+
+      <UnitDeleteDialog
+        open={unitDeleteOpen}
+        unitId={unitDeleteTarget?.id}
+        unitName={unitDeleteTarget?.name}
+        onOpenChange={(open) => {
+          if (!open) {
+            setUnitDeleteOpen(false);
+            setUnitDeleteTarget(null);
+          } else {
+            setUnitDeleteOpen(true);
+          }
+        }}
+        onCompleted={() => {
+          handleUnitMutationSuccess(
+            unitDeleteTarget
+              ? {
+                  MaDonVi: unitDeleteTarget.id,
+                  TenDonVi: unitDeleteTarget.name,
+                  CapQuanLy: selectedUnit?.type ?? 'BenhVien',
+                }
+              : undefined,
+            { closeSheet: true },
+          );
+          setUnitDeleteOpen(false);
+          setUnitDeleteTarget(null);
+        }}
+      />
+    </>
   );
 }

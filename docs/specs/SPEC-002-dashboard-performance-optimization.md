@@ -157,22 +157,22 @@ const response = await fetch(
     Trang {page} / {totalPages}
   </span>
   <div className="flex gap-2">
-    <GlassButton
+    <Button
       size="sm"
       variant="secondary"
       onClick={() => setPage(p => Math.max(1, p - 1))}
       disabled={page === 1}
     >
       ← Trước
-    </GlassButton>
-    <GlassButton
+    </Button>
+    <Button
       size="sm"
       variant="secondary"
       onClick={() => setPage(p => Math.min(totalPages, p + 1))}
       disabled={page === totalPages}
     >
       Sau →
-    </GlassButton>
+    </Button>
   </div>
 </div>
 ```

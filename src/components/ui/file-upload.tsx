@@ -3,7 +3,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Upload, X, File, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { GlassCard } from './glass-card';
-import { GlassButton } from './glass-button';
+import { Button } from './button';
 import { formatFileSize } from '@/lib/utils';
 
 export interface FileUploadProps {
@@ -285,7 +285,7 @@ export function FileUpload({
                   </div>
                 </div>
 
-                <GlassButton
+                <Button
                   variant="ghost"
                   size="sm"
                   onClick={(e) => {
@@ -295,7 +295,7 @@ export function FileUpload({
                   className="text-gray-400 hover:text-medical-red"
                 >
                   <X className="h-4 w-4" />
-                </GlassButton>
+                </Button>
               </div>
 
               {/* Progress Bar */}

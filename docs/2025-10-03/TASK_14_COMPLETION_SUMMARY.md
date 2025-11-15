@@ -197,7 +197,7 @@ if (user.role === 'DonVi') {
 
 ### Glassmorphism UI
 - ✅ GlassCard components throughout
-- ✅ GlassButton for actions
+- ✅ Button for actions
 - ✅ Semi-transparent backgrounds with backdrop blur
 - ✅ Smooth transitions and animations
 

@@ -105,6 +105,7 @@ export function SubmissionsPageClient({ userRole, practitioners, initialPractiti
               <SubmissionReview
                 submissionId={selectedSubmissionId}
                 userRole={userRole}
+                showHeading={false}
                 onBack={() => setShowViewSheet(false)}
                 onReviewComplete={handleReviewComplete}
               />

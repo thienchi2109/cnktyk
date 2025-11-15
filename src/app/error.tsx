@@ -5,7 +5,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { GlassCard, GlassButton } from '@/components/ui';
+import { GlassCard, Button } from '@/components/ui';
 
 export default function Error({
   error,
@@ -32,14 +32,14 @@ export default function Error({
           </div>
           
           <div className="space-y-3">
-            <GlassButton onClick={reset} className="w-full">
+            <Button onClick={reset} className="w-full" variant="medical">
               Thử lại
-            </GlassButton>
-            <a href="/auth/signin">
-              <GlassButton variant="outline" className="w-full">
+            </Button>
+            <Button asChild variant="outline" className="w-full">
+              <a href="/auth/signin">
                 Về trang đăng nhập
-              </GlassButton>
-            </a>
+              </a>
+            </Button>
           </div>
         </div>
       </GlassCard>

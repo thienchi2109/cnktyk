@@ -1,6 +1,5 @@
-// Base Glass Components
+// Base Components
 export { GlassCard } from './glass-card';
-export { GlassButton } from './glass-button';
 
 // Form Components
 export { Input } from './input';
@@ -17,3 +16,9 @@ export { Button } from './button';
 export { Label } from './label';
 export { Alert } from './alert';
 export { Toaster } from './toaster';
+export {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from './tooltip';

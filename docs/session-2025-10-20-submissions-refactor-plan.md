@@ -393,22 +393,22 @@ WHERE
       Trang {page} / {totalPages}
     </div>
     <div className="flex gap-2">
-      <GlassButton
+      <Button
         size="sm"
         variant="secondary"
         onClick={() => setPage(page - 1)}
         disabled={page === 1}
       >
         <ChevronLeft className="h-4 w-4" />
-      </GlassButton>
-      <GlassButton
+      </Button>
+      <Button
         size="sm"
         variant="secondary"
         onClick={() => setPage(page + 1)}
         disabled={page === totalPages}
       >
         <ChevronRight className="h-4 w-4" />
-      </GlassButton>
+      </Button>
     </div>
   </div>
 )}

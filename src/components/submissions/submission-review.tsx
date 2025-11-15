@@ -21,7 +21,6 @@ import {
 } from 'lucide-react';
 
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -96,6 +95,7 @@ interface SubmissionReviewProps {
   userRole: string;
   onBack?: () => void;
   onReviewComplete?: () => void;
+  showHeading?: boolean;
 }
 
 const statusLabels = {
@@ -121,7 +121,8 @@ export function SubmissionReview({
   submissionId,
   userRole,
   onBack,
-  onReviewComplete
+  onReviewComplete,
+  showHeading = true,
 }: SubmissionReviewProps) {
   const { data, isLoading, error } = useSubmission(submissionId);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -225,31 +226,33 @@ export function SubmissionReview({
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           {onBack && (
-            <GlassButton
+            <Button
               variant="ghost"
               onClick={onBack}
               className="text-gray-600 hover:text-gray-800"
             >
               <ArrowLeft className="h-4 w-4" />
-            </GlassButton>
+            </Button>
           )}
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 page-title">Chi tiết hoạt động</h1>
-            <p className="text-gray-600 mt-1">Xem xét và phê duyệt hoạt động đào tạo liên tục</p>
-          </div>
+          {showHeading && (
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 page-title">Chi tiết hoạt động</h1>
+              <p className="text-gray-600 mt-1">Xem xét và phê duyệt hoạt động đào tạo liên tục</p>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center space-x-3">
           {(canEdit() || canDelete()) && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <GlassButton
+                <Button
                   variant="outline"
                   className="border-gray-300"
                   size="sm"
                 >
                   <MoreHorizontal className="h-4 w-4" />
-                </GlassButton>
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {canEdit() && (
@@ -421,7 +424,7 @@ export function SubmissionReview({
             </div>
 
             <div className="flex items-center gap-2">
-              <GlassButton
+              <Button
                 size="sm"
                 variant="outline"
                 aria-label="Xem minh chứng"
@@ -435,11 +438,11 @@ export function SubmissionReview({
                   <Eye className="h-4 w-4" />
                 )}
                 <span className="ml-2">Xem</span>
-              </GlassButton>
+              </Button>
 
-              <GlassButton
+              <Button
                 size="sm"
-                className="bg-medical-green text-white hover:bg-medical-green/90"
+                variant="medical-secondary"
                 aria-label="Tải xuống minh chứng"
                 title="Tải xuống minh chứng"
                 disabled={evidenceFile.isLoading}
@@ -451,7 +454,7 @@ export function SubmissionReview({
                   <Download className="h-4 w-4" />
                 )}
                 <span className="ml-2">Tải xuống</span>
-              </GlassButton>
+              </Button>
             </div>
           </div>
         </GlassCard>
@@ -503,30 +506,30 @@ export function SubmissionReview({
 
           {!reviewAction ? (
             <div className="flex flex-wrap gap-3">
-              <GlassButton
+              <Button
                 onClick={() => setReviewAction('approve')}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                variant="medical-secondary"
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Phê duyệt
-              </GlassButton>
+              </Button>
               
-              <GlassButton
+              <Button
                 onClick={() => setReviewAction('reject')}
-                className="bg-red-600 hover:bg-red-700 text-white"
+                variant="destructive"
               >
                 <XCircle className="h-4 w-4 mr-2" />
                 Từ chối
-              </GlassButton>
+              </Button>
               
-              <GlassButton
+              <Button
                 onClick={() => setReviewAction('request_info')}
                 variant="outline"
                 className="border-yellow-500 text-yellow-700 hover:bg-yellow-50"
               >
                 <Info className="h-4 w-4 mr-2" />
                 Yêu cầu bổ sung
-              </GlassButton>
+              </Button>
             </div>
           ) : (
             <div className="space-y-4">
@@ -577,38 +580,40 @@ export function SubmissionReview({
 
       {/* Footer actions for review confirmation (sheet footer) */}
       {reviewAction && (
-<SheetFooter className="-mx-6 px-6 py-4 mt-6 border-t bg-white">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={isProcessing}
-            onClick={() => {
-              setReviewAction(null);
-              setComments('');
-              setReason('');
-            }}
-          >
-            Hủy
-          </Button>
-          <Button
-            type="button"
-            disabled={isProcessing || (reviewAction === 'reject' && !reason) || (reviewAction === 'request_info' && !comments)}
-            onClick={() => handleReviewSubmission(reviewAction)}
-          >
-            {isProcessing ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : reviewAction === 'approve' ? (
-              <CheckCircle className="h-4 w-4 mr-2" />
-            ) : reviewAction === 'reject' ? (
-              <XCircle className="h-4 w-4 mr-2" />
-            ) : (
-              <Info className="h-4 w-4 mr-2" />
-            )}
-            {isProcessing ? 'Đang xử lý...' : 
-              reviewAction === 'approve' ? 'Xác nhận phê duyệt' :
-              reviewAction === 'reject' ? 'Xác nhận từ chối' :
-              'Xác nhận yêu cầu'}
-          </Button>
+        <SheetFooter className="-mx-6 px-6 py-4 mt-6 bg-white">
+          <div className="flex w-full flex-col items-end gap-2 sm:flex-row sm:items-center sm:justify-end">
+            <Button
+              type="button"
+              variant="outline-accent"
+              disabled={isProcessing}
+              onClick={() => {
+                setReviewAction(null);
+                setComments('');
+                setReason('');
+              }}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              disabled={isProcessing || (reviewAction === 'reject' && !reason) || (reviewAction === 'request_info' && !comments)}
+              onClick={() => handleReviewSubmission(reviewAction)}
+            >
+              {isProcessing ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : reviewAction === 'approve' ? (
+                <CheckCircle className="h-4 w-4 mr-2" />
+              ) : reviewAction === 'reject' ? (
+                <XCircle className="h-4 w-4 mr-2" />
+              ) : (
+                <Info className="h-4 w-4 mr-2" />
+              )}
+              {isProcessing ? 'Đang xử lý...' : 
+                reviewAction === 'approve' ? 'Xác nhận phê duyệt' :
+                reviewAction === 'reject' ? 'Xác nhận từ chối' :
+                'Xác nhận yêu cầu'}
+            </Button>
+          </div>
         </SheetFooter>
       )}
 
@@ -672,7 +677,7 @@ export function SubmissionReview({
           <DialogFooter>
             <Button
               type="button"
-              variant="outline"
+              variant="outline-accent"
               onClick={() => setShowEditDialog(false)}
               disabled={editMutation.isPending}
             >
@@ -738,7 +743,7 @@ export function SubmissionReview({
           <DialogFooter>
             <Button
               type="button"
-              variant="outline"
+              variant="outline-accent"
               onClick={() => setShowDeleteDialog(false)}
               disabled={isProcessing || deleteMutation.isPending}
             >

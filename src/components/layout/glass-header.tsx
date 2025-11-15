@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Bell, User, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { GlassCard } from "@/components/ui/glass-card";
-import { GlassButton } from "@/components/ui/glass-button";
+import { Button } from "@/components/ui/button";
 import { signOut } from "next-auth/react";
 
 interface GlassHeaderProps {
@@ -133,7 +133,7 @@ export const GlassHeader = React.forwardRef<HTMLDivElement, GlassHeaderProps>(
       >
         {/* Notifications */}
         <div className="relative">
-          <GlassButton 
+          <Button 
             variant="ghost" 
             size="icon"
             onClick={(e) => {
@@ -148,7 +148,7 @@ export const GlassHeader = React.forwardRef<HTMLDivElement, GlassHeaderProps>(
                 {notifications > 9 ? '9+' : notifications}
               </span>
             )}
-          </GlassButton>
+          </Button>
 
           {/* Notification Dropdown */}
           {showNotifications && (

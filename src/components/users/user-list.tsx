@@ -2,11 +2,17 @@
 
 import { useState } from 'react';
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/glass-select';
 import { Label } from '@/components/ui/label';
 import { LoadingNotice } from '@/components/ui/loading-notice';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { 
   Users, 
   Search, 
@@ -19,7 +25,8 @@ import {
   Shield,
   Building,
   User,
-  Eye
+  Eye,
+  EllipsisVertical
 } from 'lucide-react';
 
 interface User {
@@ -142,10 +149,10 @@ export function UserList({
         </div>
         
         {['SoYTe', 'DonVi'].includes(currentUserRole) && (
-          <GlassButton onClick={onCreateUser} className="flex items-center gap-2">
+          <Button onClick={onCreateUser} className="flex items-center gap-2" variant="medical">
             <UserPlus className="h-4 w-4" />
             Tạo Tài Khoản Mới
-          </GlassButton>
+          </Button>
         )}
       </div>
 
@@ -251,7 +258,7 @@ export function UserList({
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Ngày Tạo
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[80px]">
                       Thao Tác
                     </th>
                   </tr>
@@ -270,10 +277,13 @@ export function UserList({
                       }}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="font-medium text-gray-900">
+                        <div
+                          className="font-medium text-gray-900 truncate max-w-[220px]"
+                          title={user.TenDangNhap}
+                        >
                           {user.TenDangNhap}
                         </div>
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-gray-500" title={user.MaTaiKhoan}>
                           ID: {user.MaTaiKhoan.slice(0, 8)}...
                         </div>
                       </td>
@@ -285,8 +295,10 @@ export function UserList({
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {getUnitName(user.MaDonVi)}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 max-w-[260px]">
+                        <span className="block truncate" title={getUnitName(user.MaDonVi)}>
+                          {getUnitName(user.MaDonVi)}
+                        </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -300,35 +312,54 @@ export function UserList({
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(user.TaoLuc).toLocaleDateString('vi-VN')}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end gap-2">
-                          <GlassButton
-                            size="sm"
-                            variant="secondary"
-                            onClick={(e) => { e.stopPropagation(); onViewUser(user); }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </GlassButton>
-                          
-                          {canManageUser(user) && (
-                            <>
-                              <GlassButton
-                                size="sm"
-                                onClick={(e) => { e.stopPropagation(); onEditUser(user); }}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </GlassButton>
-                              
-                              <GlassButton
-                                size="sm"
-                                variant="danger"
-                                onClick={(e) => { e.stopPropagation(); onDeleteUser(user); }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </GlassButton>
-                            </>
-                          )}
-                        </div>
+                      <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              aria-label="Thao tác"
+                              title="Thao tác"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <EllipsisVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onViewUser(user);
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              Xem chi tiết
+                            </DropdownMenuItem>
+                            {canManageUser(user) && (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onEditUser(user);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Chỉnh sửa
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDeleteUser(user);
+                                  }}
+                                  destructive
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Xóa
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   ))}
@@ -343,22 +374,22 @@ export function UserList({
                   Trang {currentPage} / {totalPages}
                 </div>
                 <div className="flex gap-2">
-                  <GlassButton
+                  <Button
                     size="sm"
-                    variant="secondary"
+                    variant="outline"
                     onClick={() => onPageChange(currentPage - 1)}
                     disabled={currentPage === 1}
                   >
                     <ChevronLeft className="h-4 w-4" />
-                  </GlassButton>
-                  <GlassButton
+                  </Button>
+                  <Button
                     size="sm"
-                    variant="secondary"
+                    variant="outline"
                     onClick={() => onPageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}
                   >
                     <ChevronRight className="h-4 w-4" />
-                  </GlassButton>
+                  </Button>
                 </div>
               </div>
             )}

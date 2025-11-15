@@ -492,21 +492,21 @@ export function BulkSubmissionWizard() {
                 <h3 className="font-semibold">Hoạt động đã chọn</h3>
                 <p className="text-sm text-gray-600">{selectedActivity?.TenDanhMuc}</p>
               </div>
-              <GlassButton variant="secondary" size="sm" onClick={() => setStep(1)}>
+              <Button variant="secondary" size="sm" onClick={() => setStep(1)}>
                 Thay đổi
-              </GlassButton>
+              </Button>
             </div>
           </GlassCard>
 
           <CohortBuilder onChange={setCohortSelection} />
 
           <div className="flex justify-end">
-            <GlassButton
+            <Button
               disabled={!cohortSelection || cohortSelection.selectedCount === 0}
               onClick={() => setStep(3)}
             >
               Tiếp tục → Xác nhận
-            </GlassButton>
+            </Button>
           </div>
         </>
       )}

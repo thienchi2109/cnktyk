@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, Users, Filter, X, CheckSquare, Square, ChevronLeft, ChevronRight, Tag as TagIcon, UserCog } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/glass-select';
 import { Label } from '@/components/ui/label';
@@ -285,14 +285,14 @@ export function CohortBuilder({ initialStatus = 'DangLamViec', onChange }: Cohor
                   <option key={p.MaPreset} value={p.MaPreset}>{p.TenPreset}</option>
                 ))}
               </Select>
-              <GlassButton size="sm" variant="secondary" onClick={fetchPresets}>Làm mới</GlassButton>
+              <Button size="sm" variant="secondary" onClick={fetchPresets}>Làm mới</Button>
             </div>
           </div>
           <div className="flex-1">
             <Label className="text-sm text-gray-700">Lưu preset</Label>
             <div className="mt-1 flex gap-2">
               <Input placeholder="Tên preset" value={presetName} onChange={(e) => setPresetName(e.target.value)} />
-              <GlassButton size="sm" onClick={async () => {
+              <Button size="sm" onClick={async () => {
                 if (!presetName.trim()) return;
                 await fetch('/api/cohorts/presets', {
                   method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -300,7 +300,7 @@ export function CohortBuilder({ initialStatus = 'DangLamViec', onChange }: Cohor
                 });
                 setPresetName('');
                 fetchPresets();
-              }}>Lưu</GlassButton>
+              }}>Lưu</Button>
             </div>
           </div>
         </div>
@@ -371,12 +371,12 @@ export function CohortBuilder({ initialStatus = 'DangLamViec', onChange }: Cohor
         <div className="px-6 py-4 border-t border-gray-200/50 flex items-center justify-between">
           <div className="text-sm text-gray-500">Trang {page}</div>
           <div className="flex gap-2">
-            <GlassButton size="sm" variant="secondary" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+            <Button size="sm" variant="secondary" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
               <ChevronLeft className="h-4 w-4" />
-            </GlassButton>
-            <GlassButton size="sm" variant="secondary" onClick={() => setPage((p) => p + 1)} disabled={rows.length < limit}>
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => setPage((p) => p + 1)} disabled={rows.length < limit}>
               <ChevronRight className="h-4 w-4" />
-            </GlassButton>
+            </Button>
           </div>
         </div>
       </GlassCard>

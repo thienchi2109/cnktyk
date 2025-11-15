@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { GlassCard } from '@/components/ui/glass-card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -243,7 +243,7 @@ export function PreviewAndConfirm({
                 Chạy thử xem trước để kiểm tra trùng lặp trước khi tạo.
               </p>
             </div>
-            <GlassButton
+            <Button
               size="sm"
               variant="outline"
               onClick={onRefreshPreview}
@@ -252,7 +252,7 @@ export function PreviewAndConfirm({
             >
               {loadingPreview && <Loader2 className="mr-2 h-3 w-3 animate-spin" aria-hidden="true" />}
               {loadingPreview ? 'Đang chạy...' : 'Làm mới xem trước'}
-            </GlassButton>
+            </Button>
           </div>
           {loadingPreview ? (
             <div className="grid gap-3 sm:grid-cols-2" role="status" aria-label="Đang tải dữ liệu xem trước">
@@ -322,32 +322,33 @@ export function PreviewAndConfirm({
               <div>
                 Đã tạo: <strong>{applyResult.created}</strong> · Bỏ qua: <strong>{applyResult.skipped}</strong> · Tổng: <strong>{applyResult.total}</strong>
               </div>
-              <GlassButton
+              <Button
                 size="sm"
-                variant="outline"
+                variant="medical-secondary"
                 onClick={onNavigateToSubmissions}
                 aria-label="Mở danh sách ghi nhận theo hoạt động"
               >
                 Mở danh sách ghi nhận theo hoạt động
-              </GlassButton>
+              </Button>
             </AlertDescription>
           </Alert>
         )}
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" role="group" aria-label="Điều hướng">
-        <GlassButton variant="secondary" onClick={onBack} aria-label="Quay lại bước trước">
+        <Button variant="outline" onClick={onBack} aria-label="Quay lại bước trước">
           ← Quay lại
-        </GlassButton>
-        <GlassButton
+        </Button>
+        <Button
           onClick={onConfirm}
           disabled={confirmDisabled}
           aria-label={applyLoading ? 'Đang tạo bản ghi' : 'Xác nhận và tạo bản ghi hàng loạt'}
           aria-busy={applyLoading}
+          variant="medical"
         >
           {applyLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
           {applyLoading ? 'Đang tạo bản ghi…' : 'Xác nhận & tạo bản ghi'}
-        </GlassButton>
+        </Button>
       </div>
     </GlassCard>
   );

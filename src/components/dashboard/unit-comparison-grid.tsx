@@ -1,13 +1,15 @@
 'use client';
 
 import React, { memo, useEffect, useMemo, useRef } from 'react';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import {
   DashboardTableSkeleton,
   DashboardErrorPanel,
 } from '@/components/dashboard/dashboard-skeletons';
 import { cn } from '@/lib/utils';
 import type { UnitComparisonSummary } from '@/types/dashboard';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Eye, PencilLine, Trash2 } from 'lucide-react';
 
 export type UnitSortField = 'name' | 'compliance' | 'practitioners' | 'pending' | 'totalCredits';
 
@@ -34,9 +36,11 @@ interface UnitComparisonGridProps {
   onUnitDetailClick: (
     unitId: string,
     unitData: UnitComparisonRow,
-    trigger: HTMLButtonElement,
+    trigger: HTMLButtonElement | null,
   ) => void;
   onUnitDetailHover: (unitId: string) => void;
+  onEditUnit?: (unit: UnitComparisonRow) => void;
+  onDeleteUnit?: (unit: UnitComparisonRow) => void;
 }
 
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 50] as const;
@@ -69,7 +73,7 @@ const headerColumns: Array<{
   },
   { id: 'pendingApprovals', label: 'Chờ duyệt', field: 'pending', align: 'right' },
   { id: 'totalCredits', label: 'Tổng tín chỉ', field: 'totalCredits', align: 'right' },
-  { id: 'actions', label: 'Thao tác', align: 'right', className: 'w-[130px]' },
+  { id: 'actions', label: 'Thao tác', align: 'right', className: 'w-[80px]' },
 ];
 
 function toggleSortState(
@@ -123,6 +127,8 @@ const UnitComparisonGridComponent = ({
   onRetry,
   onUnitDetailClick,
   onUnitDetailHover,
+  onEditUnit,
+  onDeleteUnit,
 }: UnitComparisonGridProps) => {
   const numberFormatter = useMemo(() => new Intl.NumberFormat('vi-VN'), []);
   const percentFormatter = useMemo(
@@ -177,12 +183,23 @@ const UnitComparisonGridComponent = ({
     }
   };
 
-  const handleDetailClick = (
-    row: UnitComparisonRow,
-    event: React.MouseEvent<HTMLButtonElement>,
-  ) => {
+  const handleDetailClick = (row: UnitComparisonRow, trigger: HTMLButtonElement | null) => {
     cancelDetailHover(row.id);
-    onUnitDetailClick(row.id, row, event.currentTarget);
+    onUnitDetailClick(row.id, row, trigger);
+  };
+
+  const handleRowActivate = (row: UnitComparisonRow) => {
+    onUnitDetailClick(row.id, row, null);
+  };
+
+  const handleRowKeyDown = (
+    event: React.KeyboardEvent<HTMLTableRowElement>,
+    row: UnitComparisonRow,
+  ) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleRowActivate(row);
+    }
   };
 
   const handleSort = (field: UnitSortField, multi: boolean) => {
@@ -240,14 +257,15 @@ const UnitComparisonGridComponent = ({
   };
 
   return (
+    <TooltipProvider delayDuration={150}>
     <div className="space-y-4" aria-busy={isLoading || undefined}>
       {error && !isLoading ? (
         <div className="space-y-3">
           <DashboardErrorPanel message={error} />
           <div>
-            <GlassButton variant="outline" onClick={onRetry}>
+            <Button variant="outline" onClick={onRetry}>
               Thử lại
-            </GlassButton>
+            </Button>
           </div>
         </div>
       ) : null}
@@ -262,9 +280,9 @@ const UnitComparisonGridComponent = ({
               <p className="text-sm text-gray-500">
                 Điều chỉnh bộ lọc hoặc từ khóa tìm kiếm để xem dữ liệu khác.
               </p>
-              <GlassButton variant="outline" onClick={() => onSortChange([])}>
+              <Button variant="outline" onClick={() => onSortChange([])}>
                 Đặt lại sắp xếp
-              </GlassButton>
+              </Button>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -317,8 +335,12 @@ const UnitComparisonGridComponent = ({
                   {safeRows.map((row, index) => (
                     <tr
                       key={row.id}
+                      tabIndex={0}
+                      aria-label={`Xem chi tiết ${row.name}`}
+                      onClick={() => handleRowActivate(row)}
+                      onKeyDown={(event) => handleRowKeyDown(event, row)}
                       className={cn(
-                        'border-t border-white/10 transition-colors hover:bg-white/30 focus-within:bg-white/40',
+                        'border-t border-white/10 transition-colors hover:bg-white/30 focus-within:bg-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-medical-blue/30 cursor-pointer',
                         index % 2 === 1 ? 'bg-white/10' : 'bg-transparent',
                       )}
                     >
@@ -350,18 +372,64 @@ const UnitComparisonGridComponent = ({
                         {formatNumber(Math.round(row.totalCredits), numberFormatter)}
                       </td>
                       <td className="px-4 py-4 text-right">
-                        <GlassButton asChild size="sm" variant="outline" className="whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={(event) => handleDetailClick(row, event)}
-                            onMouseEnter={() => handleDetailHover(row.id)}
-                            onMouseLeave={() => cancelDetailHover(row.id)}
-                            onFocus={() => handleDetailHover(row.id)}
-                            aria-label={`Xem chi tiết ${row.name}`}
-                          >
-                            Xem chi tiết
-                          </button>
-                        </GlassButton>
+                        <div className="flex items-center justify-end gap-2">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                aria-label={`Xem chi tiết ${row.name}`}
+                                onMouseEnter={() => handleDetailHover(row.id)}
+                                onMouseLeave={() => cancelDetailHover(row.id)}
+                                onFocus={() => handleDetailHover(row.id)}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleDetailClick(row, event.currentTarget);
+                                }}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Xem chi tiết</TooltipContent>
+                          </Tooltip>
+                          {onEditUnit && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  aria-label={`Chỉnh sửa ${row.name}`}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    onEditUnit?.(row);
+                                  }}
+                                >
+                                  <PencilLine className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Chỉnh sửa đơn vị</TooltipContent>
+                            </Tooltip>
+                          )}
+                          {onDeleteUnit && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  aria-label={`Vô hiệu hóa ${row.name}`}
+                                  className="text-red-600 hover:text-red-700"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    onDeleteUnit?.(row);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Vô hiệu hóa đơn vị</TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -392,29 +460,30 @@ const UnitComparisonGridComponent = ({
             </select>
           </label>
           <div className="flex items-center gap-2">
-            <GlassButton
+            <Button
               variant="outline"
               size="sm"
               onClick={() => handlePageChange(page - 1)}
               disabled={page <= 1 || totalPages === 0}
             >
               Trước
-            </GlassButton>
+            </Button>
             <span className="text-sm text-gray-600">
               Trang {totalPages === 0 ? 0 : page} / {totalPages}
             </span>
-            <GlassButton
+            <Button
               variant="outline"
               size="sm"
               onClick={() => handlePageChange(page + 1)}
               disabled={totalPages === 0 || page >= totalPages}
             >
               Sau
-            </GlassButton>
+            </Button>
           </div>
         </div>
       </div>
     </div>
+    </TooltipProvider>
   );
 };
 

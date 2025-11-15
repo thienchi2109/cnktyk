@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { AlertTriangle, Send, Users, Clock, Settings, CheckCircle } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -242,7 +242,7 @@ export const AlertGenerator: React.FC<AlertGeneratorProps> = ({
 
         {/* Generate Button */}
         <div className="flex justify-end">
-          <GlassButton
+          <Button
             onClick={handleGenerate}
             disabled={!selectedType || loading || (selectedType === 'custom' && !customMessage)}
             className="bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700"
@@ -258,7 +258,7 @@ export const AlertGenerator: React.FC<AlertGeneratorProps> = ({
                 Tạo cảnh báo
               </>
             )}
-          </GlassButton>
+          </Button>
         </div>
       </div>
     </GlassCard>

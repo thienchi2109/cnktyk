@@ -109,7 +109,7 @@ docs/
 - `CreditSummaryChart` - Credit distribution chart
 - `CreditHistoryTable` - Activity history table
 - `NotificationDropdown` - Header notifications
-- `GlassCard`, `GlassButton` - Base UI components
+- `GlassCard`, `Button` - Base UI components
 
 ### Data Hooks
 - `useCreditCycle` - Compliance and credit data

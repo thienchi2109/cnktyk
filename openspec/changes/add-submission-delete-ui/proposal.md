@@ -87,9 +87,9 @@ Submissions List
 ```tsx
 <div className="flex items-center space-x-3">
   {canEdit() && (
-    <GlassButton onClick={() => setShowEditDialog(true)}>
+    <Button onClick={() => setShowEditDialog(true)}>
       <Edit className="h-4 w-4 mr-2" /> Chỉnh sửa
-    </GlassButton>
+    </Button>
   )}
   <Badge>{statusLabels[submission.TrangThaiDuyet]}</Badge>
 </div>
@@ -99,14 +99,14 @@ Submissions List
 ```tsx
 <div className="flex items-center space-x-3">
   {canEdit() && (
-    <GlassButton onClick={() => setShowEditDialog(true)}>
+    <Button onClick={() => setShowEditDialog(true)}>
       <Edit className="h-4 w-4 mr-2" /> Chỉnh sửa
-    </GlassButton>
+    </Button>
   )}
   {canDelete() && (
-    <GlassButton onClick={() => handleDelete()} variant="destructive">
+    <Button onClick={() => handleDelete()} variant="destructive">
       <Trash2 className="h-4 w-4 mr-2" /> Xóa
-    </GlassButton>
+    </Button>
   )}
   <Badge>{statusLabels[submission.TrangThaiDuyet]}</Badge>
 </div>

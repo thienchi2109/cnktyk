@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { z } from 'zod';
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/glass-select';
 import { Label } from '@/components/ui/label';
@@ -232,24 +232,25 @@ export function UserForm({
           <Label htmlFor="status">Tài khoản hoạt động</Label>
         </div>
 
-        <div className="flex gap-3 pt-4">
-          <GlassButton
-            type="submit"
-            disabled={isLoading}
-            className="flex items-center gap-2"
-          >
-            <Save className="h-4 w-4" />
-            {isLoading ? 'Đang xử lý...' : mode === 'create' ? 'Tạo Tài Khoản' : 'Cập Nhật'}
-          </GlassButton>
-          
-          <GlassButton
+        <div className="flex w-full flex-col items-end gap-3 pt-4 sm:flex-row sm:items-center sm:justify-end">
+          <Button
             type="button"
-            variant="secondary"
+            variant="outline-accent"
             onClick={onCancel}
             disabled={isLoading}
           >
             Hủy
-          </GlassButton>
+          </Button>
+          
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="flex items-center gap-2"
+            variant="medical"
+          >
+            <Save className="h-4 w-4" />
+            {isLoading ? 'Đang xử lý...' : mode === 'create' ? 'Tạo Tài Khoản' : 'Cập Nhật'}
+          </Button>
         </div>
       </form>
     </>

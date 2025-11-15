@@ -163,7 +163,7 @@ Align practitioners datatable with users datatable for UI consistency.
 
 #### Component Replacements
 - ❌ Removed: shadcn `Card`, `CardContent`, `CardHeader`, `Button`, `Select`, `Table`
-- ✅ Added: `GlassCard`, `GlassButton`, glass `Select`, native HTML `<table>`
+- ✅ Added: `GlassCard`, `Button`, glass `Select`, native HTML `<table>`
 
 #### Layout Improvements
 **File:** `src/components/practitioners/practitioners-list.tsx`

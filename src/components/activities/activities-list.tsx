@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   useActivitiesCatalog,
@@ -10,18 +9,20 @@ import {
   ActivitiesCatalogStatusFilter,
   ActivitiesCatalogTypeFilter,
   getActivityLifecycleStatus,
+  DEFAULT_ACTIVITIES_PAGE_SIZE,
 } from '@/hooks/use-activities';
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
 import { LoadingNotice } from '@/components/ui/loading-notice';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ActivityDetailSheet } from './activity-detail-sheet';
+import { cn } from '@/lib/utils';
 import {
   Search,
   Plus,
@@ -39,7 +40,9 @@ import {
   Building2,
   ArchiveRestore,
   Upload,
-  UserPlus
+  UserPlus,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 interface ActivitiesListProps {
@@ -81,6 +84,8 @@ const unitLabels = {
   tiet: 'Tiết',
   tin_chi: 'Tín chỉ',
 };
+
+const PAGE_SIZE_OPTIONS = [25, 50, 100, 200];
 
 // Get scope badge for activity
 const getScopeBadge = (activity: ActivityCatalogItem, userRole: string) => {
@@ -143,15 +148,22 @@ export function ActivitiesList({
   const rawType = (searchParams.get('type') as ActivitiesCatalogTypeFilter | null) ?? 'all';
   const rawStatus = (searchParams.get('status') as ActivitiesCatalogStatusFilter | null) ?? 'all';
   const searchParam = searchParams.get('search') ?? '';
-  const limitParam = parseInt(searchParams.get('limit') ?? '50', 10);
-  const pageParam = parseInt(searchParams.get('page') ?? '1', 10);
+  const limitParam = Number.parseInt(searchParams.get('limit') ?? DEFAULT_ACTIVITIES_PAGE_SIZE.toString(), 10);
+  const pageParam = Number.parseInt(searchParams.get('page') ?? '1', 10);
+  const normalizedLimitParam = Number.isFinite(limitParam) && limitParam > 0 ? limitParam : DEFAULT_ACTIVITIES_PAGE_SIZE;
+  const normalizedPageParam = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1;
 
   const [searchTerm, setSearchTerm] = useState(searchParam);
+  const [pageInput, setPageInput] = useState(normalizedPageParam.toString());
   const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setSearchTerm(searchParam);
   }, [searchParam]);
+
+  useEffect(() => {
+    setPageInput(normalizedPageParam.toString());
+  }, [normalizedPageParam]);
 
   const updateQueryParams = useCallback(
     (
@@ -238,14 +250,21 @@ export function ActivitiesList({
     search: searchParam,
     type: typeFilter,
     status: statusFilter,
-    page: Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1,
-    limit: Number.isFinite(limitParam) && limitParam > 0 ? limitParam : 50,
+    page: normalizedPageParam,
+    limit: normalizedLimitParam,
   });
   const { data, isLoading, isError, error, isFetching } = activitiesQuery;
   const [selectedActivity, setSelectedActivity] = useState<ActivityCatalogItem | null>(null);
   const [showActivityDetail, setShowActivityDetail] = useState(false);
 
   const permissions = data?.permissions ?? defaultPermissions;
+  const canBulkRecord = ['DonVi', 'SoYTe'].includes(userRole);
+  const showActionsColumn =
+    permissions.canEditGlobal ||
+    permissions.canEditUnit ||
+    permissions.canAdoptToGlobal ||
+    permissions.canRestoreSoftDeleted ||
+    canBulkRecord;
   const globalActivities = data?.global ?? [];
   const unitActivities = data?.unit ?? [];
 
@@ -260,11 +279,49 @@ export function ActivitiesList({
   }, [activeScope, globalActivities, unitActivities]);
 
   const pagination = data?.pagination;
+  const currentPage = pagination?.page ?? normalizedPageParam;
+  const currentLimit = pagination?.limit ?? normalizedLimitParam;
   const totalGlobal = pagination?.totalGlobal ?? globalActivities.length;
   const totalUnit = pagination?.totalUnit ?? unitActivities.length;
   const totalAll = totalGlobal + totalUnit;
   const hasFilters =
     (searchParam?.trim().length ?? 0) > 0 || typeFilter !== 'all' || statusFilter !== 'all';
+
+  const totalItemsForScope = useMemo(() => {
+    if (activeScope === 'global') {
+      return totalGlobal;
+    }
+    if (activeScope === 'unit') {
+      return totalUnit;
+    }
+    return totalAll;
+  }, [activeScope, totalAll, totalGlobal, totalUnit]);
+
+  const totalPagesForScope = useMemo(() => {
+    const fallback = totalItemsForScope > 0 ? Math.max(1, Math.ceil(totalItemsForScope / currentLimit)) : 1;
+    if (!pagination) {
+      return fallback;
+    }
+    if (activeScope === 'global') {
+      return pagination.totalPages.global || fallback;
+    }
+    if (activeScope === 'unit') {
+      return pagination.totalPages.unit || fallback;
+    }
+    const combined = Math.max(
+      pagination.totalPages.global ?? 0,
+      pagination.totalPages.unit ?? 0,
+      fallback
+    );
+    return combined === 0 ? 1 : combined;
+  }, [activeScope, currentLimit, pagination, totalItemsForScope]);
+
+  const lastAvailablePage = Math.max(totalPagesForScope, 1);
+  const isOutOfRangePage = totalItemsForScope > 0 && currentPage > lastAvailablePage;
+  const firstRowIndex = totalItemsForScope === 0 ? 0 : (currentPage - 1) * currentLimit + 1;
+  const lastRowIndex = totalItemsForScope === 0
+    ? 0
+    : Math.min(firstRowIndex + displayedActivities.length - 1, totalItemsForScope);
 
   useEffect(() => {
     if (data?.permissions && onPermissionsLoaded) {
@@ -282,6 +339,26 @@ export function ActivitiesList({
 
   const handleStatusFilter = (value: string) => {
     updateQueryParams({ status: value }, { resetPage: true });
+  };
+
+  const handlePageChange = (nextPage: number) => {
+    const safeTarget = Math.max(1, Math.min(nextPage, lastAvailablePage));
+    updateQueryParams({ page: safeTarget.toString() }, { resetPage: false });
+  };
+
+  const handlePageSizeChange = (value: string) => {
+    const numeric = Number.parseInt(value, 10);
+    const safeLimit = PAGE_SIZE_OPTIONS.includes(numeric) ? numeric : normalizedLimitParam;
+    updateQueryParams({ limit: safeLimit.toString(), page: '1' }, { resetPage: false });
+  };
+
+  const commitPageInput = () => {
+    const parsed = Number.parseInt(pageInput, 10);
+    if (!Number.isFinite(parsed)) {
+      setPageInput(currentPage.toString());
+      return;
+    }
+    handlePageChange(parsed);
   };
 
   // Check if user can edit this specific activity
@@ -320,14 +397,15 @@ export function ActivitiesList({
         </div>
         
         {(permissions.canCreateGlobal || permissions.canCreateUnit) && onCreateActivity && (
-          <GlassButton
+          <Button
             onClick={onCreateActivity}
-            className="flex items-center gap-2 rounded-full shadow-lg hover:shadow-xl transition-shadow px-6"
+            className="gap-2"
             size="lg"
+            variant="medical"
           >
             <Plus className="h-5 w-5" />
             Thêm hoạt động
-          </GlassButton>
+          </Button>
         )}
       </div>
 
@@ -401,174 +479,321 @@ export function ActivitiesList({
 
         {/* Activities Table */}
         <TabsContent value={activeScope} className="mt-0">
-        <GlassCard className="!bg-white !backdrop-blur-none !border-slate-200 shadow-lg">
-        {isLoading || isFetching ? (
-          <div className="p-12">
-            <LoadingNotice message="Đang tải danh mục hoạt động..." />
-          </div>
-        ) : displayedActivities.length === 0 ? (
-          <div className="p-8 text-center">
-            <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Không có hoạt động nào</h3>
-            <p className="text-gray-500">
-              {hasFilters
-                ? 'Không tìm thấy hoạt động phù hợp với bộ lọc'
-                : 'Chưa có hoạt động nào được tạo'}
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Hoạt động</TableHead>
-                  <TableHead>Phạm vi</TableHead>
-                  <TableHead>Loại</TableHead>
-                  <TableHead>Đơn vị tính</TableHead>
-                  <TableHead>Tỷ lệ quy đổi</TableHead>
-                  <TableHead>Giới hạn giờ</TableHead>
-                  <TableHead>Trạng thái</TableHead>
-                  {(permissions.canEditGlobal || permissions.canEditUnit) && <TableHead>Thao tác</TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {displayedActivities.map((activity) => {
-                  const TypeIcon = activityTypeIcons[activity.LoaiHoatDong];
-                  
-                  return (
-                    <TableRow
-                      key={activity.MaDanhMuc}
-                      className="cursor-pointer hover:bg-gray-50/30"
-                      tabIndex={0}
-                      role="button"
-                      aria-label={`Xem chi tiết ${activity.TenDanhMuc}`}
-                      onClick={() => {
-                        setSelectedActivity(activity);
-                        setShowActivityDetail(true);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          setSelectedActivity(activity);
-                          setShowActivityDetail(true);
-                        }
-                      }}
-                    >
-                      <TableCell>
-                        <div className="flex items-center space-x-3">
-                          <div className="flex-shrink-0">
-                            <div className="h-10 w-10 rounded-full bg-medical-blue/10 flex items-center justify-center">
-                              <TypeIcon className="h-5 w-5 text-medical-blue" />
-                            </div>
-                          </div>
-                          <div>
-                            <div className="font-medium text-gray-900">{activity.TenDanhMuc}</div>
-                            {activity.YeuCauMinhChung && (
-                              <div className="text-sm text-gray-500">Yêu cầu minh chứng</div>
+          <TooltipProvider delayDuration={150}>
+            <div className="overflow-hidden rounded-2xl border border-white/15 bg-white/90 shadow-xl">
+              {isLoading || isFetching ? (
+                <div className="p-12">
+                  <LoadingNotice message="Đang tải danh mục hoạt động..." />
+                </div>
+              ) : displayedActivities.length === 0 ? (
+                isOutOfRangePage ? (
+                  <div className="p-8 text-center space-y-3">
+                    <BookOpen className="h-12 w-12 text-gray-400 mx-auto" />
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Trang {currentPage} vượt quá tổng {lastAvailablePage} trang hiện có
+                    </h3>
+                    <p className="text-gray-500">
+                      Bộ lọc hiện tại chỉ có {lastAvailablePage} trang dữ liệu. Hãy quay lại trang hợp lệ để xem các hoạt động.
+                    </p>
+                    <div className="flex flex-wrap items-center justify-center gap-3">
+                      <Button
+                        onClick={() => handlePageChange(lastAvailablePage)}
+                        disabled={lastAvailablePage === 0}
+                        className="px-6"
+                      >
+                        Về trang {lastAvailablePage}
+                      </Button>
+                      <Button variant="secondary" onClick={() => handlePageChange(1)} className="px-6">
+                        Về trang đầu
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-10 text-center space-y-3">
+                    <BookOpen className="h-12 w-12 text-gray-400 mx-auto" />
+                    <h3 className="text-lg font-semibold text-gray-900">Không có hoạt động nào</h3>
+                    <p className="text-gray-500">
+                      {hasFilters ? 'Không tìm thấy hoạt động phù hợp với bộ lọc' : 'Chưa có hoạt động nào được tạo'}
+                    </p>
+                  </div>
+                )
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table role="grid" className="min-w-full text-sm text-gray-700">
+                    <TableHeader className="bg-slate-50/90 backdrop-blur-sm text-[11px] font-semibold uppercase tracking-wide text-slate-600 [&_tr]:sticky [&_tr]:top-0 [&_tr]:z-10">
+                      <TableRow className="border-b border-slate-200/70">
+                        <TableHead className="text-left">Hoạt động</TableHead>
+                        <TableHead className="text-left">Phạm vi</TableHead>
+                        <TableHead className="text-left">Loại</TableHead>
+                        <TableHead className="text-left">Đơn vị tính</TableHead>
+                        <TableHead className="text-left">Tỷ lệ quy đổi</TableHead>
+                        <TableHead className="text-left">Trạng thái</TableHead>
+                        {showActionsColumn && (
+                          <TableHead className="text-right w-[160px]">Thao tác</TableHead>
+                        )}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {displayedActivities.map((activity, index) => {
+                        const TypeIcon = activityTypeIcons[activity.LoaiHoatDong];
+                        const isSoftDeleted = Boolean(activity.DaXoaMem);
+
+                        return (
+                          <TableRow
+                            key={activity.MaDanhMuc}
+                            className={cn(
+                              'cursor-pointer border-b border-slate-100/70 bg-white/40 transition-colors hover:bg-medical-blue/5 focus-within:bg-medical-blue/10',
+                              index % 2 === 1 && 'bg-white/20',
+                              isSoftDeleted && 'opacity-70'
                             )}
-                          </div>
-                        </div>
-                      </TableCell>
-                      
-                      <TableCell>
-                        {getScopeBadge(activity, userRole)}
-                      </TableCell>
-                      
-                      <TableCell>
-                        <Badge variant="outline">
-                          {activityTypeLabels[activity.LoaiHoatDong]}
-                        </Badge>
-                      </TableCell>
-                      
-                      <TableCell>
-                        {unitLabels[activity.DonViTinh]}
-                      </TableCell>
-                      
-                      <TableCell>
-                        <span className="font-medium">{activity.TyLeQuyDoi}x</span>
-                      </TableCell>
-                      
-                      <TableCell>
-                        <div className="text-sm">
-                          {activity.GioToiThieu !== null || activity.GioToiDa !== null ? (
-                            <>
-                              {activity.GioToiThieu !== null && `Tối thiểu: ${activity.GioToiThieu}h`}
-                              {activity.GioToiThieu !== null && activity.GioToiDa !== null && <br />}
-                              {activity.GioToiDa !== null && `Tối đa: ${activity.GioToiDa}h`}
-                            </>
-                          ) : (
-                            <span className="text-gray-500">Không giới hạn</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      
-                      <TableCell>
-                        {getStatusBadge(activity)}
-                      </TableCell>
-                      
-                      {(permissions.canEditGlobal || permissions.canEditUnit) && (
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            {['DonVi', 'SoYTe'].includes(userRole) && (
-                              <Link
-                                href={`/submissions/bulk?activityId=${activity.MaDanhMuc}`}
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <GlassButton
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-gray-600 hover:text-blue-600"
-                                  title="Ghi nhận hàng loạt"
-                                >
-                                  <UserPlus className="h-4 w-4" />
-                                </GlassButton>
-                              </Link>
+                            tabIndex={0}
+                            role="button"
+                            aria-label={`Xem chi tiết ${activity.TenDanhMuc}`}
+                            onClick={() => {
+                              setSelectedActivity(activity);
+                              setShowActivityDetail(true);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                setSelectedActivity(activity);
+                                setShowActivityDetail(true);
+                              }
+                            }}
+                          >
+                            <TableCell className="align-middle">
+                              <div className="flex items-center gap-4">
+                                <div className="flex-shrink-0">
+                                  <div className="h-11 w-11 rounded-full bg-medical-blue/10 flex items-center justify-center">
+                                    <TypeIcon className="h-5 w-5 text-medical-blue" />
+                                  </div>
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <p className="font-semibold text-gray-900 truncate max-w-[320px]" title={activity.TenDanhMuc}>
+                                      {activity.TenDanhMuc}
+                                    </p>
+                                    {activity.YeuCauMinhChung && (
+                                      <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
+                                        Minh chứng
+                                      </Badge>
+                                    )}
+                                    {isSoftDeleted && (
+                                      <Badge variant="outline" className="border-slate-300 bg-slate-50 text-slate-600">
+                                        Đã xóa mềm
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    {activity.MaDonVi === null ? 'Hoạt động hệ thống' : 'Hoạt động của đơn vị'}
+                                  </p>
+                                </div>
+                              </div>
+                            </TableCell>
+
+                            <TableCell className="align-middle">
+                              {getScopeBadge(activity, userRole)}
+                            </TableCell>
+
+                            <TableCell className="align-middle">
+                              <Badge variant="outline">{activityTypeLabels[activity.LoaiHoatDong]}</Badge>
+                            </TableCell>
+
+                            <TableCell className="align-middle text-gray-700">
+                              {unitLabels[activity.DonViTinh]}
+                            </TableCell>
+
+                            <TableCell className="align-middle font-semibold text-gray-900">
+                              {activity.TyLeQuyDoi}x
+                            </TableCell>
+
+                            <TableCell className="align-middle">{getStatusBadge(activity)}</TableCell>
+
+                            {showActionsColumn && (
+                              <TableCell className="align-middle text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {canBulkRecord && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          aria-label="Ghi nhận hàng loạt"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            router.push(`/submissions/bulk?activityId=${activity.MaDanhMuc}`);
+                                          }}
+                                        >
+                                          <UserPlus className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Ghi nhận hàng loạt</TooltipContent>
+                                    </Tooltip>
+                                  )}
+
+                                  {permissions.canAdoptToGlobal && activity.MaDonVi !== null && onAdoptToGlobal && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          aria-label="Chuyển lên hệ thống"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onAdoptToGlobal(activity.MaDanhMuc);
+                                          }}
+                                        >
+                                          <Upload className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Chuyển thành hoạt động hệ thống</TooltipContent>
+                                    </Tooltip>
+                                  )}
+
+                                  {permissions.canRestoreSoftDeleted && isSoftDeleted && onRestoreActivity && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          aria-label="Khôi phục hoạt động"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onRestoreActivity(activity.MaDanhMuc);
+                                          }}
+                                        >
+                                          <ArchiveRestore className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Khôi phục hoạt động</TooltipContent>
+                                    </Tooltip>
+                                  )}
+
+                                  {canEditActivity(activity) && onEditActivity && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          aria-label="Chỉnh sửa hoạt động"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onEditActivity(activity);
+                                          }}
+                                        >
+                                          <Edit className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Chỉnh sửa</TooltipContent>
+                                    </Tooltip>
+                                  )}
+
+                                  {canDeleteActivity(activity) && onDeleteActivity && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          aria-label="Xóa hoạt động"
+                                          className="text-red-600 hover:text-red-700"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onDeleteActivity(activity.MaDanhMuc);
+                                          }}
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Xóa</TooltipContent>
+                                    </Tooltip>
+                                  )}
+                                </div>
+                              </TableCell>
                             )}
-                            {canEditActivity(activity) && onEditActivity && (
-                              <GlassButton
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => { e.stopPropagation(); onEditActivity(activity); }}
-                                className="text-gray-600 hover:text-medical-blue"
-                                title="Chỉnh sửa"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </GlassButton>
-                            )}
-                            {permissions.canAdoptToGlobal && activity.MaDonVi !== null && onAdoptToGlobal && (
-                              <GlassButton
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => { e.stopPropagation(); onAdoptToGlobal(activity.MaDanhMuc); }}
-                                className="text-gray-600 hover:text-green-600"
-                                title="Chuyển thành hoạt động hệ thống"
-                              >
-                                <Upload className="h-4 w-4" />
-                              </GlassButton>
-                            )}
-                            {canDeleteActivity(activity) && onDeleteActivity && (
-                              <GlassButton
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => { e.stopPropagation(); onDeleteActivity(activity.MaDanhMuc); }}
-                                className="text-gray-600 hover:text-red-600"
-                                title="Xóa"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </GlassButton>
-                            )}
-                          </div>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </GlassCard>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
+          </TooltipProvider>
         </TabsContent>
       </Tabs>
+
+      {!isLoading && (
+        <GlassCard className="p-0 border border-slate-200 shadow-sm">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between px-4 py-3">
+            <div className="text-sm text-gray-600">
+              {totalItemsForScope === 0 ? (
+                'Không có hoạt động để hiển thị'
+              ) : (
+                <span>
+                  Hiển thị {firstRowIndex.toLocaleString('vi-VN')} - {lastRowIndex.toLocaleString('vi-VN')} trên tổng{' '}
+                  {totalItemsForScope.toLocaleString('vi-VN')} hoạt động
+                </span>
+              )}
+              {isFetching && (
+                <span className="ml-2 text-xs text-blue-600 animate-pulse">Đang tải trang...</span>
+              )}
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <span>Hiển thị</span>
+                <Select value={currentLimit.toString()} onValueChange={handlePageSizeChange}>
+                  <SelectTrigger className="w-28">
+                    <SelectValue placeholder="Kích thước" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAGE_SIZE_OPTIONS.map((size) => (
+                      <SelectItem key={size} value={size.toString()}>
+                        {size} / trang
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage <= 1}
+                  aria-label="Trang trước"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Input
+                    value={pageInput}
+                    onChange={(e) => setPageInput(e.target.value)}
+                    onBlur={commitPageInput}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        commitPageInput();
+                      }
+                    }}
+                    className="w-16 text-center"
+                    inputMode="numeric"
+                    aria-label="Trang hiện tại"
+                  />
+                  <span className="text-sm text-gray-500">/ {lastAvailablePage}</span>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage >= lastAvailablePage}
+                  aria-label="Trang sau"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </GlassCard>
+      )}
 
       {/* Activity Detail Sheet */}
       <ActivityDetailSheet

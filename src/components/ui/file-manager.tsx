@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Download, Eye, Trash2, FileText, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import { GlassCard } from './glass-card';
-import { GlassButton } from './glass-button';
+import { Button } from './button';
 import { formatFileSize } from '@/lib/utils';
 import { UploadedFile } from './file-upload';
 
@@ -129,7 +129,7 @@ if (mimeType.startsWith('image/')) {
 
             <div className="flex items-center space-x-1">
               {/* View Button */}
-              <GlassButton
+              <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => handleView(file)}
@@ -137,10 +137,10 @@ if (mimeType.startsWith('image/')) {
                 title="Xem tệp"
               >
                 <Eye className="h-4 w-4" />
-              </GlassButton>
+              </Button>
 
               {/* Download Button */}
-              <GlassButton
+              <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => handleDownload(file)}
@@ -148,11 +148,11 @@ if (mimeType.startsWith('image/')) {
                 title="Tải xuống"
               >
                 <Download className="h-4 w-4" />
-              </GlassButton>
+              </Button>
 
               {/* Delete Button */}
               {canDelete && (
-                <GlassButton
+                <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => handleDelete(file.filename)}
@@ -161,7 +161,7 @@ if (mimeType.startsWith('image/')) {
                   title="Xóa tệp"
                 >
                   <Trash2 className="h-4 w-4" />
-                </GlassButton>
+                </Button>
               )}
             </div>
           </div>

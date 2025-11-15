@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { Database, HardDrive, FileText, RefreshCw, TrendingUp, PieChart } from 'lucide-react';
 
 interface FileTypeData {
@@ -97,14 +97,14 @@ export function StorageMetrics({ autoLoad = false }: StorageMetricsProps) {
             </div>
           </div>
 
-          <GlassButton
+          <Button
             onClick={fetchMetrics}
             disabled={loading}
-            variant="default"
+            variant="medical"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             {loading ? 'Đang tải...' : 'Làm mới'}
-          </GlassButton>
+          </Button>
         </div>
       </GlassCard>
 
@@ -228,10 +228,10 @@ export function StorageMetrics({ autoLoad = false }: StorageMetricsProps) {
           <p className="text-gray-600 mb-6">
             Nhấn nút "Làm mới" để xem thống kê chi tiết về dung lượng R2
           </p>
-          <GlassButton onClick={fetchMetrics} variant="default">
+          <Button onClick={fetchMetrics} variant="medical">
             <RefreshCw className="h-4 w-4 mr-2" />
             Tải thông tin
-          </GlassButton>
+          </Button>
         </GlassCard>
       )}
     </div>

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Check, AlertCircle } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { GlassProgress } from '@/components/ui/glass-progress';
@@ -235,7 +235,7 @@ export function BulkSubmissionWizard() {
     <div className="space-y-4 sm:space-y-6" role="main" aria-labelledby="wizard-title">
       <div className="flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
-          <GlassButton
+          <Button
             variant="outline"
             size="sm"
             onClick={() => router.push('/submissions')}
@@ -244,7 +244,7 @@ export function BulkSubmissionWizard() {
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             <span className="sr-only">Quay lại danh sách</span>
-          </GlassButton>
+          </Button>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 page-title" id="wizard-title">
               Ghi nhận hoạt động cho nhóm
@@ -353,13 +353,14 @@ export function BulkSubmissionWizard() {
           )}
 
           <div className="flex justify-end gap-3">
-            <GlassButton
+            <Button
               onClick={handleContinueFromActivity}
               disabled={!selectedActivity}
               aria-label="Tiếp tục đến bước chọn nhóm đối tượng"
+              variant="medical"
             >
               Tiếp tục · Chọn nhóm đối tượng
-            </GlassButton>
+            </Button>
           </div>
         </GlassCard>
       )}
@@ -390,14 +391,14 @@ export function BulkSubmissionWizard() {
                 <Badge variant={selectedActivity.YeuCauMinhChung ? 'default' : 'outline'}>
                   {selectedActivity.YeuCauMinhChung ? 'Cần minh chứng' : 'Không cần minh chứng'}
                 </Badge>
-                <GlassButton
+                <Button
                   size="sm"
                   variant="outline"
                   onClick={() => setStep(1)}
                   aria-label="Quay lại thay đổi hoạt động"
                 >
                   Thay đổi hoạt động
-                </GlassButton>
+                </Button>
               </div>
             </GlassCard>
           )}
@@ -426,20 +427,21 @@ export function BulkSubmissionWizard() {
               )}
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3" role="group" aria-label="Điều hướng">
-              <GlassButton
-                variant="secondary"
+              <Button
+                variant="outline"
                 onClick={() => setStep(1)}
                 aria-label="Quay lại bước chọn hoạt động"
               >
                 ← Quay lại
-              </GlassButton>
-              <GlassButton
+              </Button>
+              <Button
                 disabled={!hasCohortSelection}
                 onClick={handleContinueFromCohort}
                 aria-label={hasCohortSelection ? 'Tiếp tục đến xem trước' : 'Vui lòng chọn ít nhất một nhân sự'}
+                variant="medical"
               >
                 Tiếp tục · Xem trước
-              </GlassButton>
+              </Button>
             </div>
           </div>
 

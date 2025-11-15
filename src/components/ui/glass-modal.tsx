@@ -4,7 +4,7 @@ import * as React from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { GlassCard } from "./glass-card";
-import { GlassButton } from "./glass-button";
+import { Button } from "./button";
 
 interface GlassModalProps {
   isOpen: boolean;
@@ -79,14 +79,14 @@ export const GlassModal = React.forwardRef<HTMLDivElement, GlassModalProps>(
                   </p>
                 )}
               </div>
-              <GlassButton
+              <Button
                 variant="ghost"
                 size="icon"
                 onClick={onClose}
                 className="ml-4 flex-shrink-0"
               >
                 <X className="h-4 w-4" />
-              </GlassButton>
+              </Button>
             </div>
           )}
 

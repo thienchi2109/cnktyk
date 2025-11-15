@@ -266,14 +266,14 @@ export function useEvidenceFile() {
 ```tsx
 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
   <div className="flex items-center justify-end gap-2">
-    <GlassButton size="sm" variant="secondary" onClick={...}>
+    <Button size="sm" variant="secondary" onClick={...}>
       <Eye className="h-4 w-4" />
-    </GlassButton>
+    </Button>
 
     {submission.FileMinhChungUrl && (
-      <GlassButton size="sm" variant="secondary" onClick={handleDownloadEvidence}>
+      <Button size="sm" variant="secondary" onClick={handleDownloadEvidence}>
         <Download className="h-4 w-4" />
-      </GlassButton>
+      </Button>
     )}
   </div>
 </td>
@@ -284,20 +284,20 @@ export function useEvidenceFile() {
 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
   <div className="flex items-center justify-end gap-2">
     {/* View submission details */}
-    <GlassButton
+    <Button
       size="sm"
       variant="secondary"
       onClick={(e) => { e.stopPropagation(); handleViewSubmission(submission.MaGhiNhan); }}
       title="Xem chi tiết"
     >
       <Eye className="h-4 w-4" />
-    </GlassButton>
+    </Button>
 
     {/* Evidence file actions */}
     {submission.FileMinhChungUrl && (
       <>
         {/* View file inline */}
-        <GlassButton
+        <Button
           size="sm"
           variant="secondary"
           onClick={(e) => {
@@ -308,10 +308,10 @@ export function useEvidenceFile() {
           title="Xem minh chứng"
         >
           <FileText className="h-4 w-4" />
-        </GlassButton>
+        </Button>
 
         {/* Download file */}
-        <GlassButton
+        <Button
           size="sm"
           variant="secondary"
           onClick={(e) => {
@@ -325,7 +325,7 @@ export function useEvidenceFile() {
           title="Tải xuống minh chứng"
         >
           <Download className="h-4 w-4" />
-        </GlassButton>
+        </Button>
       </>
     )}
   </div>
@@ -372,10 +372,10 @@ export function SubmissionsList({ ... }: SubmissionsListProps) {
         </div>
       </div>
 
-      <GlassButton onClick={handleDownloadEvidence}>
+      <Button onClick={handleDownloadEvidence}>
         <Download className="h-4 w-4 mr-2" />
         Tải xuống
-      </GlassButton>
+      </Button>
     </div>
   </GlassCard>
 )}
@@ -403,17 +403,17 @@ export function SubmissionsList({ ... }: SubmissionsListProps) {
 
       <div className="flex items-center gap-2">
         {/* View file inline */}
-        <GlassButton
+        <Button
           onClick={() => evidenceFile.viewFile(submission.FileMinhChungUrl!)}
           disabled={evidenceFile.isLoading}
           variant="outline"
         >
           <Eye className="h-4 w-4 mr-2" />
           Xem
-        </GlassButton>
+        </Button>
 
         {/* Download file */}
-        <GlassButton
+        <Button
           onClick={() => evidenceFile.downloadFile(
             submission.FileMinhChungUrl!,
             `${submission.TenHoatDong}_${submission.practitioner.HoVaTen}.pdf`
@@ -423,7 +423,7 @@ export function SubmissionsList({ ... }: SubmissionsListProps) {
         >
           <Download className="h-4 w-4 mr-2" />
           Tải xuống
-        </GlassButton>
+        </Button>
       </div>
     </div>
   </GlassCard>
@@ -630,7 +630,7 @@ Content-Disposition: attachment; filename="report.pdf"; filename*=UTF-8''report.
 **Idea:**
 ```tsx
 <a href={signedUrl} download="filename.pdf">
-  <GlassButton>Tải xuống</GlassButton>
+  <Button>Tải xuống</Button>
 </a>
 ```
 

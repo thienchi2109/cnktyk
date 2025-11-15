@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from "react";
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Home,
   Users,
@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { GlassHeader } from "./glass-header";
 import { GlassFooter } from "./glass-footer";
-import { GlassButton } from "@/components/ui/glass-button";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 
 interface NavigationItem {
@@ -57,6 +57,56 @@ type NavCounts = { submissionsPending?: number };
 
 type FeatureFlags = {
   donViAccountManagementEnabled?: boolean;
+};
+
+const getMatchScore = (href: string | undefined, pathname: string | null) => {
+  if (!href || !pathname) return -1;
+  if (href === "/") {
+    return pathname === "/" ? Infinity : -1;
+  }
+
+  if (pathname === href) {
+    return href.length + 100; // prefer exact matches
+  }
+
+  if (pathname.startsWith(`${href}/`)) {
+    return href.length;
+  }
+
+  return -1;
+};
+
+const findActiveItemId = (
+  items: NavigationItem[],
+  pathname: string | null
+): string | undefined => {
+  let bestMatch: { id: string; score: number } | undefined;
+
+  const evaluateItems = (navItems: NavigationItem[]) => {
+    for (const item of navItems) {
+      const score = getMatchScore(item.href, pathname);
+      if (score > (bestMatch?.score ?? -1)) {
+        bestMatch = { id: item.id, score };
+      }
+      if (item.children) {
+        evaluateItems(item.children);
+      }
+    }
+  };
+
+  evaluateItems(items);
+  return bestMatch?.id;
+};
+
+const itemIncludesActive = (
+  item: NavigationItem,
+  activeId?: string
+): boolean => {
+  if (!activeId) return false;
+  if (item.id === activeId) return true;
+  return item.children
+    ? item.children.some((child) => itemIncludesActive(child, activeId))
+    : false;
 };
 
 // Navigation items based on user roles
@@ -345,6 +395,7 @@ const HeaderNavigation = ({
 }) => {
   const [openDropdown, setOpenDropdown] = React.useState<string | null>(null);
   const [moreMenuOpen, setMoreMenuOpen] = React.useState(false);
+  const navRef = React.useRef<HTMLDivElement>(null);
 
   // Separate high and low priority items
   const highPriorityItems = items.filter(item => item.priority !== 'low');
@@ -367,24 +418,32 @@ const HeaderNavigation = ({
       if (moreMenuOpen && !target.closest('[data-more-menu]')) {
         setMoreMenuOpen(false);
       }
+      if (openDropdown && navRef.current && !navRef.current.contains(target)) {
+        setOpenDropdown(null);
+      }
     };
 
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
-  }, [moreMenuOpen]);
+  }, [moreMenuOpen, openDropdown]);
 
   const renderNavigationItem = (item: NavigationItem) => {
-    const isActive = activeItem === item.id;
+    const isActive = itemIncludesActive(item, activeItem);
     const hasChildren = item.children && item.children.length > 0;
     const isOpen = openDropdown === item.id;
 
     return (
       <div key={item.id} className="relative">
-        <GlassButton
-          variant={isActive ? "default" : "ghost"}
+        <Button
+          type="button"
+          variant={isActive ? "medical" : "ghost"}
           onClick={() => handleItemClick(item)}
+          aria-current={isActive ? "page" : undefined}
           className={cn(
-            "flex items-center gap-2 px-4 lg:px-5 py-2.5 text-sm",
+            "relative flex items-center gap-2 px-4 lg:px-5 py-2.5 text-sm font-medium transition-colors duration-200 backdrop-blur-md",
+            isActive
+              ? "shadow-[0_8px_28px_rgba(46,165,255,0.3)]"
+              : "text-slate-600 hover:bg-white/20 hover:text-slate-900 focus-visible:ring-medical-blue/30",
             hasChildren && "pr-2"
           )}
         >
@@ -401,7 +460,7 @@ const HeaderNavigation = ({
               isOpen && "rotate-180"
             )} />
           )}
-        </GlassButton>
+        </Button>
 
         {/* Dropdown Menu for children */}
         {hasChildren && isOpen && (
@@ -436,14 +495,15 @@ const HeaderNavigation = ({
   };
 
   return (
-    <nav className="hidden xl:flex items-center space-x-2 lg:space-x-3">
+    <nav ref={navRef} className="hidden xl:flex items-center space-x-2 lg:space-x-3">
       {/* High priority items */}
       {highPriorityItems.map(renderNavigationItem)}
 
       {/* More menu for low priority items */}
       {lowPriorityItems.length > 0 && (
-        <div className="relative" data-more-menu>
-          <GlassButton
+        <div className="relative flex-shrink-0" data-more-menu>
+          <Button
+            type="button"
             variant="ghost"
             onClick={() => setMoreMenuOpen(!moreMenuOpen)}
             onKeyDown={(e) => {
@@ -462,18 +522,18 @@ const HeaderNavigation = ({
               "h-3 w-3 transition-transform duration-200",
               moreMenuOpen && "rotate-180"
             )} />
-          </GlassButton>
+          </Button>
 
           {/* More dropdown */}
           {moreMenuOpen && (
             <div
-              className="absolute top-full right-0 mt-1 min-w-56 backdrop-blur-md bg-white/90 border border-white/30 rounded-lg shadow-lg z-[100]"
+              className="absolute top-full right-0 mt-1 min-w-56 origin-top-right backdrop-blur-md bg-white/90 border border-white/30 rounded-lg shadow-lg z-[100]"
               role="menu"
               aria-label="Additional navigation items"
             >
               <div className="py-1">
                 {lowPriorityItems.map((item) => {
-                  const isActive = activeItem === item.id;
+                  const isActive = itemIncludesActive(item, activeItem);
                   const hasChildren = item.children && item.children.length > 0;
 
                   return (
@@ -588,7 +648,7 @@ const FooterNavigation = ({
       <div className="flex items-center justify-around px-2 py-2 pb-safe">
         {/* Visible footer items */}
         {visibleItems.map((item) => {
-          const isActive = activeItem === item.id;
+          const isActive = itemIncludesActive(item, activeItem);
 
           return (
             <button
@@ -647,7 +707,7 @@ const FooterNavigation = ({
               >
                 <div className="py-2">
                   {moreItems.map((item) => {
-                    const isActive = activeItem === item.id;
+                    const isActive = itemIncludesActive(item, activeItem);
 
                     return (
                       <button
@@ -703,6 +763,7 @@ export const ResponsiveNavigation = React.forwardRef<HTMLDivElement, ResponsiveN
     ref,
   ) => {
     const router = useRouter();
+    const pathname = usePathname();
     const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
 
@@ -715,6 +776,12 @@ export const ResponsiveNavigation = React.forwardRef<HTMLDivElement, ResponsiveN
       () => getNavigationItems(user?.role, navCounts, featureFlags || {}),
       [user?.role, navCounts, featureFlags],
     );
+
+    const derivedActiveItem = React.useMemo(
+      () => findActiveItemId(navigationItems, pathname),
+      [navigationItems, pathname]
+    );
+    const currentActiveItem = activeItem ?? derivedActiveItem;
 
 
     const handleItemClick = (item: NavigationItem) => {
@@ -760,7 +827,7 @@ export const ResponsiveNavigation = React.forwardRef<HTMLDivElement, ResponsiveN
             {/* Center - Navigation (Desktop) */}
             <HeaderNavigation 
               items={navigationItems}
-              activeItem={activeItem}
+              activeItem={currentActiveItem}
               onNavigate={handleItemClick}
             />
 
@@ -777,7 +844,7 @@ export const ResponsiveNavigation = React.forwardRef<HTMLDivElement, ResponsiveN
             <div className="xl:hidden border-t border-white/20 bg-white/95 backdrop-blur-lg">
               <nav className="px-4 py-3 space-y-1 max-h-[calc(100vh-4rem)] overflow-y-auto">
                 {navigationItems.map((item) => {
-                  const isActive = activeItem === item.id;
+                    const isActive = itemIncludesActive(item, currentActiveItem);
                   const hasChildren = item.children && item.children.length > 0;
 
                   return (
@@ -809,7 +876,7 @@ export const ResponsiveNavigation = React.forwardRef<HTMLDivElement, ResponsiveN
                               onClick={() => handleItemClick(child)}
                               className={cn(
                                 "w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-colors",
-                                activeItem === child.id
+                                currentActiveItem === child.id
                                   ? "bg-medical-blue/10 text-medical-blue"
                                   : "text-gray-600 hover:bg-white/50"
                               )}
@@ -845,7 +912,7 @@ export const ResponsiveNavigation = React.forwardRef<HTMLDivElement, ResponsiveN
         {/* Footer Navigation (Mobile/Tablet) */}
         <FooterNavigation 
           items={navigationItems}
-          activeItem={activeItem}
+          activeItem={currentActiveItem}
           onNavigate={handleItemClick}
         />
 

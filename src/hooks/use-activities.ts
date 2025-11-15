@@ -1,6 +1,7 @@
 "use client";
-
 import { useQuery } from "@tanstack/react-query";
+
+export const DEFAULT_ACTIVITIES_PAGE_SIZE = 25;
 
 export interface ActivityCatalogItem {
   MaDanhMuc: string;
@@ -77,8 +78,8 @@ function normalizeCatalogFilters(filters: ActivitiesCatalogFilters = {}): Normal
   const scope: ActivitiesCatalogScope = filters.scope ?? "all";
   const rawPage = filters.page ?? 1;
   const page = Number.isFinite(rawPage) && rawPage > 0 ? Math.floor(rawPage) : 1;
-  const rawLimit = filters.limit ?? 50;
-  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.floor(rawLimit) : 50;
+  const rawLimit = filters.limit ?? DEFAULT_ACTIVITIES_PAGE_SIZE;
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.floor(rawLimit) : DEFAULT_ACTIVITIES_PAGE_SIZE;
   const search = filters.search?.trim() ?? "";
   const type: ActivitiesCatalogTypeFilter = filters.type ?? "all";
   const status: ActivitiesCatalogStatusFilter = filters.status ?? "all";

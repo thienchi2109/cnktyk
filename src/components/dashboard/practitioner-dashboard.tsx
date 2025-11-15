@@ -35,7 +35,7 @@ import {
   ChevronUp
 } from 'lucide-react';
 import Link from 'next/link';
-import { GlassButton } from '@/components/ui/glass-button';
+import { Button } from '@/components/ui/button';
 
 interface PractitionerDashboardProps {
   userId: string;
@@ -333,9 +333,9 @@ export function PractitionerDashboard({ userId }: PractitionerDashboardProps) {
                       </span>
                     </div>
                     <Link href="/notifications">
-                      <GlassButton variant="outline" size="sm" className="w-full">
+                      <Button variant="outline" size="sm" className="w-full">
                         Xem tất cả
-                      </GlassButton>
+                      </Button>
                     </Link>
                   </div>
                 </GlassCard>
@@ -355,11 +355,11 @@ export function PractitionerDashboard({ userId }: PractitionerDashboardProps) {
             </div>
             <div className="flex items-center gap-2">
               <Link href="/submissions/new">
-                <GlassButton className="flex items-center gap-2">
+                <Button className="flex items-center gap-2">
                   <Plus className="w-4 h-4" />
                   <span className="hidden sm:inline">Ghi nhận hoạt động mới</span>
                   <span className="sm:hidden">Thêm mới</span>
-                </GlassButton>
+                </Button>
               </Link>
               <button
                 onClick={() => toggleSection('activities')}
@@ -387,9 +387,9 @@ export function PractitionerDashboard({ userId }: PractitionerDashboardProps) {
                 {!loadingActivities && recentActivities.length > 5 && (
                   <div className="text-center pt-4">
                     <Link href="/submissions">
-                      <GlassButton variant="outline">
+                      <Button variant="outline">
                         Xem tất cả hoạt động
-                      </GlassButton>
+                      </Button>
                     </Link>
                   </div>
                 )}
@@ -469,9 +469,9 @@ export function PractitionerDashboard({ userId }: PractitionerDashboardProps) {
                   ))}
                   <div className="text-center pt-2">
                     <Link href="/notifications">
-                      <GlassButton variant="outline" size="sm">
+                      <Button variant="outline" size="sm">
                         Xem tất cả thông báo
-                      </GlassButton>
+                      </Button>
                     </Link>
                   </div>
                 </>

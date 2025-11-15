@@ -189,7 +189,7 @@ Dedicated dashboard page for practitioners (NguoiHanhNghe role).
 - `CreditSummaryChart` - Credit distribution visualization
 - `CreditHistoryTable` - Activity history table
 - `NotificationDropdown` - Header notification bell
-- `GlassCard`, `GlassButton` - Base UI components
+- `GlassCard`, `Button` - Base UI components
 
 ## Testing
 

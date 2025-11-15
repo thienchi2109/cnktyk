@@ -13,10 +13,16 @@ const buttonVariants = cva(
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:
           "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+        "outline-accent":
+          "border border-medical-blue text-medical-blue hover:bg-medical-blue/10 focus-visible:ring-medical-blue/30 font-semibold",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        medical:
+          "bg-medical-blue text-white hover:bg-medical-blue/90 focus-visible:ring-medical-blue/40",
+        "medical-secondary":
+          "bg-medical-green text-white hover:bg-medical-green/90 focus-visible:ring-medical-green/40",
       },
       size: {
         default: "h-10 px-4 py-2",
