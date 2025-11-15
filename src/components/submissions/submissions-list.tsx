@@ -32,14 +32,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
-import { formatDate } from '@/lib/utils';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn, formatDate } from '@/lib/utils';
 import { LoadingNotice } from '@/components/ui/loading-notice';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { useSubmissions, useBulkApproveSubmissions, useBulkDeleteSubmissions } from '@/hooks/use-submissions';
 import { useDeleteSubmissionMutation } from '@/hooks/use-submission';
 import { useEvidenceFile } from '@/hooks/use-evidence-file';
@@ -114,6 +110,8 @@ const activityTypeLabels = {
   BaoCao: 'Báo cáo',
 };
 
+const PAGE_SIZE = 10;
+
 export function SubmissionsList({ 
   userRole, 
   onCreateSubmission, 
@@ -139,14 +137,14 @@ export function SubmissionsList({
 
   const { data, isLoading, error } = useSubmissions({
     page,
-    limit: 10,
+    limit: PAGE_SIZE,
     status: statusFilter,
     search: searchTerm,
     refreshKey,
   });
 
-  const totalPages = (data && data.pagination ? data.pagination.totalPages : 1);
-  const total = (data && data.pagination ? data.pagination.total : 0);
+  const totalPages = data?.pagination?.totalPages ?? 1;
+  const total = data?.pagination?.total ?? 0;
 
   // Reset page when filters change
   useEffect(() => {
@@ -167,6 +165,17 @@ export function SubmissionsList({
   }, [page, statusFilter, searchTerm, data?.data]);
 
   const filteredSubmissions = ((data?.data as Submission[]) ?? []);
+  const safePage = Math.max(1, page);
+  const safeTotal = Math.max(total, 0);
+  const startRow = safeTotal === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+  const endRow = safeTotal === 0 ? 0 : Math.min(startRow + filteredSubmissions.length - 1, safeTotal);
+  const summaryText = safeTotal === 0
+    ? 'Không có hoạt động phù hợp với bộ lọc hiện tại.'
+    : `Hiển thị ${startRow.toLocaleString('vi-VN')} - ${endRow.toLocaleString('vi-VN')} trên tổng ${safeTotal.toLocaleString('vi-VN')} hoạt động.`;
+  const pendingIdsOnPage = reviewerRole
+    ? filteredSubmissions.filter((s) => s.TrangThaiDuyet === 'ChoDuyet').map((s) => s.MaGhiNhan)
+    : [];
+  const allPendingSelected = pendingIdsOnPage.length > 0 && pendingIdsOnPage.every((id) => selectedIds.includes(id));
 
   const handleSearchTermChange = (value: string) => {
     setSearchTerm(value);
@@ -467,278 +476,297 @@ export function SubmissionsList({
       </GlassCard>
 
       {/* Submissions Table */}
-      <GlassCard className="overflow-hidden">
-        {isLoading ? (
-          <div className="p-12">
-            <LoadingNotice message="Đang tải danh sách hoạt động..." />
-          </div>
-        ) : filteredSubmissions.length === 0 ? (
-          <div className="p-12 text-center">
-            <div className="p-4 rounded-full bg-gray-100/50 w-fit mx-auto mb-4">
-              <FileText className="h-12 w-12 text-gray-400" />
+      <TooltipProvider delayDuration={150}>
+        <GlassCard className="p-0 border border-white/25 shadow-lg overflow-hidden">
+          {isLoading ? (
+            <div className="p-12">
+              <LoadingNotice message="Đang tải danh sách hoạt động..." />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Không tìm thấy hoạt động</h3>
-            <p className="text-gray-500">
-              {searchTerm || statusFilter !== 'all'
-                ? 'Thử điều chỉnh bộ lọc hoặc thêm hoạt động mới'
-                : 'Chưa có hoạt động nào được ghi nhận'}
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50/50 border-b border-gray-200/50">
-                  <tr>
-                    {reviewerRole && (
-                      <th className="px-3 py-3">
-                        <input
-                          type="checkbox"
-                          aria-label="Chọn tất cả"
-                          checked={filteredSubmissions.filter(s=>s.TrangThaiDuyet==='ChoDuyet').every(s=>selectedIds.includes(s.MaGhiNhan)) && filteredSubmissions.some(s=>s.TrangThaiDuyet==='ChoDuyet')}
-                          onChange={toggleSelectAll}
-                        />
-                      </th>
-                    )}
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[250px]">Hoạt động</th>
-                    {userRole !== 'NguoiHanhNghe' && (
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[220px] max-w-[220px]">Người hành nghề</th>
-                    )}
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thời gian</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tín chỉ</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày gửi</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-[80px]">Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200/50">
-{filteredSubmissions.map((submission) => {
-                    const isActiveEvidenceRow = activeEvidenceSubmissionId === submission.MaGhiNhan;
-                    const isViewingEvidence = isActiveEvidenceRow && evidenceFile.activeAction === 'view';
-                    const isDownloadingEvidence = isActiveEvidenceRow && evidenceFile.activeAction === 'download';
-
-                    return (
-                    <tr
-                      key={submission.MaGhiNhan}
-                      className="hover:bg-gray-50/30 transition-colors cursor-pointer"
-                      tabIndex={0}
-                      role="button"
-                      aria-label={`Xem chi tiết hoạt động ${submission.TenHoatDong}`}
-                      onClick={() => handleViewSubmission(submission.MaGhiNhan)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleViewSubmission(submission.MaGhiNhan); }}
-                    >
+          ) : filteredSubmissions.length === 0 ? (
+            <div className="p-12 text-center space-y-4">
+              <div className="p-4 rounded-full bg-gray-100/60 w-fit mx-auto">
+                <FileText className="h-12 w-12 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Không tìm thấy hoạt động</h3>
+              <p className="text-gray-500">
+                {searchTerm || statusFilter !== 'all'
+                  ? 'Thử điều chỉnh bộ lọc hoặc thêm hoạt động mới'
+                  : 'Chưa có hoạt động nào được ghi nhận'}
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <Table role="grid" className="min-w-full text-sm text-gray-700">
+                  <TableHeader className="bg-slate-50/95 backdrop-blur-sm text-[11px] font-semibold uppercase tracking-wide text-slate-600 [&_tr]:sticky [&_tr]:top-0 [&_tr]:z-10">
+                    <TableRow className="border-b border-slate-200/70">
                       {reviewerRole && (
-                        <td className="px-3 py-4">
-                          {submission.TrangThaiDuyet === 'ChoDuyet' ? (
-                            <input
-                              type="checkbox"
-                              checked={selectedIds.includes(submission.MaGhiNhan)}
-                              onChange={() => toggleSelect(submission.MaGhiNhan)}
-                              onClick={(e) => e.stopPropagation()}
-                              aria-label="Chọn hoạt động"
-                            />
-                          ) : null}
-                        </td>
+                        <TableHead className="w-12 text-center">
+                          <input
+                            type="checkbox"
+                            aria-label="Chọn tất cả hoạt động chờ duyệt"
+                            checked={allPendingSelected}
+                            onChange={toggleSelectAll}
+                          />
+                        </TableHead>
                       )}
-                      <td className="px-6 py-4 min-w-[250px]">
-                        <div className="space-y-1">
-                          <div className="font-medium text-gray-900">
-                            {submission.TenHoatDong}
-                          </div>
-                          <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500">
-                            {submission.HinhThucCapNhatKienThucYKhoa && (
-                              <span>Hình thức: {submission.HinhThucCapNhatKienThucYKhoa}</span>
-                            )}
-                            {submission.ChiTietVaiTro && (
-                              <span>• Vai trò: {submission.ChiTietVaiTro}</span>
-                            )}
-                            {submission.activityCatalog && (
-                              <Badge variant="outline" className="text-xs">
-                                {activityTypeLabels[submission.activityCatalog.LoaiHoatDong as keyof typeof activityTypeLabels]}
-                              </Badge>
-                            )}
-                          </div>
-                          {submission.CreationMethod === 'bulk' && (
-                            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-medical-blue" aria-label={`Được tạo hàng loạt bởi ${submission.creatorAccount?.TenDangNhap ?? 'quản trị viên'}`}>
-                              <Badge
-                                variant="outline"
-                                className="border-medical-blue/40 bg-medical-blue/10 text-medical-blue flex items-center gap-1"
-                              >
-                                <Users className="h-3 w-3" aria-hidden="true" />
-                                Tạo hàng loạt
-                              </Badge>
-                              <span className="text-gray-500">
-                                Bởi {submission.creatorAccount?.TenDangNhap ?? 'quản trị viên'}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      
+                      <TableHead className="text-left min-w-[280px]">Hoạt động</TableHead>
                       {userRole !== 'NguoiHanhNghe' && (
-                        <td className="px-6 py-4 max-w-[220px]">
-                          <div className="space-y-1">
-                            <div
-                              className="font-medium text-gray-900 truncate"
-                              title={submission.practitioner.HoVaTen}
-                            >
-                              {submission.practitioner.HoVaTen}
+                        <TableHead className="text-left w-[220px]">Người hành nghề</TableHead>
+                      )}
+                      <TableHead className="text-left w-[140px]">Thời gian</TableHead>
+                      <TableHead className="text-left w-[120px]">Tín chỉ</TableHead>
+                      <TableHead className="text-left w-[160px]">Trạng thái</TableHead>
+                      <TableHead className="text-left w-[160px]">Ngày gửi</TableHead>
+                      <TableHead className="text-right w-[160px]">Thao tác</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredSubmissions.map((submission, index) => {
+                      const isActiveEvidenceRow = activeEvidenceSubmissionId === submission.MaGhiNhan;
+                      const isViewingEvidence = isActiveEvidenceRow && evidenceFile.activeAction === 'view';
+                      const isDownloadingEvidence = isActiveEvidenceRow && evidenceFile.activeAction === 'download';
+                      const isSelectable = submission.TrangThaiDuyet === 'ChoDuyet';
+                      const isSelected = selectedIds.includes(submission.MaGhiNhan);
+
+                      return (
+                        <TableRow
+                          key={submission.MaGhiNhan}
+                          className={cn(
+                            'cursor-pointer border-b border-slate-100/70 bg-white/40 transition-colors hover:bg-medical-blue/5 focus-within:bg-medical-blue/10',
+                            index % 2 === 1 && 'bg-white/25'
+                          )}
+                          tabIndex={0}
+                          role="button"
+                          aria-label={`Xem chi tiết hoạt động ${submission.TenHoatDong}`}
+                          onClick={() => handleViewSubmission(submission.MaGhiNhan)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleViewSubmission(submission.MaGhiNhan);
+                            }
+                          }}
+                        >
+                          {reviewerRole && (
+                            <TableCell className="text-center align-middle">
+                              {isSelectable ? (
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleSelect(submission.MaGhiNhan)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  aria-label="Chọn hoạt động"
+                                />
+                              ) : (
+                                <span className="text-xs text-gray-400">—</span>
+                              )}
+                            </TableCell>
+                          )}
+
+                          <TableCell className="align-middle min-w-[280px] max-w-[420px]">
+                            <div className="space-y-1">
+                              <div className="flex flex-wrap items-start gap-2">
+                                <p
+                                  className="font-semibold text-gray-900 leading-tight break-words whitespace-normal"
+                                  title={submission.TenHoatDong}
+                                >
+                                  {submission.TenHoatDong}
+                                </p>
+                                {submission.activityCatalog && (
+                                  <Badge variant="outline" className="text-xs shrink-0">
+                                    {activityTypeLabels[submission.activityCatalog.LoaiHoatDong as keyof typeof activityTypeLabels]}
+                                  </Badge>
+                                )}
+                                {submission.CreationMethod === 'bulk' && (
+                                  <Badge
+                                    variant="outline"
+                                    className="border-medical-blue/40 bg-medical-blue/10 text-medical-blue flex items-center gap-1 text-[11px]"
+                                  >
+                                    <Users className="h-3 w-3" aria-hidden="true" />
+                                    Tạo hàng loạt
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                                {submission.HinhThucCapNhatKienThucYKhoa && (
+                                  <span>Hình thức: {submission.HinhThucCapNhatKienThucYKhoa}</span>
+                                )}
+                                {submission.ChiTietVaiTro && <span>• Vai trò: {submission.ChiTietVaiTro}</span>}
+                                {submission.creatorAccount?.TenDangNhap && submission.CreationMethod === 'bulk' && (
+                                  <span>Bởi {submission.creatorAccount.TenDangNhap}</span>
+                                )}
+                              </div>
                             </div>
-                            {submission.practitioner.ChucDanh && (
-                              <div
-                                className="text-sm text-gray-500 truncate"
-                                title={submission.practitioner.ChucDanh}
-                              >
-                                {submission.practitioner.ChucDanh}
+                          </TableCell>
+
+                          {userRole !== 'NguoiHanhNghe' && (
+                            <TableCell className="align-middle min-w-[200px] max-w-[260px]">
+                              <div className="space-y-1 whitespace-normal break-words">
+                                <p className="font-medium text-gray-900 leading-tight" title={submission.practitioner.HoVaTen}>
+                                  {submission.practitioner.HoVaTen}
+                                </p>
+                                {submission.practitioner.ChucDanh && (
+                                  <p className="text-sm text-gray-500 leading-snug" title={submission.practitioner.ChucDanh}>
+                                    {submission.practitioner.ChucDanh}
+                                  </p>
+                                )}
+                              </div>
+                            </TableCell>
+                          )}
+
+                          <TableCell className="align-middle text-sm text-gray-700">
+                            {submission.SoTiet && <div>{submission.SoTiet} tiết</div>}
+                            {submission.NgayBatDau && (
+                              <div className="text-gray-500">{formatDate(submission.NgayBatDau)}</div>
+                            )}
+                          </TableCell>
+
+                          <TableCell className="align-middle font-semibold text-medical-blue">
+                            {submission.SoGioTinChiQuyDoi || 0} tín chỉ
+                          </TableCell>
+
+                          <TableCell className="align-middle">
+                            <div className="space-y-1">
+                              {getStatusBadge(submission.TrangThaiDuyet)}
+                              {submission.TrangThaiDuyet === 'TuChoi' && submission.GhiChuDuyet && (
+                                <p className="text-xs text-red-600 truncate" title={submission.GhiChuDuyet}>
+                                  {submission.GhiChuDuyet}
+                                </p>
+                              )}
+                            </div>
+                          </TableCell>
+
+                          <TableCell className="align-middle text-sm text-gray-600">
+                            <div>{formatDate(submission.NgayGhiNhan)}</div>
+                            {submission.NgayDuyet && (
+                              <div className="text-xs text-gray-400">
+                                Duyệt: {formatDate(submission.NgayDuyet)}
                               </div>
                             )}
-                          </div>
-                        </td>
-                      )}
-                      
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm">
-                          {submission.SoTiet && (
-                            <div>{submission.SoTiet} tiết</div>
-                          )}
-                          {submission.NgayBatDau && (
-                            <div className="text-gray-500">
-                              {formatDate(submission.NgayBatDau)}
+                          </TableCell>
+
+                          <TableCell className="align-middle text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    aria-label="Xem chi tiết"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleViewSubmission(submission.MaGhiNhan);
+                                    }}
+                                  >
+                                    <ExternalLink className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Xem chi tiết</TooltipContent>
+                              </Tooltip>
+
+                              {submission.FileMinhChungUrl && (
+                                <>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        aria-label="Xem minh chứng"
+                                        onClick={(event) => handleViewEvidence(event, submission)}
+                                        disabled={evidenceFile.isLoading && isActiveEvidenceRow}
+                                      >
+                                        {isViewingEvidence ? (
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                          <FileSearch className="h-4 w-4" />
+                                        )}
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Xem minh chứng</TooltipContent>
+                                  </Tooltip>
+
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        aria-label="Tải minh chứng"
+                                        onClick={(event) => handleDownloadEvidence(event, submission)}
+                                        disabled={evidenceFile.isLoading && isActiveEvidenceRow}
+                                      >
+                                        {isDownloadingEvidence ? (
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                          <DownloadCloud className="h-4 w-4" />
+                                        )}
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Tải xuống</TooltipContent>
+                                  </Tooltip>
+                                </>
+                              )}
+
+                              {canDelete(submission) && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      aria-label="Xóa hoạt động"
+                                      className="text-red-600 hover:text-red-700"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setDeleteConfirmId(submission.MaGhiNhan);
+                                      }}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Xóa</TooltipContent>
+                                </Tooltip>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      </td>
-                      
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="font-medium text-medical-blue">
-                          {submission.SoGioTinChiQuyDoi || 0} tín chỉ
-                        </span>
-                      </td>
-                      
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {getStatusBadge(submission.TrangThaiDuyet)}
-                        {submission.TrangThaiDuyet === 'TuChoi' && submission.GhiChuDuyet && (
-                          <div className="text-xs text-red-600 mt-1 max-w-xs truncate">
-                            {submission.GhiChuDuyet}
-                          </div>
-                        )}
-                      </td>
-                      
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">
-                          {formatDate(submission.NgayGhiNhan)}
-                        </div>
-                        {submission.NgayDuyet && (
-                          <div className="text-xs text-gray-400">
-                            Duyệt: {formatDate(submission.NgayDuyet)}
-                          </div>
-                        )}
-                      </td>
-                      
-                      <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              aria-label="Thao tác"
-                              title="Thao tác"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <EllipsisVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewSubmission(submission.MaGhiNhan);
-                              }}
-                            >
-                              <ExternalLink className="h-4 w-4 mr-2" />
-                              Xem chi tiết
-                            </DropdownMenuItem>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
 
-                            {submission.FileMinhChungUrl && (
-                              <>
-                                <DropdownMenuItem
-                                  onClick={(event) => handleViewEvidence(event, submission)}
-                                  disabled={evidenceFile.isLoading && isActiveEvidenceRow}
-                                >
-                                  {isViewingEvidence ? (
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                  ) : (
-                                    <FileSearch className="h-4 w-4 mr-2" />
-                                  )}
-                                  Xem minh chứng
-                                </DropdownMenuItem>
-
-                                <DropdownMenuItem
-                                  onClick={(event) => handleDownloadEvidence(event, submission)}
-                                  disabled={evidenceFile.isLoading && isActiveEvidenceRow}
-                                >
-                                  {isDownloadingEvidence ? (
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                  ) : (
-                                    <DownloadCloud className="h-4 w-4 mr-2" />
-                                  )}
-                                  Tải xuống minh chứng
-                                </DropdownMenuItem>
-                              </>
-                            )}
-
-                            {canDelete(submission) && (
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setDeleteConfirmId(submission.MaGhiNhan);
-                                }}
-                                destructive
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Xóa
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-
-                    </tr>
-                  );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="px-6 py-4 border-t border-gray-200/50 flex items-center justify-between">
-                <div className="text-sm text-gray-500">
-                  Trang {page} / {totalPages}
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setPage(page - 1)}
-                    disabled={page === 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setPage(page + 1)}
-                    disabled={page === totalPages}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
+              <div className="flex flex-col gap-3 border-t border-slate-200/70 px-6 py-4 md:flex-row md:items-center md:justify-between">
+                <p className="text-sm text-gray-600" aria-live="polite">
+                  {summaryText}
+                </p>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                  <div className="text-sm text-gray-500 text-center sm:text-left">
+                    Trang {page} / {totalPages}
+                  </div>
+                  <div className="flex items-center justify-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage(page - 1)}
+                      disabled={page === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      <span className="sr-only">Trang trước</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage(page + 1)}
+                      disabled={page === totalPages}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                      <span className="sr-only">Trang sau</span>
+                    </Button>
+                  </div>
                 </div>
               </div>
-            )}
-          </>
-        )}
-      </GlassCard>
+            </>
+          )}
+        </GlassCard>
+      </TooltipProvider>
 
       {/* Individual Delete Confirmation Dialog */}
       <Dialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>

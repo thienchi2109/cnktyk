@@ -17,17 +17,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
 import { LoadingNotice } from '@/components/ui/loading-notice';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ActivityDetailSheet } from './activity-detail-sheet';
+import { cn } from '@/lib/utils';
 import {
   Search,
   Plus,
@@ -46,7 +41,6 @@ import {
   ArchiveRestore,
   Upload,
   UserPlus,
-  EllipsisVertical,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
@@ -264,6 +258,13 @@ export function ActivitiesList({
   const [showActivityDetail, setShowActivityDetail] = useState(false);
 
   const permissions = data?.permissions ?? defaultPermissions;
+  const canBulkRecord = ['DonVi', 'SoYTe'].includes(userRole);
+  const showActionsColumn =
+    permissions.canEditGlobal ||
+    permissions.canEditUnit ||
+    permissions.canAdoptToGlobal ||
+    permissions.canRestoreSoftDeleted ||
+    canBulkRecord;
   const globalActivities = data?.global ?? [];
   const unitActivities = data?.unit ?? [];
 
@@ -478,217 +479,245 @@ export function ActivitiesList({
 
         {/* Activities Table */}
         <TabsContent value={activeScope} className="mt-0">
-        <GlassCard className="!bg-white !backdrop-blur-none !border-slate-200 shadow-lg">
-        {isLoading || isFetching ? (
-          <div className="p-12">
-            <LoadingNotice message="Đang tải danh mục hoạt động..." />
-          </div>
-        ) : displayedActivities.length === 0 ? (
-          isOutOfRangePage ? (
-            <div className="p-8 text-center">
-              <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Trang {currentPage} vượt quá tổng {lastAvailablePage} trang hiện có
-              </h3>
-              <p className="text-gray-500 mb-4">
-                Bộ lọc hiện tại chỉ có {lastAvailablePage} trang dữ liệu. Hãy quay lại trang hợp lệ để xem các hoạt động.
-              </p>
-              <div className="flex flex-wrap items-center justify-center gap-3">
-                <Button
-                  onClick={() => handlePageChange(lastAvailablePage)}
-                  disabled={lastAvailablePage === 0}
-                  className="px-6"
-                >
-                  Về trang {lastAvailablePage}
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => handlePageChange(1)}
-                  className="px-6"
-                >
-                  Về trang đầu
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="p-8 text-center">
-              <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Không có hoạt động nào</h3>
-              <p className="text-gray-500">
-                {hasFilters
-                  ? 'Không tìm thấy hoạt động phù hợp với bộ lọc'
-                  : 'Chưa có hoạt động nào được tạo'}
-              </p>
-            </div>
-          )
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Hoạt động</TableHead>
-                  <TableHead>Phạm vi</TableHead>
-                  <TableHead>Loại</TableHead>
-                  <TableHead>Đơn vị tính</TableHead>
-                  <TableHead>Tỷ lệ quy đổi</TableHead>
-                    <TableHead>Giới hạn giờ</TableHead>
-                    <TableHead>Trạng thái</TableHead>
-                    {(permissions.canEditGlobal || permissions.canEditUnit) && (
-                      <TableHead className="text-right w-[80px]">Thao tác</TableHead>
-                    )}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {displayedActivities.map((activity) => {
-                  const TypeIcon = activityTypeIcons[activity.LoaiHoatDong];
-                  
-                  return (
-                    <TableRow
-                      key={activity.MaDanhMuc}
-                      className="cursor-pointer hover:bg-gray-50/30"
-                      tabIndex={0}
-                      role="button"
-                      aria-label={`Xem chi tiết ${activity.TenDanhMuc}`}
-                      onClick={() => {
-                        setSelectedActivity(activity);
-                        setShowActivityDetail(true);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          setSelectedActivity(activity);
-                          setShowActivityDetail(true);
-                        }
-                      }}
-                    >
-                      <TableCell>
-                        <div className="flex items-center space-x-3">
-                          <div className="flex-shrink-0">
-                            <div className="h-10 w-10 rounded-full bg-medical-blue/10 flex items-center justify-center">
-                              <TypeIcon className="h-5 w-5 text-medical-blue" />
-                            </div>
-                          </div>
-                          <div>
-                            <div
-                              className="font-medium text-gray-900 truncate max-w-[320px]"
-                              title={activity.TenDanhMuc}
-                            >
-                              {activity.TenDanhMuc}
-                            </div>
-                            {activity.YeuCauMinhChung && (
-                              <div className="text-sm text-gray-500">Yêu cầu minh chứng</div>
+          <TooltipProvider delayDuration={150}>
+            <div className="overflow-hidden rounded-2xl border border-white/15 bg-white/90 shadow-xl">
+              {isLoading || isFetching ? (
+                <div className="p-12">
+                  <LoadingNotice message="Đang tải danh mục hoạt động..." />
+                </div>
+              ) : displayedActivities.length === 0 ? (
+                isOutOfRangePage ? (
+                  <div className="p-8 text-center space-y-3">
+                    <BookOpen className="h-12 w-12 text-gray-400 mx-auto" />
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Trang {currentPage} vượt quá tổng {lastAvailablePage} trang hiện có
+                    </h3>
+                    <p className="text-gray-500">
+                      Bộ lọc hiện tại chỉ có {lastAvailablePage} trang dữ liệu. Hãy quay lại trang hợp lệ để xem các hoạt động.
+                    </p>
+                    <div className="flex flex-wrap items-center justify-center gap-3">
+                      <Button
+                        onClick={() => handlePageChange(lastAvailablePage)}
+                        disabled={lastAvailablePage === 0}
+                        className="px-6"
+                      >
+                        Về trang {lastAvailablePage}
+                      </Button>
+                      <Button variant="secondary" onClick={() => handlePageChange(1)} className="px-6">
+                        Về trang đầu
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-10 text-center space-y-3">
+                    <BookOpen className="h-12 w-12 text-gray-400 mx-auto" />
+                    <h3 className="text-lg font-semibold text-gray-900">Không có hoạt động nào</h3>
+                    <p className="text-gray-500">
+                      {hasFilters ? 'Không tìm thấy hoạt động phù hợp với bộ lọc' : 'Chưa có hoạt động nào được tạo'}
+                    </p>
+                  </div>
+                )
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table role="grid" className="min-w-full text-sm text-gray-700">
+                    <TableHeader className="bg-slate-50/90 backdrop-blur-sm text-[11px] font-semibold uppercase tracking-wide text-slate-600 [&_tr]:sticky [&_tr]:top-0 [&_tr]:z-10">
+                      <TableRow className="border-b border-slate-200/70">
+                        <TableHead className="text-left">Hoạt động</TableHead>
+                        <TableHead className="text-left">Phạm vi</TableHead>
+                        <TableHead className="text-left">Loại</TableHead>
+                        <TableHead className="text-left">Đơn vị tính</TableHead>
+                        <TableHead className="text-left">Tỷ lệ quy đổi</TableHead>
+                        <TableHead className="text-left">Trạng thái</TableHead>
+                        {showActionsColumn && (
+                          <TableHead className="text-right w-[160px]">Thao tác</TableHead>
+                        )}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {displayedActivities.map((activity, index) => {
+                        const TypeIcon = activityTypeIcons[activity.LoaiHoatDong];
+                        const isSoftDeleted = Boolean(activity.DaXoaMem);
+
+                        return (
+                          <TableRow
+                            key={activity.MaDanhMuc}
+                            className={cn(
+                              'cursor-pointer border-b border-slate-100/70 bg-white/40 transition-colors hover:bg-medical-blue/5 focus-within:bg-medical-blue/10',
+                              index % 2 === 1 && 'bg-white/20',
+                              isSoftDeleted && 'opacity-70'
                             )}
-                          </div>
-                        </div>
-                      </TableCell>
-                      
-                      <TableCell>
-                        {getScopeBadge(activity, userRole)}
-                      </TableCell>
-                      
-                      <TableCell>
-                        <Badge variant="outline">
-                          {activityTypeLabels[activity.LoaiHoatDong]}
-                        </Badge>
-                      </TableCell>
-                      
-                      <TableCell>
-                        {unitLabels[activity.DonViTinh]}
-                      </TableCell>
-                      
-                      <TableCell>
-                        <span className="font-medium">{activity.TyLeQuyDoi}x</span>
-                      </TableCell>
-                      
-                      <TableCell>
-                        <div className="text-sm">
-                          {activity.GioToiThieu !== null || activity.GioToiDa !== null ? (
-                            <>
-                              {activity.GioToiThieu !== null && `Tối thiểu: ${activity.GioToiThieu}h`}
-                              {activity.GioToiThieu !== null && activity.GioToiDa !== null && <br />}
-                              {activity.GioToiDa !== null && `Tối đa: ${activity.GioToiDa}h`}
-                            </>
-                          ) : (
-                            <span className="text-gray-500">Không giới hạn</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      
-                      <TableCell>
-                        {getStatusBadge(activity)}
-                      </TableCell>
-                      
-                      {(permissions.canEditGlobal || permissions.canEditUnit) && (
-                        <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            aria-label="Thao tác"
-                            title="Thao tác"
-                            onClick={(e) => e.stopPropagation()}
+                            tabIndex={0}
+                            role="button"
+                            aria-label={`Xem chi tiết ${activity.TenDanhMuc}`}
+                            onClick={() => {
+                              setSelectedActivity(activity);
+                              setShowActivityDetail(true);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                setSelectedActivity(activity);
+                                setShowActivityDetail(true);
+                              }
+                            }}
                           >
-                            <EllipsisVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {['DonVi', 'SoYTe'].includes(userRole) && (
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    router.push(`/submissions/bulk?activityId=${activity.MaDanhMuc}`);
-                                  }}
-                                >
-                                  <UserPlus className="h-4 w-4 mr-2" />
-                                  Ghi nhận hàng loạt
-                                </DropdownMenuItem>
-                              )}
-                              {canEditActivity(activity) && onEditActivity && (
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onEditActivity(activity);
-                                  }}
-                                >
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Chỉnh sửa
-                                </DropdownMenuItem>
-                              )}
-                              {permissions.canAdoptToGlobal && activity.MaDonVi !== null && onAdoptToGlobal && (
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onAdoptToGlobal(activity.MaDanhMuc);
-                                  }}
-                                >
-                                  <Upload className="h-4 w-4 mr-2" />
-                                  Chuyển thành hoạt động hệ thống
-                                </DropdownMenuItem>
-                              )}
-                              {canDeleteActivity(activity) && onDeleteActivity && (
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onDeleteActivity(activity.MaDanhMuc);
-                                  }}
-                                  destructive
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Xóa
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </GlassCard>
+                            <TableCell className="align-middle">
+                              <div className="flex items-center gap-4">
+                                <div className="flex-shrink-0">
+                                  <div className="h-11 w-11 rounded-full bg-medical-blue/10 flex items-center justify-center">
+                                    <TypeIcon className="h-5 w-5 text-medical-blue" />
+                                  </div>
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <p className="font-semibold text-gray-900 truncate max-w-[320px]" title={activity.TenDanhMuc}>
+                                      {activity.TenDanhMuc}
+                                    </p>
+                                    {activity.YeuCauMinhChung && (
+                                      <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
+                                        Minh chứng
+                                      </Badge>
+                                    )}
+                                    {isSoftDeleted && (
+                                      <Badge variant="outline" className="border-slate-300 bg-slate-50 text-slate-600">
+                                        Đã xóa mềm
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    {activity.MaDonVi === null ? 'Hoạt động hệ thống' : 'Hoạt động của đơn vị'}
+                                  </p>
+                                </div>
+                              </div>
+                            </TableCell>
+
+                            <TableCell className="align-middle">
+                              {getScopeBadge(activity, userRole)}
+                            </TableCell>
+
+                            <TableCell className="align-middle">
+                              <Badge variant="outline">{activityTypeLabels[activity.LoaiHoatDong]}</Badge>
+                            </TableCell>
+
+                            <TableCell className="align-middle text-gray-700">
+                              {unitLabels[activity.DonViTinh]}
+                            </TableCell>
+
+                            <TableCell className="align-middle font-semibold text-gray-900">
+                              {activity.TyLeQuyDoi}x
+                            </TableCell>
+
+                            <TableCell className="align-middle">{getStatusBadge(activity)}</TableCell>
+
+                            {showActionsColumn && (
+                              <TableCell className="align-middle text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {canBulkRecord && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          aria-label="Ghi nhận hàng loạt"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            router.push(`/submissions/bulk?activityId=${activity.MaDanhMuc}`);
+                                          }}
+                                        >
+                                          <UserPlus className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Ghi nhận hàng loạt</TooltipContent>
+                                    </Tooltip>
+                                  )}
+
+                                  {permissions.canAdoptToGlobal && activity.MaDonVi !== null && onAdoptToGlobal && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          aria-label="Chuyển lên hệ thống"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onAdoptToGlobal(activity.MaDanhMuc);
+                                          }}
+                                        >
+                                          <Upload className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Chuyển thành hoạt động hệ thống</TooltipContent>
+                                    </Tooltip>
+                                  )}
+
+                                  {permissions.canRestoreSoftDeleted && isSoftDeleted && onRestoreActivity && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          aria-label="Khôi phục hoạt động"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onRestoreActivity(activity.MaDanhMuc);
+                                          }}
+                                        >
+                                          <ArchiveRestore className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Khôi phục hoạt động</TooltipContent>
+                                    </Tooltip>
+                                  )}
+
+                                  {canEditActivity(activity) && onEditActivity && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          aria-label="Chỉnh sửa hoạt động"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onEditActivity(activity);
+                                          }}
+                                        >
+                                          <Edit className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Chỉnh sửa</TooltipContent>
+                                    </Tooltip>
+                                  )}
+
+                                  {canDeleteActivity(activity) && onDeleteActivity && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          aria-label="Xóa hoạt động"
+                                          className="text-red-600 hover:text-red-700"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onDeleteActivity(activity.MaDanhMuc);
+                                          }}
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Xóa</TooltipContent>
+                                    </Tooltip>
+                                  )}
+                                </div>
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
+          </TooltipProvider>
         </TabsContent>
       </Tabs>
 
