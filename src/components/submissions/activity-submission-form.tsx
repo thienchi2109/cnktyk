@@ -28,7 +28,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { FileUpload, UploadedFile } from '@/components/ui/file-upload';
 import { LoadingNotice } from '@/components/ui/loading-notice';
 import { SheetFooter } from '@/components/ui/sheet';
-import { useActivities } from '@/hooks/use-activities';
+import { useActivitiesCatalog } from '@/hooks/use-activities';
 import { PractitionerSelector } from '@/components/ui/practitioner-selector';
 import { useUnitPractitioners } from '@/hooks/use-unit-practitioners';
 
@@ -102,7 +102,11 @@ export function ActivitySubmissionForm({
   const [success, setSuccess] = useState<string | null>(null);
   const [activityCatalog, setActivityCatalog] = useState<ActivityCatalog[]>([]);
   const [selectedActivity, setSelectedActivity] = useState<ActivityCatalog | null>(null);
-  const { data: activitiesData, isLoading: isActivitiesLoading } = useActivities();
+  const { data: activitiesData, isLoading: isActivitiesLoading } = useActivitiesCatalog({
+    scope: 'all',
+    status: 'active',
+    limit: 200,
+  });
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [calculatedCredits, setCalculatedCredits] = useState<number>(0);
 
@@ -146,21 +150,11 @@ export function ActivitySubmissionForm({
       return;
     }
 
-    const fromFlat = (activitiesData as { activities?: ActivityCatalog[] }).activities;
-    if (Array.isArray(fromFlat)) {
-      setActivityCatalog(fromFlat.filter((activity) => !activity?.DaXoaMem));
-      return;
-    }
+    // useActivitiesCatalog returns { global: [], unit: [], permissions: {} }
+    const global = Array.isArray(activitiesData.global) ? activitiesData.global : [];
+    const unit = Array.isArray(activitiesData.unit) ? activitiesData.unit : [];
 
-    const maybeGlobal = (activitiesData as { global?: ActivityCatalog[] }).global;
-    const maybeUnit = (activitiesData as { unit?: ActivityCatalog[] }).unit;
-    const global = Array.isArray(maybeGlobal) ? maybeGlobal : [];
-    const unit = Array.isArray(maybeUnit) ? maybeUnit : [];
-
-    if (global.length === 0 && unit.length === 0) {
-      return;
-    }
-
+    // Combine global and unit activities, filtering out soft-deleted ones
     const dedupedMap = new Map<string, ActivityCatalog>();
     for (const activity of [...global, ...unit]) {
       if (!activity || activity.DaXoaMem) {
