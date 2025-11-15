@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
@@ -100,15 +100,12 @@ export function ActivitySubmissionForm({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [activityCatalog, setActivityCatalog] = useState<ActivityCatalog[]>([]);
-  const [selectedActivity, setSelectedActivity] = useState<ActivityCatalog | null>(null);
   const { data: activitiesData, isLoading: isActivitiesLoading } = useActivitiesCatalog({
     scope: 'all',
     status: 'active',
     limit: 200,
   });
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
-  const [calculatedCredits, setCalculatedCredits] = useState<number>(0);
 
   // Use TanStack Query for practitioner caching (with server data as initialData)
   const { data: cachedPractitioners, isLoading: isPractitionersLoading } = useUnitPractitioners({
@@ -132,22 +129,15 @@ export function ActivitySubmissionForm({
     },
   });
 
-  const watchedValues = watch();
+  // Optimization #1: Only watch specific fields instead of all fields
+  const MaDanhMuc = watch('MaDanhMuc');
+  const SoTiet = watch('SoTiet');
+  const SoGioTinChiQuyDoi = watch('SoGioTinChiQuyDoi');
 
-  // Prefill practitioner id for practitioner role
-  useEffect(() => {
-    if (userRole === 'NguoiHanhNghe' && initialPractitionerId) {
-      setValue('MaNhanVien', initialPractitionerId, {
-        shouldDirty: false,
-        shouldValidate: true,
-      });
-    }
-  }, [userRole, initialPractitionerId, setValue]);
-
-  // Load activity catalog via React Query
-  useEffect(() => {
+  // Optimization #2: Process activity catalog with useMemo instead of useEffect + setState
+  const activityCatalog = useMemo(() => {
     if (!activitiesData) {
-      return;
+      return [];
     }
 
     // useActivitiesCatalog returns { global: [], unit: [], permissions: {} }
@@ -163,33 +153,48 @@ export function ActivitySubmissionForm({
       dedupedMap.set(activity.MaDanhMuc, activity);
     }
 
-    setActivityCatalog(Array.from(dedupedMap.values()));
+    return Array.from(dedupedMap.values());
   }, [activitiesData]);
 
-  // Handle activity catalog selection
-  useEffect(() => {
-    if (watchedValues.MaDanhMuc) {
-      const activity = activityCatalog.find(a => a.MaDanhMuc === watchedValues.MaDanhMuc);
-      setSelectedActivity(activity || null);
-      
-      if (activity) {
-        setValue('TenHoatDong', activity.TenDanhMuc);
-      }
-    } else {
-      setSelectedActivity(null);
+  // Optimization #3: Derive selectedActivity with useMemo instead of useEffect + setState
+  const selectedActivity = useMemo(() => {
+    if (!MaDanhMuc) {
+      return null;
     }
-  }, [watchedValues.MaDanhMuc, activityCatalog, setValue]);
+    return activityCatalog.find((a: ActivityCatalog) => a.MaDanhMuc === MaDanhMuc) || null;
+  }, [MaDanhMuc, activityCatalog]);
 
-  // Calculate credits automatically
-  useEffect(() => {
-    if (selectedActivity && watchedValues.SoTiet) {
-      const credits = watchedValues.SoTiet * selectedActivity.TyLeQuyDoi;
-      setCalculatedCredits(credits);
-      setValue('SoGioTinChiQuyDoi', credits);
-    } else if (!selectedActivity && watchedValues.SoGioTinChiQuyDoi !== undefined) {
-      setCalculatedCredits(watchedValues.SoGioTinChiQuyDoi);
+  // Optimization #4: Calculate credits with useMemo instead of useState
+  const calculatedCredits = useMemo(() => {
+    if (selectedActivity && SoTiet) {
+      return SoTiet * selectedActivity.TyLeQuyDoi;
     }
-  }, [selectedActivity, watchedValues.SoTiet, watchedValues.SoGioTinChiQuyDoi, setValue]);
+    return SoGioTinChiQuyDoi || 0;
+  }, [selectedActivity, SoTiet, SoGioTinChiQuyDoi]);
+
+  // Prefill practitioner id for practitioner role
+  useEffect(() => {
+    if (userRole === 'NguoiHanhNghe' && initialPractitionerId) {
+      setValue('MaNhanVien', initialPractitionerId, {
+        shouldDirty: false,
+        shouldValidate: true,
+      });
+    }
+  }, [userRole, initialPractitionerId, setValue]);
+
+  // Auto-fill activity name when catalog item is selected
+  useEffect(() => {
+    if (selectedActivity) {
+      setValue('TenHoatDong', selectedActivity.TenDanhMuc);
+    }
+  }, [selectedActivity, setValue]);
+
+  // Auto-sync calculated credits to form field
+  useEffect(() => {
+    if (selectedActivity && SoTiet) {
+      setValue('SoGioTinChiQuyDoi', calculatedCredits);
+    }
+  }, [selectedActivity, SoTiet, calculatedCredits, setValue]);
 
   const handleFileUpload = (files: UploadedFile[]) => {
     setUploadedFiles(files);
@@ -228,12 +233,10 @@ export function ActivitySubmissionForm({
       }
 
       setSuccess('Hoạt động đã được gửi thành công và đang chờ phê duyệt');
-      
+
       // Reset form
       reset();
       setUploadedFiles([]);
-      setSelectedActivity(null);
-      setCalculatedCredits(0);
 
       // Notify parent component
       if (onSubmit) {
@@ -455,15 +458,15 @@ export function ActivitySubmissionForm({
                 min="0"
                 {...register('SoGioTinChiQuyDoi', { valueAsNumber: true })}
                 placeholder="0"
-                disabled={!!selectedActivity && !!watchedValues.SoTiet}
+                disabled={!!selectedActivity && !!SoTiet}
               />
               {errors.SoGioTinChiQuyDoi && (
                 <p className="text-sm text-red-600 mt-1">{errors.SoGioTinChiQuyDoi.message}</p>
               )}
-              
-              {selectedActivity && watchedValues.SoTiet && (
+
+              {selectedActivity && SoTiet && (
                 <p className="text-sm text-green-600 mt-1">
-                  Tự động tính: {watchedValues.SoTiet} tiết × {selectedActivity.TyLeQuyDoi} = {calculatedCredits} tín chỉ
+                  Tự động tính: {SoTiet} tiết × {selectedActivity.TyLeQuyDoi} = {calculatedCredits} tín chỉ
                 </p>
               )}
             </div>
