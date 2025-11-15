@@ -20,7 +20,10 @@ import {
   ExternalLink,
   FileSearch,
   DownloadCloud,
-  EllipsisVertical
+  EllipsisVertical,
+  ChevronDown,
+  User,
+  FolderPlus
 } from 'lucide-react';
 
 import { GlassCard } from '@/components/ui/glass-card';
@@ -33,6 +36,12 @@ import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn, formatDate } from '@/lib/utils';
 import { LoadingNotice } from '@/components/ui/loading-notice';
 import {
@@ -450,17 +459,6 @@ export function SubmissionsList({
         <div className="flex gap-3">
           {reviewerRole && (
             <>
-              <Button
-                asChild
-                variant="medical-secondary"
-                className="gap-2"
-                size="lg"
-              >
-                <Link href="/submissions/bulk">
-                  <Users className="h-5 w-5" />
-                  Gán hoạt động cho nhóm
-                </Link>
-              </Button>
               {/* Bulk approve button - only visible when items are selected */}
               {selectedIds.length > 0 && (
                 <>
@@ -504,18 +502,70 @@ export function SubmissionsList({
                   </Button>
                 </>
               )}
+
+              {/* Add to catalog button */}
+              <Button
+                asChild
+                variant="outline-accent"
+                className="gap-2"
+                size="lg"
+              >
+                <Link href="/activities?action=create">
+                  <FolderPlus className="h-5 w-5" />
+                  Thêm hoạt động mới vào danh mục
+                </Link>
+              </Button>
+
+              {/* Dropdown menu for submission actions */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="medical" className="gap-2" size="lg">
+                    <Plus className="h-5 w-5" />
+                    Ghi nhận hoạt động
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={onCreateSubmission} className="cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Ghi nhận cho cá nhân</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link href="/submissions/bulk">
+                      <Users className="mr-2 h-4 w-4" />
+                      <span>Ghi nhận cho hàng loạt</span>
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </>
           )}
-          {canCreateSubmission() && onCreateSubmission && (
-            <Button
-              onClick={onCreateSubmission}
-              variant="medical"
-              className="gap-2"
-              size="lg"
-            >
-              <Plus className="h-5 w-5" />
-              Ghi nhận hoạt động
-            </Button>
+          {!reviewerRole && canCreateSubmission() && onCreateSubmission && (
+            <>
+              {/* Add to catalog button for non-reviewers */}
+              <Button
+                asChild
+                variant="outline-accent"
+                className="gap-2"
+                size="lg"
+              >
+                <Link href="/activities?action=create">
+                  <FolderPlus className="h-5 w-5" />
+                  Thêm hoạt động mới vào danh mục
+                </Link>
+              </Button>
+
+              {/* Simple button for non-reviewers */}
+              <Button
+                onClick={onCreateSubmission}
+                variant="medical"
+                className="gap-2"
+                size="lg"
+              >
+                <Plus className="h-5 w-5" />
+                Ghi nhận hoạt động
+              </Button>
+            </>
           )}
         </div>
       ) : null}
