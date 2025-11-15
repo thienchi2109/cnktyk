@@ -1341,7 +1341,7 @@ export function BackupCenterClient({ adminName }: BackupCenterClientProps) {
               <DialogFooter>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="outline-accent"
                   onClick={() => handleDeleteDialogOpenChange(false)}
                   disabled={isDeleting}
                 >

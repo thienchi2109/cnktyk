@@ -511,7 +511,7 @@ export function ActivitySubmissionForm({
             {onCancel && (
               <Button
                 type="button"
-                variant="outline"
+                variant="outline-accent"
                 onClick={onCancel}
                 disabled={isLoading}
                 className="gap-2"
@@ -542,7 +542,7 @@ export function ActivitySubmissionForm({
               {onCancel && (
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="outline-accent"
                   onClick={onCancel}
                   disabled={isLoading}
                   className="gap-2"

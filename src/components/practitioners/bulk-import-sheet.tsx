@@ -530,7 +530,7 @@ export function BulkImportSheet({ open, onOpenChange, onImportSuccess }: BulkImp
                 <>
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="outline-accent"
                     onClick={() => {
                       setFile(null);
                       setValidationResult(null);
@@ -566,7 +566,7 @@ export function BulkImportSheet({ open, onOpenChange, onImportSuccess }: BulkImp
                 <>
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="outline-accent"
                     onClick={() => {
                       setFile(null);
                       setValidationResult(null);

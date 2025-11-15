@@ -245,7 +245,7 @@ export function UserForm({
           
           <Button
             type="button"
-            variant="outline"
+            variant="outline-accent"
             onClick={onCancel}
             disabled={isLoading}
           >

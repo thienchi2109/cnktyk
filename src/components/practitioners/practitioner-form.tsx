@@ -369,7 +369,7 @@ export function PractitionerForm({
     return (
       <Button
         type="button"
-        variant="outline"
+        variant="outline-accent"
         onClick={onCancel}
         disabled={isLoading}
         className="gap-2"

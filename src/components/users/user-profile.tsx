@@ -324,7 +324,7 @@ export function UserProfile({ profile, onUpdateProfile, isLoading = false }: Use
               
               <Button
                 type="button"
-                variant="outline"
+                variant="outline-accent"
                 onClick={() => {
                   setIsChangingPassword(false);
                   setPasswordData({ newPassword: '', confirmPassword: '' });

@@ -437,7 +437,7 @@ export function ActivityForm({
             <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-end">
               <Button
                 type="button"
-                variant="outline"
+                variant="outline-accent"
                 onClick={onCancel}
                 disabled={isLoading}
                 className="gap-2"
@@ -468,7 +468,7 @@ export function ActivityForm({
           <div className="flex justify-end gap-3 pt-4">
             <Button
               type="button"
-              variant="outline"
+              variant="outline-accent"
               onClick={onCancel}
               disabled={isLoading}
               className="gap-2"

@@ -580,10 +580,10 @@ export function SubmissionReview({
 
       {/* Footer actions for review confirmation (sheet footer) */}
       {reviewAction && (
-<SheetFooter className="-mx-6 px-6 py-4 mt-6 border-t bg-white">
+        <SheetFooter className="-mx-6 px-6 py-4 mt-6 border-t bg-white">
           <Button
             type="button"
-            variant="outline"
+            variant="outline-accent"
             disabled={isProcessing}
             onClick={() => {
               setReviewAction(null);
@@ -675,7 +675,7 @@ export function SubmissionReview({
           <DialogFooter>
             <Button
               type="button"
-              variant="outline"
+              variant="outline-accent"
               onClick={() => setShowEditDialog(false)}
               disabled={editMutation.isPending}
             >
@@ -741,7 +741,7 @@ export function SubmissionReview({
           <DialogFooter>
             <Button
               type="button"
-              variant="outline"
+              variant="outline-accent"
               onClick={() => setShowDeleteDialog(false)}
               disabled={isProcessing || deleteMutation.isPending}
             >

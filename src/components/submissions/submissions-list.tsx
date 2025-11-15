@@ -762,7 +762,7 @@ export function SubmissionsList({
           <DialogFooter>
             <Button
               type="button"
-              variant="outline"
+              variant="outline-accent"
               onClick={() => setDeleteConfirmId(null)}
               disabled={deleteMutation.isPending}
             >
