@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { usePractitioners, practitionersQueryKey, fetchPractitionersApi } from '@/hooks/use-practitioners';
-import { Search, Filter, Plus, Eye, Edit, Trash2, AlertTriangle, CheckCircle, Clock, Upload, UserCircle, ChevronLeft, ChevronRight, EllipsisVertical } from 'lucide-react';
+import { Search, Filter, Plus, Eye, Edit, Trash2, AlertTriangle, CheckCircle, Clock, Upload, UserCircle, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,15 +14,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LoadingNotice } from '@/components/ui/loading-notice';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { PractitionerForm } from './practitioner-form';
 import { PractitionerDetailSheet } from './practitioner-detail-sheet';
 import { BulkImportSheet } from './bulk-import-sheet';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 
 interface ComplianceStatus {
   totalCredits: number;
@@ -367,7 +362,8 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
       )}
 
       {/* Practitioners Table */}
-      <GlassCard className="overflow-hidden">
+      <TooltipProvider delayDuration={150}>
+        <GlassCard className="overflow-hidden">
         {isLoading ? (
           <div className="p-12 text-center">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-medical-blue mx-auto mb-4"></div>
@@ -488,31 +484,25 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
                         </div>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              aria-label="Thao tác"
-                              title="Thao tác"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <EllipsisVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedPractitionerId(practitioner.MaNhanVien);
-                                setShowDetailSheet(true);
-                              }}
-                            >
-                              <Eye className="h-4 w-4 mr-2" />
-                              Xem chi tiết
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label="Xem chi tiết"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedPractitionerId(practitioner.MaNhanVien);
+                                  setShowDetailSheet(true);
+                                }}
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Xem chi tiết</TooltipContent>
+                          </Tooltip>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -567,7 +557,8 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
             </div>
           </>
         )}
-      </GlassCard>
+        </GlassCard>
+      </TooltipProvider>
 
       {/* Practitioner Detail Sheet */}
       <PractitionerDetailSheet
