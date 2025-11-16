@@ -120,19 +120,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Build valid CCHNs set
-    const validCCHNs = new Set<string>();
-    parsedData.practitioners.forEach(p => {
-      if (p.soCCHN) validCCHNs.add(p.soCCHN);
-    });
-    existingCCHNs.forEach(cchn => validCCHNs.add(cchn));
-
-    // Validate activities
-    const activityErrors = validator.validateActivities(parsedData.activities, validCCHNs);
-
     // Check for blocking errors
-    const allErrors = [...practitionerErrors, ...activityErrors];
-    const blockingErrors = allErrors.filter(e => e.severity === 'error');
+    const blockingErrors = practitionerErrors.filter(e => e.severity === 'error');
 
     if (blockingErrors.length > 0) {
       return NextResponse.json(
@@ -174,7 +163,6 @@ export async function POST(request: NextRequest) {
           const importService = new ImportService();
           const result = await importService.executeImport(
             parsedData.practitioners,
-            parsedData.activities,
             unitId,
             userId,
             {
@@ -201,10 +189,9 @@ export async function POST(request: NextRequest) {
               data: {
                 success: true,
                 result: {
-                  message: 'Nhập dữ liệu thành công',
+                  message: 'Nhập danh sách nhân viên thành công',
                   practitionersCreated: result.practitionersCreated,
                   practitionersUpdated: result.practitionersUpdated,
-                  activitiesCreated: result.activitiesCreated,
                   cyclesCreated: result.cyclesCreated,
                   metrics: result.metrics
                 }

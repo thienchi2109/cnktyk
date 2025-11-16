@@ -40,11 +40,11 @@ export interface ActivityRow {
 
 export interface ParsedData {
   practitioners: PractitionerRow[];
-  activities: ActivityRow[];
+  // Activities are now handled via separate bulk-submission feature
 }
 
 export interface ValidationError {
-  sheet: 'Nhân viên' | 'Hoạt động';
+  sheet: 'Nhân viên';
   row: number;
   column: string;
   field: string;
@@ -57,7 +57,6 @@ export interface ValidationResult {
   errors: ValidationError[];
   warnings: ValidationError[];
   practitionersCount: number;
-  activitiesCount: number;
 }
 
 export class ExcelProcessor {
@@ -176,146 +175,40 @@ export class ExcelProcessor {
       });
     }
 
-    // Sheet 2: Activities
-    const activitiesSheet = workbook.addWorksheet('Hoạt động', {
-      views: [{ state: 'frozen', xSplit: 0, ySplit: 1 }]
-    });
-
-    activitiesSheet.columns = [
-      { key: 'soCCHN', width: 18 },
-      { key: 'tenHoatDong', width: 40 },
-      { key: 'hinhThucCapNhatKienThucYKhoa', width: 25 },
-      { key: 'chiTietVaiTro', width: 20 },
-      { key: 'donViToChuc', width: 30 },
-      { key: 'ngayBatDau', width: 15 },
-      { key: 'ngayKetThuc', width: 15 },
-      { key: 'soTiet', width: 12 },
-      { key: 'soTinChi', width: 12 },
-      { key: 'bangChungSoGiayChungNhan', width: 20 },
-      { key: 'trangThaiDuyet', width: 15 },
-      { key: 'ngayDuyet', width: 15 },
-      { key: 'ghiChuDuyet', width: 30 },
-      { key: 'urlMinhChung', width: 40 }
-    ];
-
-    // Header row
-    const activitiesHeader = activitiesSheet.addRow([
-      'Số CCHN *',
-      'Tên hoạt động *',
-      'Hình thức CNKT',
-      'Chi tiết vai trò',
-      'Đơn vị tổ chức',
-      'Ngày bắt đầu *',
-      'Ngày kết thúc',
-      'Số tiết',
-      'Số tín chỉ *',
-      'Số giấy chứng nhận',
-      'Trạng thái *',
-      'Ngày duyệt',
-      'Ghi chú duyệt',
-      'URL minh chứng'
-    ]);
-    activitiesHeader.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    activitiesHeader.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FF70AD47' }
-    };
-    activitiesHeader.alignment = { horizontal: 'center', vertical: 'middle' };
-
-    // Data type hints row
-    const activitiesHints = activitiesSheet.addRow([
-      'Text (Required)',
-      'Text (Required)',
-      'Text (Optional)',
-      'Text (Optional)',
-      'Text (Optional)',
-      'DD/MM/YYYY (Required)',
-      'DD/MM/YYYY (Optional)',
-      'Number (Optional)',
-      'Number (Required)',
-      'Text (Optional)',
-      'Enum (Required)',
-      'DD/MM/YYYY (Optional)',
-      'Text (Optional)',
-      'URL (Optional)'
-    ]);
-    activitiesHints.font = { italic: true, color: { argb: 'FF808080' }, size: 9 };
-    activitiesHints.alignment = { horizontal: 'center' };
-
-    // Example data row (users should delete this before importing)
-    const activitiesExample = activitiesSheet.addRow([
-      'CCHN-2023-001234',
-      'Hội thảo Y học lâm sàng 2024',
-      'Hội thảo',
-      'Báo cáo viên',
-      'Bệnh viện Đa khoa Trung ương Cần Thơ',
-      new Date(2024, 2, 15),
-      new Date(2024, 2, 17),
-      10,
-      5.5,
-      'HT-2024-001234',
-      'DaDuyet',
-      new Date(2024, 2, 20),
-      'Đã xác minh chứng chỉ',
-      'https://storage.example.com/cert.pdf'
-    ]);
-    activitiesExample.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFFFC7CE' }
-    };
-    activitiesExample.font = { italic: true, color: { argb: 'FF9C0006' } };
-    // Add note to first cell
-    const activityNoteCell = activitiesSheet.getCell('A3');
-    if (activityNoteCell.note) {
-      activityNoteCell.note = {
-        texts: [{ text: '⚠️ Đây là dòng mẫu. Vui lòng XÓA dòng này trước khi nhập dữ liệu thật!' }]
-      };
-    }
-
-    // Format date columns (updated column indices)
-    activitiesSheet.getColumn(6).numFmt = 'dd/mm/yyyy';  // Ngày bắt đầu
-    activitiesSheet.getColumn(7).numFmt = 'dd/mm/yyyy';  // Ngày kết thúc
-    activitiesSheet.getColumn(12).numFmt = 'dd/mm/yyyy'; // Ngày duyệt
-
-    // Add data validation for status (if supported)
-    if ('dataValidations' in activitiesSheet) {
-      (activitiesSheet as any).dataValidations.add('K4:K10000', {
-        type: 'list',
-        allowBlank: false,
-        formulae: ['"ChoDuyet,DaDuyet,TuChoi"']
-      });
-    }
-
-    // Sheet 3: Instructions
+    // Sheet 2: Instructions
     const instructionsSheet = workbook.addWorksheet('Hướng dẫn');
     instructionsSheet.getColumn(1).width = 100;
 
     const instructions = [
-      { text: 'HƯỚNG DẪN NHẬP DỮ LIỆU HÀNG LOẠT', style: { bold: true, size: 16, color: { argb: 'FF4472C4' } } },
+      { text: 'HƯỚNG DẪN NHẬP DANH SÁCH NHÂN VIÊN', style: { bold: true, size: 16, color: { argb: 'FF4472C4' } } },
       { text: 'CNKTYKLT - Hệ thống quản lý tuân thủ CNKT', style: { size: 12 } },
       { text: '' },
       { text: '📋 TỔNG QUAN', style: { bold: true, size: 12 } },
-      { text: 'File Excel này cho phép bạn nhập hàng loạt:' },
-      { text: '• Thông tin nhân viên y tế' },
-      { text: '• Lịch sử hoạt động CNKT của họ' },
+      { text: 'File Excel này cho phép bạn nhập hàng loạt thông tin nhân viên y tế.' },
+      { text: '• Chỉ nhập thông tin nhân viên (họ tên, CCHN, khoa/phòng, v.v.)' },
+      { text: '• Hoạt động CNKT sử dụng tính năng Ghi nhận hàng loạt riêng biệt' },
       { text: '' },
       { text: '🔢 CÁC BƯỚC THỰC HIỆN', style: { bold: true, size: 12 } },
       { text: '1. Điền thông tin vào sheet "Nhân viên"' },
-      { text: '2. Điền hoạt động vào sheet "Hoạt động"' },
-      { text: '3. Lưu file và tải lên hệ thống' },
-      { text: '4. Kiểm tra kết quả xác thực' },
-      { text: '5. Xác nhận nhập dữ liệu' },
+      { text: '2. Lưu file và tải lên hệ thống' },
+      { text: '3. Kiểm tra kết quả xác thực' },
+      { text: '4. Xác nhận nhập dữ liệu' },
+      { text: '5. Sử dụng tính năng "Ghi nhận hàng loạt" để nhập hoạt động CNKT' },
       { text: '' },
       { text: '⚠️ LƯU Ý QUAN TRỌNG', style: { bold: true, size: 12, color: { argb: 'FFFF0000' } } },
       { text: '• XÓA dòng 3 (dòng mẫu màu đỏ nhạt) trước khi nhập dữ liệu thật' },
-      { text: '• Không xóa hoặc đổi tên các sheet' },
+      { text: '• Không xóa hoặc đổi tên sheet "Nhân viên"' },
       { text: '• Không thay đổi tiêu đề cột (dòng 1)' },
       { text: '• Các trường có dấu * là bắt buộc' },
       { text: '• Số CCHN phải duy nhất trong đơn vị của bạn' },
-      { text: '• Ngày hoạt động phải nằm trong kỳ CNKT' },
-      { text: '• File tối đa 10MB' }
+      { text: '• File tối đa 10MB' },
+      { text: '' },
+      { text: '💡 NHẬP HOẠT ĐỘNG CNKT', style: { bold: true, size: 12, color: { argb: 'FF0066CC' } } },
+      { text: 'Sau khi nhập nhân viên, sử dụng tính năng "Ghi nhận hàng loạt":' },
+      { text: '• Truy cập trang Ghi nhận hoạt động' },
+      { text: '• Chọn "Ghi nhận hàng loạt"' },
+      { text: '• Nhập nhiều hoạt động cho cùng một nhân viên' },
+      { text: '• Hệ thống tự động tính tín chỉ theo danh mục' }
     ];
 
     instructions.forEach((line, index) => {
@@ -331,14 +224,13 @@ export class ExcelProcessor {
   }
 
   /**
-   * Parse Excel file and extract data
+   * Parse Excel file and extract practitioner data
    */
   async parseFile(buffer: Buffer): Promise<ParsedData> {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer as any);
 
     const practitioners: PractitionerRow[] = [];
-    const activities: ActivityRow[] = [];
 
     // Parse Practitioners sheet
     const practitionersSheet = workbook.getWorksheet('Nhân viên');
@@ -372,36 +264,7 @@ export class ExcelProcessor {
       });
     }
 
-    // Parse Activities sheet
-    const activitiesSheet = workbook.getWorksheet('Hoạt động');
-    if (activitiesSheet) {
-      activitiesSheet.eachRow((row, rowNumber) => {
-        if (rowNumber <= 2) return; // Skip header and hints rows only
-
-        const values = row.values as any[];
-        if (!values[1] && !values[2]) return; // Skip empty rows
-
-        activities.push({
-          soCCHN: values[1]?.toString().trim() || '',
-          tenHoatDong: values[2]?.toString().trim() || '',
-          hinhThucCapNhatKienThucYKhoa: values[3]?.toString().trim(),
-          chiTietVaiTro: values[4]?.toString().trim(),
-          donViToChuc: values[5]?.toString().trim(),
-          ngayBatDau: this.parseDate(values[6]) || new Date(),
-          ngayKetThuc: this.parseDate(values[7]),
-          soTiet: values[8] ? parseFloat(values[8].toString()) : undefined,
-          soTinChi: parseFloat(values[9]?.toString() || '0'),
-          bangChungSoGiayChungNhan: values[10]?.toString().trim(),
-          trangThaiDuyet: (values[11]?.toString().trim() || 'ChoDuyet') as any,
-          ngayDuyet: this.parseDate(values[12]),
-          ghiChuDuyet: values[13]?.toString().trim(),
-          urlMinhChung: values[14]?.toString().trim(),
-          rowNumber
-        });
-      });
-    }
-
-    return { practitioners, activities };
+    return { practitioners };
   }
 
   /**

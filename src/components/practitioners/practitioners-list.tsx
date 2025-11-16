@@ -38,6 +38,7 @@ interface Practitioner {
   Email?: string;
   DienThoai?: string;
   ChucDanh?: string;
+  KhoaPhong?: string | null;
   complianceStatus: ComplianceStatus;
 }
 
@@ -184,7 +185,7 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
 
   const getComplianceBadge = (complianceStatus: ComplianceStatus) => {
     const { compliancePercentage, status } = complianceStatus;
-    
+
     switch (status) {
       case 'compliant':
         return (
@@ -210,6 +211,14 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
       default:
         return <Badge variant="outline">{compliancePercentage.toFixed(0)}%</Badge>;
     }
+  };
+
+  // Helper function to combine ChucDanh and KhoaPhong for display
+  const getCombinedTitle = (chucDanh?: string, khoaPhong?: string | null) => {
+    const parts = [];
+    if (chucDanh) parts.push(chucDanh);
+    if (khoaPhong) parts.push(khoaPhong);
+    return parts.length > 0 ? parts.join(' - ') : 'Chưa xác định';
   };
 
   // Phase 1: No client-side filtering needed - all filtering done on server
@@ -510,8 +519,8 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
                         )}
                       </td>
                       <td className="px-6 py-4 text-xs text-gray-900 max-w-[160px]">
-                        <div className="break-words leading-tight" title={practitioner.ChucDanh || 'Chưa xác định'}>
-                          {practitioner.ChucDanh || 'Chưa xác định'}
+                        <div className="break-words leading-tight" title={getCombinedTitle(practitioner.ChucDanh, practitioner.KhoaPhong)}>
+                          {getCombinedTitle(practitioner.ChucDanh, practitioner.KhoaPhong)}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900" title={practitioner.SoCCHN || 'N/A'}>

@@ -76,18 +76,30 @@ export const NhanVienSchema = z.object({
   DienThoai: z.string().nullable(),
   ChucDanh: z.string().nullable(),
   MaNhanVienNoiBo: z.string().nullable(),
+  // Extended fields from bulk import template (optional)
+  NgaySinh: z.date().nullable().optional(),
+  GioiTinh: z.string().nullable().optional(),
+  KhoaPhong: z.string().nullable().optional(),
+  NoiCapCCHN: z.string().nullable().optional(),
+  PhamViChuyenMon: z.string().nullable().optional(),
 });
 
 export const CreateNhanVienSchema = NhanVienSchema.omit({ MaNhanVien: true }).extend({
   // Accept ISO string from JSON and coerce to Date for creation as well
   NgayCapCCHN: z.coerce.date().nullable(),
-  // Optional internal employee code on creation
+  NgaySinh: z.coerce.date().nullable().optional(),
+  // Extended fields are already optional from base schema, explicitly marked here for clarity
   MaNhanVienNoiBo: z.string().nullable().optional(),
+  GioiTinh: z.string().nullable().optional(),
+  KhoaPhong: z.string().nullable().optional(),
+  NoiCapCCHN: z.string().nullable().optional(),
+  PhamViChuyenMon: z.string().nullable().optional(),
 });
 export const UpdateNhanVienSchema = CreateNhanVienSchema.partial().extend({
   MaDonVi: UUIDSchema.optional(),
   // API receives dates as ISO strings via JSON; coerce to Date
   NgayCapCCHN: z.coerce.date().nullable().optional(),
+  NgaySinh: z.coerce.date().nullable().optional(),
 });
 
 // DanhMucHoatDong (Activity Catalog) schema
