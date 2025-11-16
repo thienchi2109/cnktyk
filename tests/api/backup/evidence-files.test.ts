@@ -110,7 +110,7 @@ const mockSizeResolution = (
   options?: { sizes?: Array<number | null>; r2Configured?: boolean },
 ) => {
   const resolvedSizes = options?.sizes ?? records.map(() => 1024);
-  const total = resolvedSizes.reduce((sum, size) => sum + (size ?? 0), 0);
+  const total = resolvedSizes.reduce((sum: number, size) => sum + (size ?? 0), 0);
 
   (resolveFileSizes as unknown as Mock).mockResolvedValue({
     files: records.map((record, index) => ({
