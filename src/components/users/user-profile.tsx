@@ -124,9 +124,11 @@ export function UserProfile({ profile, onUpdateProfile, isLoading = false }: Use
           <div className="p-4 rounded-full bg-gradient-to-br from-medical-blue/20 to-medical-green/20">
             <User className="h-10 w-10 text-medical-blue" />
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">{profile.TenDangNhap}</h2>
-            <div className="flex items-center gap-2 mt-1">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-xl font-bold text-gray-900 break-words" title={profile.DonVi?.TenDonVi || profile.TenDangNhap}>
+              {profile.DonVi?.TenDonVi || profile.TenDangNhap}
+            </h2>
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
               <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${roleColors[profile.QuyenHan]}`}>
                 <Shield className="h-3 w-3" />
                 {roleLabels[profile.QuyenHan]}
