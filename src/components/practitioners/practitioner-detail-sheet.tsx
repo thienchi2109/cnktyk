@@ -18,21 +18,24 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LoadingNotice } from '@/components/ui/loading-notice';
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  Building, 
-  Award, 
+import {
+  User,
+  Mail,
+  Phone,
+  Building,
+  Award,
   Calendar,
   CheckCircle,
   Clock,
   AlertTriangle,
   FileText,
   Edit,
-  X
+  X,
+  ArrowRight
 } from 'lucide-react';
 import { PractitionerForm } from './practitioner-form';
+import { SubmissionsSummaryCard } from './submissions-summary-card';
+import { RecentSubmissionsTable } from './recent-submissions-table';
 
 interface PractitionerDetailSheetProps {
   practitionerId: string | null;
@@ -302,6 +305,35 @@ export function PractitionerDetailSheet({
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Activity Submissions */}
+            {practitionerId && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Hoạt động đã ghi nhận
+                </h3>
+
+                {/* Summary Card */}
+                <SubmissionsSummaryCard practitionerId={practitionerId} />
+
+                {/* Recent Submissions Table */}
+                <RecentSubmissionsTable practitionerId={practitionerId} />
+
+                {/* View All Button */}
+                <Button
+                  variant="medical-secondary"
+                  className="w-full gap-2"
+                  size="lg"
+                  onClick={() => {
+                    window.location.href = `/submissions?practitionerId=${practitionerId}`;
+                  }}
+                >
+                  Xem tất cả hoạt động
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
               </div>
             )}
           </div>
