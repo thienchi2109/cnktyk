@@ -509,10 +509,10 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
                           </div>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 max-w-[200px]">
-                        <span className="block truncate" title={practitioner.ChucDanh || 'Chưa xác định'}>
+                      <td className="px-6 py-4 text-xs text-gray-900 max-w-[160px]">
+                        <div className="break-words leading-tight" title={practitioner.ChucDanh || 'Chưa xác định'}>
                           {practitioner.ChucDanh || 'Chưa xác định'}
-                        </span>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900" title={practitioner.SoCCHN || 'N/A'}>
                         {practitioner.SoCCHN || 'N/A'}
