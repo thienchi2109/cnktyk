@@ -114,7 +114,7 @@ export function BulkImportSheet({ open, onOpenChange, onImportSuccess }: BulkImp
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']
     },
     maxFiles: 1,
-    maxSize: 10 * 1024 * 1024 // 10MB
+    maxSize: 5 * 1024 * 1024 // 5MB
   });
 
   // Validate file
@@ -293,7 +293,7 @@ export function BulkImportSheet({ open, onOpenChange, onImportSuccess }: BulkImp
                     Kéo thả file Excel vào đây hoặc click để chọn
                   </p>
                   <p className="text-sm text-gray-500">
-                    Chỉ chấp nhận file .xlsx, tối đa 10MB
+                    Chỉ chấp nhận file .xlsx, tối đa 5MB
                   </p>
                 </>
               )}

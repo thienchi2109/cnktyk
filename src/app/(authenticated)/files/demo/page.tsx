@@ -91,7 +91,7 @@ export default function FileUploadDemo() {
             </div>
             <div className="flex items-center space-x-2">
               <Upload className="h-4 w-4 text-medical-green" />
-              <span>Tối đa: 10MB mỗi tệp</span>
+              <span>Tối đa: 5MB mỗi tệp</span>
             </div>
             <div className="flex items-center space-x-2">
               <Shield className="h-4 w-4 text-medical-amber" />

@@ -502,7 +502,7 @@ export function ActivitySubmissionForm({
             onUpload={handleFileUpload}
             onError={handleFileUploadError}
             maxFiles={3}
-            maxSize={10}
+            maxSize={5}
             acceptedTypes={['application/pdf', 'image/jpeg', 'image/png']}
           />
         </GlassCard>

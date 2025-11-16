@@ -225,11 +225,11 @@ export const FileUploadSchema = z.object({
   }
 ).refine(
   (data) => {
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const maxSize = 5 * 1024 * 1024; // 5MB
     return data.file.size <= maxSize;
   },
   {
-    message: 'File size must be less than 10MB',
+    message: 'File size must be less than 5MB',
     path: ['file'],
   }
 );
