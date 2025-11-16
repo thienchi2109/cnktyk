@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { Building, BarChart3 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PerformanceSummaryReport } from '@/components/reports/performance-summary';
-import type { ReportType, ReportFilters } from '@/types/reports';
+import { ComplianceReport } from '@/components/reports/compliance-report';
+import type { ReportType, ReportFilters, ComplianceReportFilters } from '@/types/reports';
 import { subDays } from 'date-fns';
 
 interface ReportsPageClientProps {
@@ -15,6 +16,13 @@ interface ReportsPageClientProps {
 export function ReportsPageClient({ unitId, userId }: ReportsPageClientProps) {
   const [selectedReport, setSelectedReport] = useState<ReportType>('performance');
   const [filters, setFilters] = useState<ReportFilters>({
+    startDate: subDays(new Date(), 30).toISOString(),
+    endDate: new Date().toISOString(),
+    preset: 'last_30_days',
+  });
+
+  // Compliance-specific filters
+  const [complianceFilters, setComplianceFilters] = useState<ComplianceReportFilters>({
     startDate: subDays(new Date(), 30).toISOString(),
     endDate: new Date().toISOString(),
     preset: 'last_30_days',
@@ -79,17 +87,9 @@ export function ReportsPageClient({ unitId, userId }: ReportsPageClientProps) {
           <PerformanceSummaryReport unitId={unitId} filters={filters} />
         </TabsContent>
 
-        {/* Compliance Report - Placeholder for Phase 2 */}
+        {/* Compliance Report */}
         <TabsContent value="compliance" className="space-y-6">
-          <div className="glass-card p-12 text-center">
-            <Building className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">
-              Báo cáo tuân thủ
-            </h3>
-            <p className="text-gray-600">
-              Tính năng này sẽ được triển khai trong Phase 2
-            </p>
-          </div>
+          <ComplianceReport unitId={unitId} filters={complianceFilters} />
         </TabsContent>
 
         {/* Activity Report - Placeholder for Phase 2 */}

@@ -1,0 +1,80 @@
+'use client';
+
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Cell } from 'recharts';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart';
+import { getComplianceStatusColor } from './chart-config';
+import type { PractitionerComplianceSummary } from '@/types/reports';
+
+interface ComplianceBarChartProps {
+  data: PractitionerComplianceSummary[];
+  limit?: number;
+  showTopPerformers?: boolean;
+}
+
+export function ComplianceBarChart({
+  data,
+  limit = 10,
+  showTopPerformers = true,
+}: ComplianceBarChartProps) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-[300px] flex items-center justify-center text-gray-500">
+        <p>Không có dữ liệu</p>
+      </div>
+    );
+  }
+
+  // Sort and limit data
+  const sortedData = [...data].sort((a, b) =>
+    showTopPerformers ? b.credits - a.credits : a.credits - b.credits
+  );
+  const limitedData = sortedData.slice(0, limit);
+
+  // Transform data for Recharts
+  const chartData = limitedData.map((item) => ({
+    name: item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name,
+    fullName: item.name,
+    credits: item.credits,
+    fill: getComplianceStatusColor(item.status),
+  }));
+
+  const chartConfig = {
+    credits: {
+      label: 'Tín chỉ',
+      color: 'hsl(var(--medical-blue))',
+    },
+  };
+
+  return (
+    <ChartContainer config={chartConfig} className="h-[300px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          data={chartData}
+          layout="vertical"
+          margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+          <XAxis type="number" />
+          <YAxis dataKey="name" type="category" width={90} />
+          <ChartTooltip
+            content={<ChartTooltipContent />}
+            cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
+          />
+          <Bar
+            dataKey="credits"
+            radius={[0, 4, 4, 0]}
+            className="hover:opacity-80 transition-opacity"
+          >
+            {chartData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.fill} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </ChartContainer>
+  );
+}
