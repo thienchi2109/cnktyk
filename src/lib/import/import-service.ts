@@ -132,24 +132,21 @@ export class ImportService {
           continue;
         }
 
-        // Build ChucDanh from ChucVu and KhoaPhong
-        let chucDanh = '';
-        if (p.chucVu && p.khoaPhong) {
-          chucDanh = `${p.chucVu} - ${p.khoaPhong}`;
-        } else if (p.chucVu) {
-          chucDanh = p.chucVu;
-        } else if (p.khoaPhong) {
-          chucDanh = p.khoaPhong;
-        }
-
+        // Map fields directly - no combining of ChucVu and KhoaPhong
         validPractitioners.push({
           hoVaTen: p.hoVaTen,
           soCCHN: p.soCCHN,
           ngayCapCCHN: p.ngayCapCCHN,
           maDonVi: unitId,
           trangThaiLamViec: p.trangThaiLamViec || 'DangLamViec',
-          chucDanh: chucDanh || null,
-          maNhanVienNoiBo: (p.maNhanVien && p.maNhanVien.trim() !== '') ? p.maNhanVien.trim() : null
+          chucDanh: p.chucVu || null,  // Column F: Chức vụ → ChucDanh
+          maNhanVienNoiBo: (p.maNhanVien && p.maNhanVien.trim() !== '') ? p.maNhanVien.trim() : null,
+          // Extended fields from Excel template
+          ngaySinh: p.ngaySinh || null,           // Column C: Ngày sinh
+          gioiTinh: p.gioiTinh || null,           // Column D: Giới tính
+          khoaPhong: p.khoaPhong || null,         // Column E: Khoa/Phòng → KhoaPhong
+          noiCapCCHN: p.noiCap || null,           // Column I: Nơi cấp
+          phamViChuyenMon: p.phamViChuyenMon || null  // Column J: Phạm vi chuyên môn
         });
       }
 
