@@ -27,7 +27,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { FileUpload, UploadedFile } from '@/components/ui/file-upload';
 import { LoadingNotice } from '@/components/ui/loading-notice';
-import { SheetFooter } from '@/components/ui/sheet';
 import { useActivitiesCatalog } from '@/hooks/use-activities';
 import { PractitionerSelector } from '@/components/ui/practitioner-selector';
 import { useUnitPractitioners } from '@/hooks/use-unit-practitioners';
@@ -263,7 +262,7 @@ export function ActivitySubmissionForm({
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className={variant === 'sheet' ? 'space-y-6' : 'max-w-4xl mx-auto space-y-6'}>
       {/* Alerts */}
       {error && (
         <Alert className="border-red-200 bg-red-50">
@@ -281,7 +280,7 @@ export function ActivitySubmissionForm({
 
       <form
         onSubmit={handleSubmit(onSubmitForm)}
-        className={variant === 'sheet' ? 'space-y-6 pb-36' : 'space-y-6'}
+        className="space-y-6"
       >
         {/* Practitioner Selection (for unit admins) */}
         {userRole === 'DonVi' && practitioners.length > 0 && (
@@ -508,69 +507,35 @@ export function ActivitySubmissionForm({
         </GlassCard>
 
         {/* Form Actions */}
-        {variant === 'page' ? (
-          <div className="flex justify-end gap-3 pt-6">
-            {onCancel && (
-              <Button
-                type="button"
-                variant="outline-accent"
-                onClick={onCancel}
-                disabled={isLoading}
-                className="gap-2"
-                size="lg"
-              >
-                <X className="w-4 h-4" />
-                Hủy
-              </Button>
-            )}
+        <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:justify-end pt-2 border-t border-gray-100">
+          {onCancel && (
             <Button
-              type="submit"
+              type="button"
+              variant="outline-accent"
+              onClick={onCancel}
               disabled={isLoading}
-              variant="medical"
               className="gap-2"
               size="lg"
             >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              Gửi hoạt động
+              <X className="w-4 h-4" />
+              Hủy
             </Button>
-          </div>
-        ) : (
-          <SheetFooter className="-mx-6 px-6 py-4 mt-6 bg-white sticky bottom-0">
-            <div className="flex w-full flex-col items-end gap-2 sm:flex-row sm:items-center sm:justify-end">
-              {onCancel && (
-                <Button
-                  type="button"
-                  variant="outline-accent"
-                  onClick={onCancel}
-                  disabled={isLoading}
-                  className="gap-2"
-                  size="lg"
-                >
-                  <X className="w-4 h-4" />
-                  Hủy
-                </Button>
-              )}
-              <Button
-                type="submit"
-                disabled={isLoading}
-                variant="medical"
-                className="gap-2"
-                size="lg"
-              >
-                {isLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4" />
-                )}
-                Gửi hoạt động
-              </Button>
-            </div>
-          </SheetFooter>
-        )}
+          )}
+          <Button
+            type="submit"
+            disabled={isLoading}
+            variant="medical"
+            className="gap-2"
+            size="lg"
+          >
+            {isLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            Gửi hoạt động
+          </Button>
+        </div>
       </form>
     </div>
   );
