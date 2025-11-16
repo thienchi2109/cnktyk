@@ -13,19 +13,17 @@ import {
 export interface ImportResult {
   practitionersCreated: number;
   practitionersUpdated: number;
-  activitiesCreated: number;
   cyclesCreated: number;
   errors: string[];
   metrics?: {
     validationTime: number;
     practitionersTime: number;
-    activitiesTime: number;
     totalTime: number;
     recordsPerSecond: number;
   };
 }
 
-export type ProgressPhase = 'validation' | 'practitioners' | 'activities' | 'audit';
+export type ProgressPhase = 'validation' | 'practitioners' | 'audit';
 
 export interface ProgressEvent {
   phase: ProgressPhase;
@@ -44,11 +42,11 @@ export interface ImportOptions {
 
 export class ImportService {
   /**
-   * Execute full import with transaction and progress tracking
+   * Execute practitioners import with transaction and progress tracking
+   * Note: Activities are now handled via separate bulk-submission feature
    */
   async executeImport(
     practitioners: PractitionerRow[],
-    activities: ActivityRow[],
     unitId: string,
     userId: string,
     options: ImportOptions = {}
@@ -58,13 +56,11 @@ export class ImportService {
     const result: ImportResult = {
       practitionersCreated: 0,
       practitionersUpdated: 0,
-      activitiesCreated: 0,
       cyclesCreated: 0,
       errors: [],
       metrics: {
         validationTime: 0,
         practitionersTime: 0,
-        activitiesTime: 0,
         totalTime: 0,
         recordsPerSecond: 0
       }
@@ -207,94 +203,7 @@ export class ImportService {
 
       result.metrics!.practitionersTime = performance.now() - practitionersStart;
 
-      // Phase 2: Import activities with batching
-      const activitiesStart = performance.now();
-      const validActivities: ActivityBatchRow[] = [];
-
-      // Lookup missing practitioner IDs
-      const missingCCHNs = new Set<string>();
-      activities.forEach(a => {
-        if (!practitionerMap.has(a.soCCHN)) {
-          missingCCHNs.add(a.soCCHN);
-        }
-      });
-
-      if (missingCCHNs.size > 0) {
-        const lookupResult = await db.query<{ MaNhanVien: string; SoCCHN: string }>(
-          `SELECT "MaNhanVien", "SoCCHN" FROM "NhanVien" 
-           WHERE "SoCCHN" = ANY($1) AND "MaDonVi" = $2`,
-          [Array.from(missingCCHNs), unitId]
-        );
-        lookupResult.forEach(row => {
-          practitionerMap.set(row.SoCCHN, row.MaNhanVien);
-        });
-      }
-
-      // Prepare activity batch rows
-      for (const a of activities) {
-        const maNhanVien = practitionerMap.get(a.soCCHN);
-
-        if (!maNhanVien) {
-          result.errors.push(
-            `Lỗi dòng ${a.rowNumber}: Không tìm thấy nhân viên với Số CCHN "${a.soCCHN}" trong đơn vị`
-          );
-          continue;
-        }
-
-        const nguoiDuyet = ['DaDuyet', 'TuChoi'].includes(a.trangThaiDuyet) ? userId : null;
-
-        validActivities.push({
-          maNhanVien,
-          tenHoatDong: a.tenHoatDong,
-          hinhThucCapNhatKienThucYKhoa: a.hinhThucCapNhatKienThucYKhoa || null,
-          chiTietVaiTro: a.chiTietVaiTro || null,
-          donViToChuc: a.donViToChuc || null,
-          ngayBatDau: a.ngayBatDau,
-          ngayKetThuc: a.ngayKetThuc || null,
-          soTiet: a.soTiet ?? null,
-          soGioTinChiQuyDoi: a.soTinChi,
-          bangChungSoGiayChungNhan: a.bangChungSoGiayChungNhan || null,
-          nguoiNhap: userId,
-          trangThaiDuyet: a.trangThaiDuyet,
-          ngayDuyet: a.ngayDuyet || null,
-          nguoiDuyet,
-          ghiChuDuyet: a.ghiChuDuyet || null,
-          fileMinhChungUrl: a.urlMinhChung || null
-        });
-      }
-
-      // Batch insert activities
-      const activitiesStartProcess = performance.now();
-      const activityTotalBatches = Math.ceil(validActivities.length / batchSize);
-      let activityCurrentBatch = 0;
-
-      result.activitiesCreated = await BatchProcessor.batchInsertActivities(
-        validActivities,
-        {
-          batchSize,
-          onProgress: (processed, total) => {
-            activityCurrentBatch = Math.ceil(processed / batchSize);
-            const elapsed = performance.now() - activitiesStartProcess;
-            const rate = processed / (elapsed / 1000);
-            const remaining = total - processed;
-            const estimatedTimeRemaining = remaining > 0 ? (remaining / rate) * 1000 : 0;
-
-            options.onProgress?.({
-              phase: 'activities',
-              processed,
-              total,
-              percentage: Math.round((processed / total) * 100),
-              estimatedTimeRemaining: estimatedTimeRemaining > 0 ? Math.round(estimatedTimeRemaining) : undefined,
-              currentBatch: activityCurrentBatch,
-              totalBatches: activityTotalBatches
-            });
-          }
-        }
-      );
-
-      result.metrics!.activitiesTime = performance.now() - activitiesStart;
-
-      // Phase 3: Audit trail
+      // Phase 2: Audit trail
       options.onProgress?.({
         phase: 'audit',
         processed: 1,
@@ -304,7 +213,7 @@ export class ImportService {
 
       // Calculate final metrics
       result.metrics!.totalTime = performance.now() - startTime;
-      const totalRecords = result.practitionersCreated + result.practitionersUpdated + result.activitiesCreated;
+      const totalRecords = result.practitionersCreated + result.practitionersUpdated;
       result.metrics!.recordsPerSecond = totalRecords / (result.metrics!.totalTime / 1000);
 
       // Log audit trail with metrics
@@ -316,12 +225,11 @@ export class ImportService {
         `,
         [
           userId,
-          'BULK_IMPORT',
-          'NhanVien,GhiNhanHoatDong',
+          'BULK_IMPORT_PRACTITIONERS',
+          'NhanVien',
           JSON.stringify({
             practitionersCreated: result.practitionersCreated,
             practitionersUpdated: result.practitionersUpdated,
-            activitiesCreated: result.activitiesCreated,
             cyclesCreated: result.cyclesCreated,
             metrics: result.metrics,
             timestamp: new Date().toISOString()
