@@ -726,10 +726,10 @@ export function SubmissionsList({
             <>
               <div className="overflow-x-auto">
                 <Table role="grid" className="min-w-full text-sm text-gray-700">
-                  <TableHeader className="bg-slate-50/95 backdrop-blur-sm text-[11px] font-semibold uppercase tracking-wide text-slate-600 [&_tr]:sticky [&_tr]:top-0 [&_tr]:z-10">
-                    <TableRow className="border-b border-slate-200/70">
+                  <TableHeader className="bg-gray-200/90 backdrop-blur-md sticky top-0 z-10 border-b-2 border-gray-300/50 shadow-sm">
+                    <TableRow>
                       {reviewerRole && (
-                        <TableHead className="w-12 text-center">
+                        <TableHead className="w-12 px-6 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-700">
                           <input
                             type="checkbox"
                             aria-label="Chọn tất cả hoạt động chờ duyệt"
@@ -738,15 +738,15 @@ export function SubmissionsList({
                           />
                         </TableHead>
                       )}
-                      <TableHead className="text-left min-w-[280px]">Hoạt động</TableHead>
+                      <TableHead className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-700 min-w-[280px]">Hoạt động</TableHead>
                       {userRole !== 'NguoiHanhNghe' && (
-                        <TableHead className="text-left w-[220px]">Người hành nghề</TableHead>
+                        <TableHead className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-700 w-[220px]">Người hành nghề</TableHead>
                       )}
-                      <TableHead className="text-left w-[140px]">Thời gian</TableHead>
-                      <TableHead className="text-left w-[120px]">Tín chỉ</TableHead>
-                      <TableHead className="text-left w-[160px]">Trạng thái</TableHead>
-                      <TableHead className="text-left w-[160px]">Ngày gửi</TableHead>
-                      <TableHead className="text-right w-[160px]">Thao tác</TableHead>
+                      <TableHead className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-700 w-[140px]">Thời gian</TableHead>
+                      <TableHead className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-700 w-[120px]">Tín chỉ</TableHead>
+                      <TableHead className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-700 w-[160px]">Trạng thái</TableHead>
+                      <TableHead className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-700 w-[160px]">Ngày gửi</TableHead>
+                      <TableHead className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-700 w-[160px]">Thao tác</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

@@ -218,6 +218,23 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
   const canCreatePractitioner = ['SoYTe', 'DonVi'].includes(userRole);
   const canEditPractitioner = ['SoYTe', 'DonVi'].includes(userRole);
 
+  // Convert Practitioner to form-compatible format
+  const convertPractitionerToFormData = (practitioner: Practitioner | undefined) => {
+    if (!practitioner) return undefined;
+    return {
+      MaNhanVien: practitioner.MaNhanVien,
+      HoVaTen: practitioner.HoVaTen,
+      SoCCHN: practitioner.SoCCHN || null,
+      NgayCapCCHN: practitioner.NgayCapCCHN ? new Date(practitioner.NgayCapCCHN) : null,
+      MaDonVi: practitioner.MaDonVi,
+      TrangThaiLamViec: practitioner.TrangThaiLamViec,
+      Email: practitioner.Email || null,
+      DienThoai: practitioner.DienThoai || null,
+      ChucDanh: practitioner.ChucDanh || null,
+      MaNhanVienNoiBo: practitioner.MaNhanVienNoiBo || null,
+    };
+  };
+
   const canDelete = (practitioner: Practitioner) => {
     if (!['SoYTe', 'DonVi'].includes(userRole)) return false;
     // DonVi can only delete practitioners from their own unit
@@ -669,7 +686,7 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
             </SheetHeader>
             <div className="mt-6">
               <PractitionerForm
-                initialData={practitioners.find(p => p.MaNhanVien === editPractitionerId)}
+                initialData={convertPractitionerToFormData(practitioners.find(p => p.MaNhanVien === editPractitionerId))}
                 unitId={userRole === 'DonVi' ? userUnitId : undefined}
                 units={userRole === 'SoYTe' ? units : units.filter(u => u.MaDonVi === userUnitId)}
                 userRole={userRole}
