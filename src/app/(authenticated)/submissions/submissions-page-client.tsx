@@ -65,16 +65,19 @@ export function SubmissionsPageClient({ userRole, practitioners, initialPractiti
         onCreateSubmission={handleCreateSubmission}
         onViewSubmission={handleViewSubmission}
         refreshKey={refreshKey}
+        practitioners={preparedPractitioners}
       />
 
       {/* Create Submission Sheet */}
       <Sheet open={showCreateSheet} onOpenChange={setShowCreateSheet}>
-        <SheetContent side="right" className="w-full sm:max-w-3xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Ghi nhận hoạt động</SheetTitle>
-            <SheetDescription>Gửi hoạt động đào tạo liên tục để được phê duyệt</SheetDescription>
-          </SheetHeader>
-          <div className="mt-6">
+        <SheetContent side="right" className="w-full sm:max-w-3xl flex flex-col p-0">
+          <div className="flex-shrink-0 border-b border-gray-200 px-6 py-4">
+            <SheetHeader>
+              <SheetTitle>Ghi nhận hoạt động</SheetTitle>
+              <SheetDescription>Gửi hoạt động đào tạo liên tục để được phê duyệt</SheetDescription>
+            </SheetHeader>
+          </div>
+          <div className="flex-1 overflow-y-auto px-6">
             <ActivitySubmissionForm
               userRole={userRole}
               practitioners={preparedPractitioners}

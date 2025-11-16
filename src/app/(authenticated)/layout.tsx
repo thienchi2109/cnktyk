@@ -42,7 +42,7 @@ export default async function AuthenticatedLayout({
   return (
     <ResponsiveNavigation
       user={{
-        name: session.user.username,
+        name: session.user.unitName || session.user.username,
         role: session.user.role,
       }}
       notifications={unreadCount}

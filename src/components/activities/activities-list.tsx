@@ -520,16 +520,16 @@ export function ActivitiesList({
               ) : (
                 <div className="overflow-x-auto">
                   <Table role="grid" className="min-w-full text-sm text-gray-700">
-                    <TableHeader className="bg-slate-50/90 backdrop-blur-sm text-[11px] font-semibold uppercase tracking-wide text-slate-600 [&_tr]:sticky [&_tr]:top-0 [&_tr]:z-10">
-                      <TableRow className="border-b border-slate-200/70">
-                        <TableHead className="text-left">Hoạt động</TableHead>
-                        <TableHead className="text-left">Phạm vi</TableHead>
-                        <TableHead className="text-left">Loại</TableHead>
-                        <TableHead className="text-left">Đơn vị tính</TableHead>
-                        <TableHead className="text-left">Tỷ lệ quy đổi</TableHead>
-                        <TableHead className="text-left">Trạng thái</TableHead>
+                    <TableHeader className="bg-gray-200/90 backdrop-blur-md sticky top-0 z-10 border-b-2 border-gray-300/50 shadow-sm">
+                      <TableRow>
+                        <TableHead className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-700">Hoạt động</TableHead>
+                        <TableHead className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-700">Phạm vi</TableHead>
+                        <TableHead className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-700">Loại</TableHead>
+                        <TableHead className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-700">Đơn vị tính</TableHead>
+                        <TableHead className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-700">Tỷ lệ quy đổi</TableHead>
+                        <TableHead className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-700">Trạng thái</TableHead>
                         {showActionsColumn && (
-                          <TableHead className="text-right w-[160px]">Thao tác</TableHead>
+                          <TableHead className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-700 w-[160px]">Thao tác</TableHead>
                         )}
                       </TableRow>
                     </TableHeader>

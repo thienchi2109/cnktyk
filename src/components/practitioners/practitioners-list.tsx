@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { usePractitioners, practitionersQueryKey, fetchPractitionersApi } from '@/hooks/use-practitioners';
-import { Search, Filter, Plus, Eye, Edit, Trash2, AlertTriangle, CheckCircle, Clock, Upload, UserCircle, ChevronLeft, ChevronRight, EllipsisVertical } from 'lucide-react';
+import { Search, Filter, Plus, Eye, Edit, Trash2, AlertTriangle, CheckCircle, Clock, Upload, UserCircle, ChevronLeft, ChevronRight, ExternalLink, Loader2 } from 'lucide-react';
 import { GlassCard } from '@/components/ui/glass-card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,15 +14,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LoadingNotice } from '@/components/ui/loading-notice';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { PractitionerForm } from './practitioner-form';
 import { PractitionerDetailSheet } from './practitioner-detail-sheet';
 import { BulkImportSheet } from './bulk-import-sheet';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 
 interface ComplianceStatus {
   totalCredits: number;
@@ -67,10 +63,30 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
   const [showBulkImportSheet, setShowBulkImportSheet] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [editPractitionerId, setEditPractitionerId] = useState<string | null>(null);
+  const [showEditSheet, setShowEditSheet] = useState(false);
 
   const PAGE_SIZE_OPTIONS = [10, 20, 30, 50] as const;
 
   const queryClient = useQueryClient();
+
+  // Delete practitioner mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/practitioners/${id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete practitioner');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['practitioners'] });
+    },
+  });
 
   const { data, isLoading, isError, error } = usePractitioners({
     page,
@@ -201,6 +217,41 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
 
   const canCreatePractitioner = ['SoYTe', 'DonVi'].includes(userRole);
   const canEditPractitioner = ['SoYTe', 'DonVi'].includes(userRole);
+
+  // Convert Practitioner to form-compatible format
+  const convertPractitionerToFormData = (practitioner: Practitioner | undefined) => {
+    if (!practitioner) return undefined;
+    return {
+      MaNhanVien: practitioner.MaNhanVien,
+      HoVaTen: practitioner.HoVaTen,
+      SoCCHN: practitioner.SoCCHN || null,
+      NgayCapCCHN: practitioner.NgayCapCCHN ? new Date(practitioner.NgayCapCCHN) : null,
+      MaDonVi: practitioner.MaDonVi,
+      TrangThaiLamViec: practitioner.TrangThaiLamViec,
+      Email: practitioner.Email || null,
+      DienThoai: practitioner.DienThoai || null,
+      ChucDanh: practitioner.ChucDanh || null,
+      MaNhanVienNoiBo: practitioner.MaNhanVienNoiBo || null,
+    };
+  };
+
+  const canDelete = (practitioner: Practitioner) => {
+    if (!['SoYTe', 'DonVi'].includes(userRole)) return false;
+    // DonVi can only delete practitioners from their own unit
+    if (userRole === 'DonVi' && practitioner.MaDonVi !== userUnitId) return false;
+    return true;
+  };
+
+  const handleIndividualDelete = async () => {
+    if (!deleteConfirmId) return;
+    try {
+      await deleteMutation.mutateAsync(deleteConfirmId);
+      setDeleteConfirmId(null);
+    } catch (error) {
+      console.error('Error deleting practitioner:', error);
+      alert(error instanceof Error ? error.message : 'Không thể xóa người hành nghề');
+    }
+  };
 
   if (isLoading && practitioners.length === 0) {
     return (
@@ -367,7 +418,8 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
       )}
 
       {/* Practitioners Table */}
-      <GlassCard className="overflow-hidden">
+      <TooltipProvider delayDuration={150}>
+        <GlassCard className="overflow-hidden">
         {isLoading ? (
           <div className="p-12 text-center">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-medical-blue mx-auto mb-4"></div>
@@ -457,10 +509,10 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
                           </div>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 max-w-[200px]">
-                        <span className="block truncate" title={practitioner.ChucDanh || 'Chưa xác định'}>
+                      <td className="px-6 py-4 text-xs text-gray-900 max-w-[160px]">
+                        <div className="break-words leading-tight" title={practitioner.ChucDanh || 'Chưa xác định'}>
                           {practitioner.ChucDanh || 'Chưa xác định'}
-                        </span>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900" title={practitioner.SoCCHN || 'N/A'}>
                         {practitioner.SoCCHN || 'N/A'}
@@ -488,31 +540,65 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
                         </div>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              aria-label="Thao tác"
-                              title="Thao tác"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <EllipsisVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedPractitionerId(practitioner.MaNhanVien);
-                                setShowDetailSheet(true);
-                              }}
-                            >
-                              <Eye className="h-4 w-4 mr-2" />
-                              Xem chi tiết
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label="Xem chi tiết"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedPractitionerId(practitioner.MaNhanVien);
+                                  setShowDetailSheet(true);
+                                }}
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Xem chi tiết</TooltipContent>
+                          </Tooltip>
+
+                          {canEditPractitioner && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  aria-label="Chỉnh sửa"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditPractitionerId(practitioner.MaNhanVien);
+                                    setShowEditSheet(true);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Chỉnh sửa</TooltipContent>
+                            </Tooltip>
+                          )}
+
+                          {canDelete(practitioner) && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  aria-label="Xóa"
+                                  className="text-red-600 hover:text-red-700"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteConfirmId(practitioner.MaNhanVien);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Xóa</TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -567,7 +653,8 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
             </div>
           </>
         )}
-      </GlassCard>
+        </GlassCard>
+      </TooltipProvider>
 
       {/* Practitioner Detail Sheet */}
       <PractitionerDetailSheet
@@ -586,6 +673,89 @@ export function PractitionersList({ userRole, userUnitId, units = [] }: Practiti
         onOpenChange={setShowBulkImportSheet}
         onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ['practitioners'] })}
       />
+
+      {/* Edit Practitioner Sheet */}
+      {editPractitionerId && (
+        <Sheet open={showEditSheet} onOpenChange={setShowEditSheet}>
+          <SheetContent className="w-full sm:max-w-3xl overflow-y-auto" side="right">
+            <SheetHeader>
+              <SheetTitle>Chỉnh sửa người hành nghề</SheetTitle>
+              <SheetDescription>
+                Cập nhật thông tin người hành nghề y tế
+              </SheetDescription>
+            </SheetHeader>
+            <div className="mt-6">
+              <PractitionerForm
+                initialData={convertPractitionerToFormData(practitioners.find(p => p.MaNhanVien === editPractitionerId))}
+                unitId={userRole === 'DonVi' ? userUnitId : undefined}
+                units={userRole === 'SoYTe' ? units : units.filter(u => u.MaDonVi === userUnitId)}
+                userRole={userRole}
+                onSuccess={() => {
+                  setShowEditSheet(false);
+                  setEditPractitionerId(null);
+                  queryClient.invalidateQueries({ queryKey: ['practitioners'] });
+                }}
+                onCancel={() => {
+                  setShowEditSheet(false);
+                  setEditPractitionerId(null);
+                }}
+                mode="edit"
+                variant="sheet"
+              />
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận xóa người hành nghề</DialogTitle>
+          </DialogHeader>
+
+          <div className="py-4">
+            <p className="text-gray-700 mb-2">
+              Bạn có chắc chắn muốn xóa người hành nghề này?
+            </p>
+            <Alert className="border-red-200 bg-red-50">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <AlertDescription className="text-red-700">
+                Hành động này sẽ đánh dấu người hành nghề là "Đã nghỉ" (soft delete). Dữ liệu sẽ được giữ lại trong hệ thống.
+              </AlertDescription>
+            </Alert>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline-accent"
+              onClick={() => setDeleteConfirmId(null)}
+              disabled={deleteMutation.isPending}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleIndividualDelete}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang xóa...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Xác nhận xóa
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

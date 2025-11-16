@@ -1297,8 +1297,7 @@ When working with this codebase:
 **UI:** `/so-y-te/backup` (SoYTe role only)
 
 **Endpoints:**
-- `POST /api/backup/evidence-files` - Stream ZIP with manifest
-- `POST /api/backup/evidence-files/estimate` - Size/duration estimates
+- `POST /api/backup/evidence-files` - Stream ZIP with manifest and enforce file-count safeguards
 - `GET /api/backup/dashboard` - Metrics for dashboard
 - `POST /api/backup/delete-archived` - Cleanup with safeguards
 

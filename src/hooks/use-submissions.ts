@@ -10,6 +10,7 @@ export interface UseSubmissionsOptions {
   search?: string;
   refreshKey?: number;
   unitId?: string;
+  practitionerId?: string;
 }
 
 export function submissionsQueryKey(o: UseSubmissionsOptions) {
@@ -21,6 +22,7 @@ export function submissionsQueryKey(o: UseSubmissionsOptions) {
     o.search ?? "",
     o.refreshKey ?? 0,
     o.unitId ?? "all-unit",
+    o.practitionerId ?? "all-practitioner",
   ] as const;
 }
 
@@ -34,6 +36,7 @@ export async function fetchSubmissionsApi(o: UseSubmissionsOptions): Promise<Sub
   if (o.status && o.status !== "all") params.append("status", o.status);
   if (o.search) params.append("search", o.search);
   if (o.unitId) params.append("unitId", o.unitId);
+  if (o.practitionerId) params.append("practitionerId", o.practitionerId);
 
   const res = await fetch(`/api/submissions?${params.toString()}`);
   if (!res.ok) {
@@ -73,6 +76,7 @@ export function useSubmissions(o: UseSubmissionsOptions) {
     o.status,
     o.refreshKey,
     o.unitId,
+    o.practitionerId,
     query.isSuccess,
     query.data?.pagination?.totalPages,
   ]);

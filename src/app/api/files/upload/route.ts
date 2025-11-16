@@ -56,9 +56,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!validateFileSize(file, 10)) {
+    if (!validateFileSize(file, 5)) {
       return NextResponse.json(
-        { error: 'File size exceeds 10MB limit.' },
+        { error: 'File size exceeds 5MB limit.' },
         { status: 400 }
       );
     }

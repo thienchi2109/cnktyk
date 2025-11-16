@@ -204,8 +204,10 @@ export const GlassHeader = React.forwardRef<HTMLDivElement, GlassHeaderProps>(
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-800 truncate">{user?.name || 'User'}</p>
-                    <p className="text-xs text-gray-600 truncate">
+                    <p className="text-sm font-semibold text-gray-800 break-words line-clamp-2" title={user?.name || 'User'}>
+                      {user?.name || 'User'}
+                    </p>
+                    <p className="text-xs text-gray-600 mt-0.5">
                       {user?.role === 'SoYTe' && 'Quản trị Sở Y Tế'}
                       {user?.role === 'DonVi' && 'Quản lý Đơn vị'}
                       {user?.role === 'NguoiHanhNghe' && 'Người hành nghề'}

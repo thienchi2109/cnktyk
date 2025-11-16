@@ -12,6 +12,7 @@ import { Readable } from 'stream';
 import { getCurrentUser } from '@/lib/auth/server';
 import { db } from '@/lib/db/client';
 import { r2Client } from '@/lib/storage/r2-client';
+import { extractR2Key, resolveFileSizes } from '@/app/api/backup/utils/file-size';
 import {
   saoLuuMinhChungRepo,
   chiTietSaoLuuRepo,
@@ -43,7 +44,7 @@ interface EvidenceFileRecord {
   NgayGhiNhan: Date;
   practitioner_HoVaTen: string;
   practitioner_SoCCHN: string;
-  FileMinhChungSize?: number;
+  FileMinhChungSize?: number | null;
 }
 
 interface ManifestFile {
@@ -55,40 +56,6 @@ interface ManifestFile {
   filename: string;
   path: string;
   size?: number;
-}
-
-/**
- * Extracts the R2 object key from an evidence file URL while preserving folder prefixes.
- *
- * @param url - Original URL as persisted in the database (may be proxy or direct R2 URL).
- * @returns The object key that R2 expects (e.g. `evidence/12345.pdf`).
- * @remarks The key must retain any prefixes produced by `generateSecureFilename`; trimming the path
- * causes downstream `GetObject` calls to fail with 404s.
- */
-function extractR2Key(url: string): string {
-  // Submissions persist proxy URLs (e.g. /api/files/prefix/file.pdf)
-  if (url.startsWith('/api/files/')) {
-    const path = url.slice('/api/files/'.length);
-    return path.split('?')[0];
-  }
-
-  // Support plain keys stored without protocol or leading slash
-  if (!url.match(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//)) {
-    return url.replace(/^\/+/, '').split('?')[0];
-  }
-
-  try {
-    const urlObj = new URL(url);
-    return urlObj.pathname.substring(1);
-  } catch (error) {
-    console.warn(`Unexpected evidence file URL format: ${url}`, error);
-    const parts = url.split('/');
-    if (parts.length >= 3) {
-      const tail = parts.slice(parts.length - 2).map((segment) => segment.split('?')[0]);
-      return tail.join('/');
-    }
-    return parts[parts.length - 1].split('?')[0];
-  }
 }
 
 /**
@@ -110,6 +77,9 @@ function sanitizeFilename(str: string): string {
  * @param date - Date instance to format.
  */
 function formatDate(date: Date): string {
+  if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+    return 'unknown-date';
+  }
   return date.toISOString().split('T')[0];
 }
 
@@ -224,7 +194,6 @@ export async function POST(req: NextRequest) {
         g."FileMinhChungUrl",
         g."TenHoatDong",
         g."NgayGhiNhan",
-        g."FileMinhChungSize",
         n."HoVaTen" AS practitioner_HoVaTen,
         n."SoCCHN" AS practitioner_SoCCHN
       FROM "GhiNhanHoatDong" g
@@ -236,16 +205,34 @@ export async function POST(req: NextRequest) {
       ORDER BY n."SoCCHN", g."NgayGhiNhan" DESC
     `;
 
-    const files = await db.query<EvidenceFileRecord>(query, [startDateObj, endDateExclusive]);
+    const rawFiles = await db.query<EvidenceFileRecord>(query, [startDateObj, endDateExclusive]);
 
-    if (!files || files.length === 0) {
+    if (!rawFiles || rawFiles.length === 0) {
       return NextResponse.json(
         { error: 'Không tìm thấy minh chứng nào trong khoảng thời gian đã chọn.' },
         { status: 404 },
       );
     }
 
-    const totalSizeBytes = files.reduce((sum, f) => sum + (f.FileMinhChungSize || 0), 0);
+    const sizeResolution = await resolveFileSizes(
+      rawFiles.map((file) => ({ id: file.MaGhiNhan, url: file.FileMinhChungUrl })),
+    );
+
+    if (!sizeResolution.r2Configured) {
+      return NextResponse.json(
+        {
+          error: 'Hệ thống chưa cấu hình kho lưu trữ minh chứng (Cloudflare R2). Vui lòng hoàn tất cấu hình trước khi tạo bản sao lưu.',
+        },
+        { status: 503 },
+      );
+    }
+
+    const files = rawFiles.map((file, index) => ({
+      ...file,
+      FileMinhChungSize: sizeResolution.files[index]?.size ?? null,
+    }));
+
+    const totalSizeBytes = sizeResolution.totalSizeBytes;
 
     if (files.length > MAX_BACKUP_FILE_COUNT) {
       return NextResponse.json(
@@ -310,6 +297,16 @@ export async function POST(req: NextRequest) {
      */
     const processFile = async (file: EvidenceFileRecord) => {
       const objectPath = extractR2Key(file.FileMinhChungUrl);
+      if (!objectPath) {
+        skippedCount++;
+        skippedManifest.push({
+          submissionId: file.MaGhiNhan,
+          filename: file.FileMinhChungUrl,
+          reason: 'INVALID_URL',
+        });
+        return;
+      }
+
       const stream = await downloadWithRetry(objectPath);
 
       if (!stream) {
@@ -321,6 +318,15 @@ export async function POST(req: NextRequest) {
         });
         return;
       }
+
+      let streamedBytes = 0;
+      stream.on('data', (chunk) => {
+        if (typeof chunk === 'string') {
+          streamedBytes += Buffer.byteLength(chunk);
+        } else if (chunk) {
+          streamedBytes += chunk.length;
+        }
+      });
 
       const practitionerFolder = `${sanitizeFilename(file.practitioner_SoCCHN)}_${sanitizeFilename(file.practitioner_HoVaTen)}`;
       const fileDate = formatDate(new Date(file.NgayGhiNhan));
@@ -367,15 +373,19 @@ export async function POST(req: NextRequest) {
 
         addedFiles++;
 
+        const resolvedSize = file.FileMinhChungSize ?? (streamedBytes > 0 ? streamedBytes : null);
+
         manifestFiles.push({
           submissionId: file.MaGhiNhan,
           activityName: file.TenHoatDong,
           practitioner: file.practitioner_HoVaTen,
           cchn: file.practitioner_SoCCHN,
-          date: file.NgayGhiNhan.toISOString(),
+          date: file.NgayGhiNhan instanceof Date && !isNaN(file.NgayGhiNhan.getTime())
+            ? file.NgayGhiNhan.toISOString()
+            : new Date().toISOString(),
           filename: objectPath,
           path: zipPath,
-          size: file.FileMinhChungSize,
+          size: resolvedSize ?? undefined,
         });
 
         await chiTietSaoLuuRepo.create({
@@ -383,7 +393,7 @@ export async function POST(req: NextRequest) {
           MaGhiNhan: file.MaGhiNhan,
           TrangThai: 'DaSaoLuu',
           NgayXoa: null,
-          DungLuongTep: file.FileMinhChungSize || null,
+          DungLuongTep: resolvedSize ?? null,
         });
       } catch (error) {
           console.error(`Error streaming file ${objectPath}:`, error);
@@ -435,6 +445,10 @@ export async function POST(req: NextRequest) {
         try {
           // Finalise once all workers finish piping their streams into the archive.
           await Promise.all(workers);
+
+          if (addedFiles === 0) {
+            throw new Error('Không thể tải bất kỳ minh chứng nào từ kho lưu trữ. Vui lòng kiểm tra Cloudflare R2 và thử lại.');
+          }
 
           const manifest = {
             backupDate: new Date().toISOString(),
