@@ -26,7 +26,7 @@ const PractitionerFormSchema = CreateNhanVienSchema
     TrangThaiLamViec: z.enum(['DangLamViec', 'DaNghi', 'TamHoan']).default('DangLamViec'),
     Email: z.string().email('Định dạng email không hợp lệ').optional().or(z.literal('')),
     DienThoai: z.string().regex(/^[0-9+\-\s()]*$/, 'Định dạng số điện thoại không hợp lệ').optional().or(z.literal('')),
-    MaNhanVienNoiBo: z.string().optional().or(z.literal('')),
+    MaNhanVienNoiBo: z.string().min(1, 'Vui lòng nhập mã nhân viên'),
   })
   .refine(
     (data) => {
@@ -138,7 +138,7 @@ export function PractitionerForm({
         Email: data.Email || null,
         DienThoai: data.DienThoai || null,
         ChucDanh: data.ChucDanh || null,
-        MaNhanVienNoiBo: (data as any).MaNhanVienNoiBo ? (data as any).MaNhanVienNoiBo : null,
+        MaNhanVienNoiBo: (data as any).MaNhanVienNoiBo, // Required field
       };
 
       // DonVi and NguoiHanhNghe cannot change unit in edit mode; exclude MaDonVi from payload
@@ -199,15 +199,21 @@ export function PractitionerForm({
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="MaNhanVienNoiBo">Mã nhân viên</Label>
+                <Label htmlFor="MaNhanVienNoiBo">Mã nhân viên *</Label>
                 <Input
                   id="MaNhanVienNoiBo"
                   {...form.register('MaNhanVienNoiBo')}
                   placeholder="Nhập mã nhân viên nội bộ"
+                  className={form.formState.errors.MaNhanVienNoiBo ? 'border-red-500' : ''}
                   disabled={isSelfLimited}
                 />
+                {form.formState.errors.MaNhanVienNoiBo && (
+                  <p className="text-sm text-red-500">
+                    {form.formState.errors.MaNhanVienNoiBo.message}
+                  </p>
+                )}
                 <p className="text-sm text-gray-500">
-                  Mã nhân viên nội bộ của đơn vị (tùy chọn)
+                  Mã nhân viên nội bộ của đơn vị
                 </p>
               </div>
 

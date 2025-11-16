@@ -8,12 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { 
-  Loader2, 
-  Shield, 
-  HeartPulse, 
-  Microscope, 
-  Stethoscope, 
+import {
+  Loader2,
+  Shield,
+  HeartPulse,
+  Microscope,
+  Stethoscope,
   BookOpen,
   User,
   Lock,
@@ -95,7 +95,7 @@ function SignInForm() {
     <>
       {/* Loading Overlay */}
       <LoadingOverlay isVisible={isLoading} />
-      
+
       <div className="min-h-screen relative overflow-hidden">
         {/* Simple Premium Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
@@ -253,13 +253,13 @@ function SignInForm() {
               {/* Mobile Logo and Header inside card */}
               <div className="lg:hidden text-center mb-6">
                 <div className="flex justify-center mb-4">
-                  <div className="relative w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden bg-white shadow-lg shadow-slate-900/10 border border-white/60 aspect-square backdrop-blur-sm">
+                  <div className="relative w-24 h-24 flex-shrink-0 rounded-xl overflow-hidden bg-white shadow-lg shadow-slate-900/10 border border-white/60 aspect-square backdrop-blur-sm">
                     <Image
                       src="/logo.png"
                       alt="CT-HTMS Logo"
                       fill
-                      sizes="64px"
-                      className="object-contain p-2"
+                      sizes="96px"
+                      className="object-contain p-3"
                     />
                   </div>
                 </div>
@@ -274,13 +274,13 @@ function SignInForm() {
               {/* Desktop Logo and Header inside card */}
               <div className="hidden lg:block text-center mb-6">
                 <div className="flex justify-center mb-4">
-                  <div className="relative w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden bg-white shadow-lg shadow-slate-900/10 border border-white/60 aspect-square backdrop-blur-sm">
+                  <div className="relative w-32 h-32 flex-shrink-0 rounded-xl overflow-hidden bg-white shadow-lg shadow-slate-900/10 border border-white/60 aspect-square backdrop-blur-sm">
                     <Image
                       src="/logo.png"
                       alt="CT-HTMS Logo"
                       fill
-                      sizes="80px"
-                      className="object-contain p-2.5"
+                      sizes="128px"
+                      className="object-contain p-4"
                     />
                   </div>
                 </div>
@@ -389,22 +389,22 @@ function SignInForm() {
                     <ShieldCheck className="h-3.5 w-3.5 text-amber-600" />
                     <h3 className="text-xs font-semibold text-amber-800">Chế độ phát triển - Đăng nhập nhanh</h3>
                   </div>
-                  <ChevronDown 
+                  <ChevronDown
                     className={`h-3.5 w-3.5 text-amber-600 transition-transform duration-200 ${
                       showDevAccounts ? 'rotate-180' : ''
-                    }`} 
+                    }`}
                   />
                 </button>
 
                 {/* Collapsible Content */}
                 <div className={`transition-all duration-300 ease-in-out ${
-                  showDevAccounts 
-                    ? 'max-h-96 opacity-100' 
+                  showDevAccounts
+                    ? 'max-h-96 opacity-100'
                     : 'max-h-0 opacity-0'
                 } overflow-hidden`}>
                   <div className="px-3 pb-3">
                     <p className="text-xs text-amber-600 mb-3">Nhấp để tự động điền thông tin (xóa trước khi triển khai)</p>
-                    
+
                     <div className="grid grid-cols-1 gap-2">
                       {/* SoYTe Account */}
                       <button
@@ -454,7 +454,7 @@ function SignInForm() {
                         </div>
                       </button>
                     </div>
-                    
+
                     <div className="mt-2 pt-2 border-t border-amber-200/50">
                       <p className="text-[10px] text-amber-700 text-center">Tất cả mật khẩu: <code className="bg-amber-100 px-1 py-0.5 rounded text-amber-800 font-mono text-[10px]">1234</code></p>
                     </div>

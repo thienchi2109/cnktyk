@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { ActivitiesList } from '@/components/activities/activities-list';
 import { ActivityFormSheet } from '@/components/activities/activity-form-sheet';
@@ -33,6 +34,8 @@ const defaultPermissions: ActivityPermissions = {
 export default function ActivitiesPage() {
   const { data: session, status } = useSession();
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [showCreateSheet, setShowCreateSheet] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<ActivityCatalogItem | null>(null);
@@ -40,6 +43,17 @@ export default function ActivitiesPage() {
   const [permissions, setPermissions] = useState<ActivityPermissions>(defaultPermissions);
 
   const catalogKey = activitiesCatalogBaseKey;
+
+  // Auto-open create sheet when redirected from submissions page
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'create') {
+      setShowCreateSheet(true);
+      setSelectedActivity(null);
+      // Clean up URL parameter
+      router.replace('/activities');
+    }
+  }, [searchParams, router]);
 
   type CatalogSnapshot = Array<[
     readonly unknown[],

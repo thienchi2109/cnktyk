@@ -73,10 +73,10 @@ describe('POST /api/files/upload', () => {
     expect(Array.isArray(body.details)).toBe(true);
   });
 
-  it('validates file size limit 10MB (schema validation)', async () => {
+  it('validates file size limit 5MB (schema validation)', async () => {
     (getCurrentUser as any).mockResolvedValueOnce({ id: 'u1', role: 'NguoiHanhNghe' });
     const form = new FormData();
-    const big = makeFile('big.pdf', 10 * 1024 * 1024 + 1, 'application/pdf');
+    const big = makeFile('big.pdf', 5 * 1024 * 1024 + 1, 'application/pdf');
     form.append('file', big);
     const res = await makeRequest(form);
     expect(res.status).toBe(400);

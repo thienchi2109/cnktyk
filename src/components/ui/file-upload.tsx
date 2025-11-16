@@ -40,7 +40,7 @@ export function FileUpload({
   onUpload,
   onError,
   maxFiles = 5,
-  maxSize = 10,
+  maxSize = 5,
   acceptedTypes = ['application/pdf', 'image/jpeg', 'image/png'],
   activityId,
   disabled = false,

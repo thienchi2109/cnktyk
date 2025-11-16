@@ -10,6 +10,7 @@ declare module "@auth/core/jwt" {
     role: "SoYTe" | "DonVi" | "NguoiHanhNghe" | "Auditor";
     unitId?: string;
     username: string;
+    unitName?: string;
     sessionStart: number;
   }
 }
@@ -22,6 +23,7 @@ declare module "next-auth" {
       username: string;
       role: "SoYTe" | "DonVi" | "NguoiHanhNghe" | "Auditor";
       unitId?: string;
+      unitName?: string;
     };
   }
 
@@ -30,6 +32,7 @@ declare module "next-auth" {
     username: string;
     role: "SoYTe" | "DonVi" | "NguoiHanhNghe" | "Auditor";
     unitId?: string;
+    unitName?: string;
   }
 }
 
@@ -65,6 +68,14 @@ export const authConfig: NextAuthConfig = {
           }
 
           console.log("[AUTH] Authentication successful for:", authResult.user.username);
+          console.log("[AUTH] User data:", {
+            id: authResult.user.id,
+            username: authResult.user.username,
+            role: authResult.user.role,
+            unitId: authResult.user.unitId,
+            unitName: authResult.user.unit?.TenDonVi,
+            hasUnit: !!authResult.user.unit
+          });
 
           // Return user object that matches our User interface
           return {
@@ -72,6 +83,7 @@ export const authConfig: NextAuthConfig = {
             username: authResult.user.username,
             role: authResult.user.role,
             unitId: authResult.user.unitId || undefined,
+            unitName: authResult.user.unit?.TenDonVi || undefined,
           };
         } catch (error) {
           console.error("[AUTH] Authorization error:", error);
@@ -88,10 +100,18 @@ export const authConfig: NextAuthConfig = {
     async jwt({ token, user, trigger }) {
       // Initial sign in
       if (user) {
+        console.log("[AUTH] JWT callback - creating token from user:", {
+          id: user.id,
+          username: user.username,
+          role: user.role,
+          unitId: user.unitId,
+          unitName: user.unitName
+        });
         token.sub = user.id;
         token.role = user.role;
         token.unitId = user.unitId;
         token.username = user.username;
+        token.unitName = user.unitName;
         token.sessionStart = Date.now();
       }
 
@@ -114,6 +134,8 @@ export const authConfig: NextAuthConfig = {
         sub: token.sub, 
         role: token.role, 
         username: token.username,
+        unitId: token.unitId,
+        unitName: token.unitName,
         hasSessionStart: typeof token.sessionStart === 'number' 
       });
 
@@ -139,6 +161,7 @@ export const authConfig: NextAuthConfig = {
         (session.user as any).username = token.username;
         (session.user as any).role = token.role;
         (session.user as any).unitId = token.unitId;
+        (session.user as any).unitName = token.unitName;
       }
 
       console.log("[AUTH] Session callback - returning valid session");

@@ -257,6 +257,9 @@ class R2StorageClient {
         activityId: response.Metadata?.activityId,
       };
     } catch (error) {
+      if (this.isNotFoundError(error)) {
+        return null;
+      }
       console.error('R2 metadata error:', error);
       return null;
     }
@@ -307,6 +310,9 @@ class R2StorageClient {
       console.warn('Unsupported R2 body stream type, returning null');
       return null;
     } catch (error) {
+      if (this.isNotFoundError(error)) {
+        return null;
+      }
       console.error('R2 download stream error:', error);
       return null;
     }
@@ -327,7 +333,9 @@ class R2StorageClient {
 
       return Buffer.concat(chunks);
     } catch (error) {
-      console.error('R2 download error:', error);
+      if (!this.isNotFoundError(error)) {
+        console.error('R2 download error:', error);
+      }
       return null;
     }
   }
@@ -402,6 +410,26 @@ class R2StorageClient {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
 
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+  }
+
+  private isNotFoundError(error: unknown): boolean {
+    if (!error) {
+      return false;
+    }
+
+    const metadataStatus = (error as { $metadata?: { httpStatusCode?: number } })?.$metadata?.httpStatusCode;
+    if (metadataStatus === 404) {
+      return true;
+    }
+
+    if (error instanceof Error && 'name' in error) {
+      const name = (error as Error).name;
+      if (name === 'NotFound' || name === 'NoSuchKey') {
+        return true;
+      }
+    }
+
+    return false;
   }
 }
 

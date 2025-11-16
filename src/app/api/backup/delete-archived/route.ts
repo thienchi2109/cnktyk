@@ -17,6 +17,7 @@ import {
   ghiNhanHoatDongRepo,
   saoLuuMinhChungRepo,
 } from '@/lib/db/repositories';
+import { extractR2Key, resolveFileSizes } from '@/app/api/backup/utils/file-size';
 
 // Configure route for long-running deletion operations
 export const maxDuration = 300; // 5 minutes
@@ -31,26 +32,6 @@ interface FileToDelete {
   MaGhiNhan: string;
   FileMinhChungUrl: string;
   FileMinhChungSize: number | null;
-}
-
-/**
- * Extracts the R2 object key from a persisted URL.
- *
- * @param url - The stored evidence file URL.
- * @returns The R2 object key ready for deletion commands.
- */
-function extractR2Key(url: string): string {
-  try {
-    const urlObj = new URL(url);
-    return urlObj.pathname.substring(1);
-  } catch (error) {
-    console.error(`Invalid URL format: ${url}`, error);
-    const parts = url.split('/');
-    if (parts.length >= 3) {
-      return parts.slice(parts.length - 2).join('/');
-    }
-    return parts[parts.length - 1];
-  }
 }
 
 /**
@@ -247,7 +228,7 @@ export async function POST(req: NextRequest) {
       SELECT DISTINCT
         g."MaGhiNhan",
         g."FileMinhChungUrl",
-        g."FileMinhChungSize"
+        c."DungLuongTep" AS "FileMinhChungSize"
       FROM "GhiNhanHoatDong" g
       INNER JOIN "ChiTietSaoLuu" c ON c."MaGhiNhan" = g."MaGhiNhan"
       WHERE g."FileMinhChungUrl" IS NOT NULL
@@ -258,14 +239,27 @@ export async function POST(req: NextRequest) {
       ORDER BY g."NgayGhiNhan" DESC
     `;
 
-    const files = await db.query<FileToDelete>(query, [startDateObj, endDateObj]);
+    const rawFiles = await db.query<FileToDelete>(query, [startDateObj, endDateObj]);
 
-    if (!files || files.length === 0) {
+    if (!rawFiles || rawFiles.length === 0) {
       return NextResponse.json(
         { error: 'Không tìm thấy minh chứng đã sao lưu trong khoảng thời gian đã chọn.' },
         { status: 404 },
       );
     }
+
+    const sizeResolution = await resolveFileSizes(
+      rawFiles.map((file) => ({
+        id: file.MaGhiNhan,
+        url: file.FileMinhChungUrl,
+        existingSize: file.FileMinhChungSize,
+      })),
+    );
+
+    const files = rawFiles.map((file, index) => ({
+      ...file,
+      FileMinhChungSize: sizeResolution.files[index]?.size ?? null,
+    }));
 
     // Check file count limit (max 5000)
     if (files.length > 5000) {
@@ -290,6 +284,15 @@ export async function POST(req: NextRequest) {
     for (const file of files) {
       try {
         const r2Key = extractR2Key(file.FileMinhChungUrl);
+        if (!r2Key) {
+          failedCount++;
+          failedDeletions.push({
+            id: file.MaGhiNhan,
+            url: file.FileMinhChungUrl,
+            error: 'INVALID_URL',
+          });
+          continue;
+        }
         
         // Delete from R2
         const deleteSuccess = await r2Client.deleteFile(r2Key);
@@ -297,7 +300,7 @@ export async function POST(req: NextRequest) {
         if (deleteSuccess) {
           deletedCount++;
           deletedSubmissionIds.push(file.MaGhiNhan);
-          totalSpaceFreed += file.FileMinhChungSize || 0;
+          totalSpaceFreed += file.FileMinhChungSize ?? 0;
         } else {
           failedCount++;
           failedDeletions.push({
@@ -324,10 +327,7 @@ export async function POST(req: NextRequest) {
         // Update GhiNhanHoatDong: Set file URLs to NULL
         const updateQuery = `
           UPDATE "GhiNhanHoatDong"
-          SET "FileMinhChungUrl" = NULL,
-              "FileMinhChungETag" = NULL,
-              "FileMinhChungSha256" = NULL,
-              "FileMinhChungSize" = NULL
+          SET "FileMinhChungUrl" = NULL
           WHERE "MaGhiNhan" = ANY($1::uuid[])
         `;
         
