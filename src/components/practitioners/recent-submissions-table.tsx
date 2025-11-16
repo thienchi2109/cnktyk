@@ -16,9 +16,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 interface RecentSubmissionsTableProps {
   practitionerId: string;
+  onSelectSubmission?: (submissionId: string) => void;
 }
 
-export function RecentSubmissionsTable({ practitionerId }: RecentSubmissionsTableProps) {
+export function RecentSubmissionsTable({ practitionerId, onSelectSubmission }: RecentSubmissionsTableProps) {
   const { data, isLoading, isError, error, refetch } = usePractitionerRecentSubmissions(practitionerId);
 
   const getStatusBadge = (status: 'ChoDuyet' | 'DaDuyet' | 'TuChoi') => {
@@ -138,7 +139,20 @@ export function RecentSubmissionsTable({ practitionerId }: RecentSubmissionsTabl
                 </thead>
                 <tbody className="divide-y divide-gray-200/50">
                   {submissions.map((submission) => (
-                    <tr key={submission.MaGhiNhan} className="hover:bg-gray-50/30">
+                    <tr
+                      key={submission.MaGhiNhan}
+                      className={`hover:bg-gray-50/60 transition cursor-pointer ${onSelectSubmission ? 'focus-within:bg-gray-50/80' : ''}`}
+                      onClick={() => onSelectSubmission?.(submission.MaGhiNhan)}
+                      role={onSelectSubmission ? 'button' : undefined}
+                      tabIndex={onSelectSubmission ? 0 : -1}
+                      onKeyDown={(e) => {
+                        if (!onSelectSubmission) return;
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onSelectSubmission(submission.MaGhiNhan);
+                        }
+                      }}
+                    >
                       <td className="px-3 py-3 max-w-[200px]">
                         <Tooltip>
                           <TooltipTrigger asChild>

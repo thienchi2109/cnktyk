@@ -94,11 +94,18 @@ interface Submission {
   } | null;
 }
 
+interface PractitionerInfo {
+  MaNhanVien: string;
+  HoVaTen: string;
+  ChucDanh: string | null;
+}
+
 interface SubmissionsListProps {
   userRole: string;
   onCreateSubmission?: () => void;
   onViewSubmission?: (submissionId: string) => void;
   refreshKey?: number;
+  practitioners?: PractitionerInfo[];
 }
 
 const statusLabels = {
@@ -133,6 +140,7 @@ export function SubmissionsList({
   onCreateSubmission, 
   onViewSubmission,
   refreshKey,
+  practitioners = [],
 }: SubmissionsListProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -142,6 +150,7 @@ export function SubmissionsList({
   const [searchInput, setSearchInput] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [unitFilter, setUnitFilter] = useState<string>('all');
+  const [practitionerFilter, setPractitionerFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -160,6 +169,15 @@ export function SubmissionsList({
 
   const debouncedSearchInput = useDebounce(searchInput, 400);
   const effectiveUnitFilter = userRole === 'SoYTe' && unitFilter !== 'all' ? unitFilter : undefined;
+  const effectivePractitionerFilter = practitionerFilter !== 'all' ? practitionerFilter : undefined;
+  const practitionerLabel = useMemo(() => {
+    if (!effectivePractitionerFilter) return null;
+    const target = practitioners.find((p) => p.MaNhanVien === effectivePractitionerFilter);
+    if (target) {
+      return `${target.HoVaTen}${target.ChucDanh ? ` • ${target.ChucDanh}` : ''}`;
+    }
+    return `Mã NHN: ${effectivePractitionerFilter}`;
+  }, [effectivePractitionerFilter, practitioners]);
 
   const { data, isLoading, error } = useSubmissions({
     page,
@@ -168,6 +186,7 @@ export function SubmissionsList({
     search: searchTerm,
     refreshKey,
     unitId: effectiveUnitFilter,
+    practitionerId: effectivePractitionerFilter,
   });
 
   const totalPages = data?.pagination?.totalPages ?? 1;
@@ -176,7 +195,7 @@ export function SubmissionsList({
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, searchTerm, effectiveUnitFilter]);
+  }, [statusFilter, searchTerm, effectiveUnitFilter, effectivePractitionerFilter]);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParamsString);
@@ -187,6 +206,8 @@ export function SubmissionsList({
       const paramUnitId = params.get('unitId') ?? 'all';
       setUnitFilter((prev) => (prev === paramUnitId ? prev : paramUnitId));
     }
+    const paramPractitioner = params.get('practitionerId') ?? 'all';
+    setPractitionerFilter((prev) => (prev === paramPractitioner ? prev : paramPractitioner));
   }, [searchParamsString, userRole]);
 
   useEffect(() => {
@@ -244,6 +265,26 @@ export function SubmissionsList({
     },
     [pathname, router, searchParamsString],
   );
+
+  const syncPractitionerQuery = useCallback(
+    (value: string) => {
+      const params = new URLSearchParams(searchParamsString);
+      if (value && value !== 'all') {
+        params.set('practitionerId', value);
+      } else {
+        params.delete('practitionerId');
+      }
+      const queryString = params.toString();
+      router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParamsString],
+  );
+
+  const handleClearPractitionerFilter = useCallback(() => {
+    setPractitionerFilter('all');
+    syncPractitionerQuery('all');
+    setPage(1);
+  }, [syncPractitionerQuery]);
 
   useEffect(() => {
     if (debouncedSearchInput === searchTerm) {
@@ -706,6 +747,22 @@ export function SubmissionsList({
       {/* Submissions Table */}
       <TooltipProvider delayDuration={150}>
         <GlassCard className="p-0 border border-white/25 shadow-lg overflow-hidden">
+          {effectivePractitionerFilter && (
+            <div className="px-6 py-4 bg-medical-blue/5 border-b border-medical-blue/10 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2 text-sm text-medical-blue font-medium">
+                <User className="h-4 w-4" />
+                <span>Đang lọc theo người hành nghề: {practitionerLabel}</span>
+              </div>
+              <Button
+                variant="outline-accent"
+                size="sm"
+                onClick={handleClearPractitionerFilter}
+                className="w-full sm:w-auto"
+              >
+                Bỏ lọc
+              </Button>
+            </div>
+          )}
           {isLoading ? (
             <div className="p-12">
               <LoadingNotice message="Đang tải danh sách hoạt động..." />

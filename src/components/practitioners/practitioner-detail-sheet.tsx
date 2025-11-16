@@ -18,6 +18,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LoadingNotice } from '@/components/ui/loading-notice';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { practitionerRecentSubmissionsQueryKey } from '@/hooks/use-practitioner-recent-submissions';
+import { practitionerSubmissionsSummaryQueryKey } from '@/hooks/use-practitioner-submissions-summary';
 import {
   User,
   Mail,
@@ -30,12 +33,12 @@ import {
   AlertTriangle,
   FileText,
   Edit,
-  X,
   ArrowRight
 } from 'lucide-react';
 import { PractitionerForm } from './practitioner-form';
 import { SubmissionsSummaryCard } from './submissions-summary-card';
 import { RecentSubmissionsTable } from './recent-submissions-table';
+import { SubmissionReview } from '@/components/submissions/submission-review';
 
 interface PractitionerDetailSheetProps {
   practitionerId: string | null;
@@ -44,7 +47,7 @@ interface PractitionerDetailSheetProps {
   canEdit?: boolean;
   units?: Array<{ MaDonVi: string; TenDonVi: string }>;
   onUpdate?: () => void;
-  userRole?: 'SoYTe' | 'DonVi' | 'NguoiHanhNghe' | 'Auditor' | string;
+  userRole: 'SoYTe' | 'DonVi' | 'NguoiHanhNghe' | 'Auditor' | string;
 }
 
 export function PractitionerDetailSheet({
@@ -59,6 +62,8 @@ export function PractitionerDetailSheet({
   const [practitioner, setPractitioner] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
+  const [showSubmissionDialog, setShowSubmissionDialog] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -193,10 +198,10 @@ export function PractitionerDetailSheet({
                 </h3>
                 {canEdit && !isEditing && (
                   <Button 
-                    variant="secondary" 
+                    variant="default" 
                     size="lg" 
                     onClick={() => setIsEditing(true)}
-                    className="gap-2"
+                    className="gap-2 bg-gradient-to-r from-medical-blue to-blue-600 hover:from-medical-blue/90 hover:to-blue-600/90 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 font-semibold ring-2 ring-medical-blue/20 hover:ring-medical-blue/40"
                   >
                     <Edit className="w-5 h-5" />
                     Chỉnh sửa
@@ -320,7 +325,13 @@ export function PractitionerDetailSheet({
                 <SubmissionsSummaryCard practitionerId={practitionerId} />
 
                 {/* Recent Submissions Table */}
-                <RecentSubmissionsTable practitionerId={practitionerId} />
+                <RecentSubmissionsTable
+                  practitionerId={practitionerId}
+                  onSelectSubmission={(submissionId) => {
+                    setSelectedSubmissionId(submissionId);
+                    setShowSubmissionDialog(true);
+                  }}
+                />
 
                 {/* View All Button */}
                 <Button
@@ -342,6 +353,38 @@ export function PractitionerDetailSheet({
             Không tìm thấy thông tin người hành nghề
           </div>
         )}
+
+        <Dialog
+          open={showSubmissionDialog}
+          onOpenChange={(open) => {
+            setShowSubmissionDialog(open);
+            if (!open) {
+              setSelectedSubmissionId(null);
+            }
+          }}
+        >
+          <DialogContent className="sm:max-w-3xl w-full max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Chi tiết hoạt động</DialogTitle>
+            </DialogHeader>
+            <div className="mt-4">
+              {selectedSubmissionId && (
+                <SubmissionReview
+                  submissionId={selectedSubmissionId}
+                  userRole={userRole}
+                  showHeading={false}
+                  onBack={() => setShowSubmissionDialog(false)}
+                  onReviewComplete={() => {
+                    if (practitionerId) {
+                      queryClient.invalidateQueries({ queryKey: practitionerRecentSubmissionsQueryKey(practitionerId) });
+                      queryClient.invalidateQueries({ queryKey: practitionerSubmissionsSummaryQueryKey(practitionerId) });
+                    }
+                  }}
+                />
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
 
       </SheetContent>
     </Sheet>
