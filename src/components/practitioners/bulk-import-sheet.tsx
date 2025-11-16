@@ -2,7 +2,7 @@
 
 /**
  * Bulk Import Sheet Component
- * Allows DonVi users to import practitioners and activities via Excel in an off-canvas sheet
+ * Allows DonVi users to import practitioners via Excel in an off-canvas sheet
  */
 
 import { useState, useCallback } from 'react';
@@ -31,7 +31,6 @@ const getPhaseLabel = (phase: ProgressPhase): string => {
   const labels: Record<ProgressPhase, string> = {
     validation: 'Đang kiểm tra dữ liệu...',
     practitioners: 'Đang nhập nhân viên...',
-    activities: 'Đang nhập hoạt động...',
     audit: 'Đang lưu nhật ký...'
   };
   return labels[phase];
@@ -244,9 +243,9 @@ export function BulkImportSheet({ open, onOpenChange, onImportSuccess }: BulkImp
       >
         <div className="flex-1 overflow-y-auto px-6 py-6">
           <SheetHeader>
-            <SheetTitle>Nhập dữ liệu hàng loạt</SheetTitle>
+            <SheetTitle>Nhập danh sách nhân viên</SheetTitle>
             <SheetDescription>
-              Nhập thông tin nhân viên và hoạt động CNKT từ file Excel
+              Nhập thông tin nhân viên y tế từ file Excel
             </SheetDescription>
           </SheetHeader>
 
@@ -331,7 +330,7 @@ export function BulkImportSheet({ open, onOpenChange, onImportSuccess }: BulkImp
                         </li>
                         <li className="flex items-start gap-2">
                           <span className="text-blue-600 mt-0.5">•</span>
-                          <span>Xem trước số lượng nhân viên và hoạt động sẽ được nhập</span>
+                          <span>Xem trước số lượng nhân viên sẽ được nhập</span>
                         </li>
                         <li className="flex items-start gap-2">
                           <span className="text-blue-600 mt-0.5">•</span>
@@ -352,17 +351,11 @@ export function BulkImportSheet({ open, onOpenChange, onImportSuccess }: BulkImp
             {validationResult && (
               <div className="space-y-4">
                 {/* Summary */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div className="p-3 bg-blue-50 rounded-lg">
                     <p className="text-xs text-blue-600 mb-1">Nhân viên</p>
                     <p className="text-xl font-bold text-blue-900">
                       {validationResult.practitionersCount}
-                    </p>
-                  </div>
-                  <div className="p-3 bg-green-50 rounded-lg">
-                    <p className="text-xs text-green-600 mb-1">Hoạt động</p>
-                    <p className="text-xl font-bold text-green-900">
-                      {validationResult.activitiesCount}
                     </p>
                   </div>
                   <div className="p-3 bg-yellow-50 rounded-lg">
@@ -479,10 +472,10 @@ export function BulkImportSheet({ open, onOpenChange, onImportSuccess }: BulkImp
                 <div className="flex items-center gap-2 mb-3">
                   <CheckCircle className="w-5 h-5 text-green-600" />
                   <h3 className="font-semibold text-green-900">
-                    Nhập dữ liệu thành công!
+                    Nhập danh sách nhân viên thành công!
                   </h3>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div>
                     <p className="text-xs text-green-600">Nhân viên mới</p>
                     <p className="text-xl font-bold text-green-900">
@@ -493,12 +486,6 @@ export function BulkImportSheet({ open, onOpenChange, onImportSuccess }: BulkImp
                     <p className="text-xs text-green-600">Nhân viên cập nhật</p>
                     <p className="text-xl font-bold text-green-900">
                       {importResult.practitionersUpdated}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-green-600">Hoạt động</p>
-                    <p className="text-xl font-bold text-green-900">
-                      {importResult.activitiesCreated}
                     </p>
                   </div>
                   <div>
