@@ -39,6 +39,7 @@ import {
   Activity
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface UnitAdminDashboardProps {
   userId: string;
@@ -81,6 +82,7 @@ interface PendingApproval {
 }
 
 export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDashboardProps) {
+  const router = useRouter();
   const isDesktop = useIsDesktop();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -313,7 +315,12 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" className="hidden md:flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden md:flex items-center gap-2"
+                onClick={() => router.push('/dashboard/unit-admin/reports')}
+              >
                 <Download className="w-4 h-4" />
                 Xuất báo cáo
               </Button>
