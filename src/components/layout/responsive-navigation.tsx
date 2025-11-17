@@ -197,7 +197,7 @@ const getNavigationItems = (
         id: 'reports',
         label: 'Báo cáo',
         icon: <BarChart3 className="h-4 w-4" />,
-        href: '/reports'
+        href: '/dashboard/unit-admin/reports'
       },
     ];
 

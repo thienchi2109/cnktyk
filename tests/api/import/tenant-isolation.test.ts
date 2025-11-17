@@ -40,6 +40,7 @@ import { POST as executePOST } from '@/app/api/import/execute/route';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { ExcelProcessor } from '@/lib/import/excel-processor';
+import { BatchProcessor } from '@/lib/import/batch-processor';
 
 function makeFormData(filename = 'test.xlsx') {
   const blob = new Blob([new Uint8Array(100)], { 
@@ -251,9 +252,9 @@ describe('Import Tenant Isolation - ImportService', () => {
       if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') {
         return [];
       }
-      if (sql.includes('SELECT "MaNhanVien", "MaDonVi"')) {
+      if (sql.includes('SELECT "SoCCHN", "MaDonVi"')) {
         // Existing check: found in Unit B
-        return [{ MaNhanVien: 'nv-b', MaDonVi: 'unit-b' }];
+        return [{ SoCCHN: 'CCHN-UNIT-B', MaDonVi: 'unit-b' }];
       }
       if (sql.includes('INSERT INTO "NhatKyHeThong"')) {
         // Audit log
@@ -273,7 +274,6 @@ describe('Import Tenant Isolation - ImportService', () => {
 
     const result = await service.executeImport(
       practitioners,
-      [],
       'unit-a', // Unit A trying to import Unit B's practitioner
       'user1'
     );
@@ -305,7 +305,7 @@ describe('Import Tenant Isolation - ImportService', () => {
       if (sql === 'BEGIN' || sql === 'COMMIT' || sql === 'ROLLBACK') {
         return [];
       }
-      if (sql.includes('SELECT "MaNhanVien", "MaDonVi"')) {
+      if (sql.includes('SELECT "SoCCHN", "MaDonVi"')) {
         return []; // Not found
       }
       if (sql.includes('INSERT INTO "NhanVien"')) {
@@ -327,7 +327,6 @@ describe('Import Tenant Isolation - ImportService', () => {
 
     const result = await service.executeImport(
       practitioners,
-      [],
       'unit-a', // This should be auto-assigned
       'user1'
     );
@@ -335,45 +334,53 @@ describe('Import Tenant Isolation - ImportService', () => {
     expect(result.practitionersCreated).toBe(1);
   });
 
-  it('should scope activity practitioner lookup by unitId', async () => {
+  it('should scope practitioner upserts to provided unitId', async () => {
     const { ImportService } = await import('@/lib/import/import-service');
     const service = new ImportService();
 
-    // Mock database queries
-    (db.query as any)
-      .mockResolvedValueOnce(undefined) // BEGIN
-      .mockResolvedValueOnce([]) // No practitioners to import
-      .mockResolvedValueOnce([{ MaNhanVien: 'nv-1' }]) // Activity practitioner lookup (same unit)
-      .mockResolvedValueOnce(undefined) // INSERT activity
-      .mockResolvedValueOnce(undefined) // Final audit log
-      .mockResolvedValueOnce(undefined); // COMMIT
+    // Mock database queries for transaction + conflict checks
+    (db.query as any).mockImplementation(async (sql: string) => {
+      if (sql === 'BEGIN' || sql === 'COMMIT' || sql.startsWith('SET statement_timeout')) {
+        return [];
+      }
+      if (sql.includes('SELECT "SoCCHN", "MaDonVi"')) {
+        return []; // No cross-unit conflicts
+      }
+      if (sql.includes('INSERT INTO "NhatKyHeThong"')) {
+        return [];
+      }
+      return [];
+    });
 
-    const activities = [
+    const insertedRows: Array<{ maDonVi: string; soCCHN: string }> = [];
+    const practitionerSpy = vi.spyOn(BatchProcessor, 'batchInsertPractitioners').mockImplementation(
+      async (rows) => {
+        insertedRows.push(...rows);
+        return new Map([['CCHN-001', { id: 'nv-1', isNew: true }]]);
+      }
+    );
+    const cycleSpy = vi.spyOn(BatchProcessor, 'batchInsertCycles').mockResolvedValue(1);
+
+    const practitioners = [
       {
         soCCHN: 'CCHN-001',
-        tenHoatDong: 'Training',
-        ngayBatDau: new Date(),
-        soTinChi: 5,
-        trangThaiDuyet: 'ChoDuyet' as const,
+        hoVaTen: 'Training User',
+        ngayCapCCHN: new Date(),
         rowNumber: 3
       }
     ];
 
     await service.executeImport(
-      [],
-      activities,
+      practitioners,
       'unit-a',
       'user1'
     );
 
-    // Find the practitioner lookup query for activity
-    const lookupCall = (db.query as any).mock.calls.find((call: any) => 
-      call[0].includes('SELECT "MaNhanVien" FROM "NhanVien" WHERE "SoCCHN"') &&
-      call[0].includes('AND "MaDonVi"')
-    );
-    
-    expect(lookupCall).toBeDefined();
-    expect(lookupCall[1]).toContain('CCHN-001');
-    expect(lookupCall[1]).toContain('unit-a');
+    expect(insertedRows.length).toBe(1);
+    expect(insertedRows[0].maDonVi).toBe('unit-a');
+    expect(insertedRows[0].soCCHN).toBe('CCHN-001');
+
+    practitionerSpy.mockRestore();
+    cycleSpy.mockRestore();
   });
 });

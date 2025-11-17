@@ -41,7 +41,11 @@
 ### Git Workflow
 - Default branch: main
 - Feature branches → PRs into main; GitHub Actions run typecheck/lint/build; PRs auto-deploy preview to Cloudflare Pages; merges to main deploy to production
-- Commit style follows Conventional Commits (e.g., feat(scope): message) based on history
+- **Commit style**: Conventional Commits format required
+  - Format: `<type>: <subject>` (subject under 100 chars, imperative mood)
+  - Types: `feat`, `fix`, `docs`, `refactor`, `style`, `test`, `chore`, `perf`
+  - Examples: `feat: Add Google login`, `fix: Correct admin login logic`, `docs: Update API docs`
+  - See CLAUDE.md for comprehensive commit message guidelines
 
 ## Domain Context
 - CPD compliance for Vietnam: 5-year cycles with total credit targets and per-activity rules

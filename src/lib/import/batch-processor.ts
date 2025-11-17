@@ -93,14 +93,14 @@ export class BatchProcessor {
         ON CONFLICT ("SoCCHN") DO UPDATE SET
           "HoVaTen" = EXCLUDED."HoVaTen",
           "NgayCapCCHN" = EXCLUDED."NgayCapCCHN",
-          "ChucDanh" = EXCLUDED."ChucDanh",
+          "ChucDanh" = COALESCE(EXCLUDED."ChucDanh", "NhanVien"."ChucDanh"),
           "TrangThaiLamViec" = EXCLUDED."TrangThaiLamViec",
-          "MaNhanVienNoiBo" = EXCLUDED."MaNhanVienNoiBo",
-          "NgaySinh" = EXCLUDED."NgaySinh",
-          "GioiTinh" = EXCLUDED."GioiTinh",
-          "KhoaPhong" = EXCLUDED."KhoaPhong",
-          "NoiCapCCHN" = EXCLUDED."NoiCapCCHN",
-          "PhamViChuyenMon" = EXCLUDED."PhamViChuyenMon"
+          "MaNhanVienNoiBo" = COALESCE(EXCLUDED."MaNhanVienNoiBo", "NhanVien"."MaNhanVienNoiBo"),
+          "NgaySinh" = COALESCE(EXCLUDED."NgaySinh", "NhanVien"."NgaySinh"),
+          "GioiTinh" = COALESCE(EXCLUDED."GioiTinh", "NhanVien"."GioiTinh"),
+          "KhoaPhong" = COALESCE(EXCLUDED."KhoaPhong", "NhanVien"."KhoaPhong"),
+          "NoiCapCCHN" = COALESCE(EXCLUDED."NoiCapCCHN", "NhanVien"."NoiCapCCHN"),
+          "PhamViChuyenMon" = COALESCE(EXCLUDED."PhamViChuyenMon", "NhanVien"."PhamViChuyenMon")
         WHERE "NhanVien"."MaDonVi" = EXCLUDED."MaDonVi"
         RETURNING "MaNhanVien", "SoCCHN", (xmax = 0) AS is_new
       `;

@@ -46,6 +46,33 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - **Auth**: NextAuth v5 with JWT sessions, bcryptjs password hashing
 - **Security**: Application-level tenant isolation via WHERE clauses, audit logging required
 
+## Git Workflow
+
+### Conventional Commits
+This project follows **Conventional Commits** for all commit messages. Format: `<type>: <subject>`
+
+**Main types:**
+- **feat**: Add a new feature
+- **fix**: Fix a bug
+- **docs**: Update documentation only
+- **refactor**: Refactor code (optimize, restructure) without adding features or fixing bugs
+- **style**: Format code (whitespace, semicolons, indentation)
+- **test**: Add or update tests
+- **chore**: Update build tasks, configs, dependencies
+- **perf**: Performance improvements
+
+**Subject:** Brief description (under 100 characters) in imperative mood, present tense.
+
+**Examples:**
+```
+fix: Correct login logic for admin user
+feat: Add Google login button to homepage
+docs: Update API documentation for user endpoints
+refactor: Optimize database query performance in practitioners list
+```
+
+See CLAUDE.md for comprehensive commit message guidelines and best practices.
+
 ## Architecture
 - **Database Layer**: `src/lib/db/` with repositories pattern, Zod schemas, parameterized queries
 - **Authentication**: Role-based middleware, 5-min JWT tokens, 2-hour session timeout
