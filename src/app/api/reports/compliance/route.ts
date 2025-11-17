@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client';
 import { NhatKyHeThongRepository } from '@/lib/db/repositories';
 import type { ComplianceReportData } from '@/types/reports';
 import { z } from 'zod';
+import { monitorPerformance, validateDateRange } from '@/lib/utils/performance';
 
 // Query parameter validation schema
 const QuerySchema = z.object({
@@ -45,6 +46,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // 4.5. Validate date range
+    const dateValidation = validateDateRange(params.startDate, params.endDate);
+    if (!dateValidation.isValid) {
+      return NextResponse.json(
+        { success: false, error: dateValidation.error },
+        { status: 400 }
+      );
+    }
+
     // 5. Build WHERE clause filters
     const queryParams: any[] = [unitId];
     let paramIndex = 2;
@@ -62,8 +72,10 @@ export async function GET(request: NextRequest) {
       queryParams.push(params.position);
     }
 
-    // 6. Fetch compliance data using optimized CTE query
-    const complianceResult: any = await db.query(
+    // 6. Fetch compliance data using optimized CTE query with performance monitoring
+    const complianceResult: any = await monitorPerformance(
+      'compliance-report-query',
+      async () => db.query(
       `WITH
       -- CTE 1: Calculate total credits per practitioner
       practitioner_credits AS (
@@ -173,6 +185,8 @@ export async function GET(request: NextRequest) {
         ) as practitioners
       FROM summary_stats ss`,
       queryParams
+    ),
+      { unitId, filters: params }
     );
 
     const result = complianceResult[0] || {};

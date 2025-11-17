@@ -2,12 +2,72 @@
 
 import { useState } from 'react';
 import { Building, BarChart3 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PerformanceSummaryReport } from '@/components/reports/performance-summary';
-import { ComplianceReport } from '@/components/reports/compliance-report';
-import { ActivityReport } from '@/components/reports/activity-report';
+import { ReportErrorBoundary } from '@/components/reports/report-error-boundary';
 import type { ReportType, ReportFilters, ComplianceReportFilters, ActivityReportFilters } from '@/types/reports';
 import { subDays } from 'date-fns';
+
+// Dynamic imports for code splitting - load reports only when needed
+const PerformanceSummaryReport = dynamic(
+  () => import('@/components/reports/performance-summary').then(mod => ({ default: mod.PerformanceSummaryReport })),
+  {
+    loading: () => (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(7)].map((_, i) => (
+            <div key={i} className="glass-card p-6 animate-pulse">
+              <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
+              <div className="h-8 bg-gray-300 rounded w-1/2"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    ),
+  }
+);
+
+const ComplianceReport = dynamic(
+  () => import('@/components/reports/compliance-report').then(mod => ({ default: mod.ComplianceReport })),
+  {
+    loading: () => (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="glass-card p-6 animate-pulse">
+              <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
+              <div className="h-8 bg-gray-300 rounded w-1/2"></div>
+            </div>
+          ))}
+        </div>
+        <div className="glass-card p-6 animate-pulse">
+          <div className="h-64 bg-gray-300 rounded"></div>
+        </div>
+      </div>
+    ),
+  }
+);
+
+const ActivityReport = dynamic(
+  () => import('@/components/reports/activity-report').then(mod => ({ default: mod.ActivityReport })),
+  {
+    loading: () => (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="glass-card p-6 animate-pulse">
+              <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
+              <div className="h-8 bg-gray-300 rounded w-1/2"></div>
+            </div>
+          ))}
+        </div>
+        <div className="glass-card p-6 animate-pulse">
+          <div className="h-64 bg-gray-300 rounded"></div>
+        </div>
+      </div>
+    ),
+  }
+);
 
 interface ReportsPageClientProps {
   unitId: string;
@@ -93,26 +153,32 @@ export function ReportsPageClient({ unitId, userId }: ReportsPageClientProps) {
 
         {/* Performance Summary Report */}
         <TabsContent value="performance" className="space-y-6">
-          <PerformanceSummaryReport unitId={unitId} filters={filters} />
+          <ReportErrorBoundary>
+            <PerformanceSummaryReport unitId={unitId} filters={filters} />
+          </ReportErrorBoundary>
         </TabsContent>
 
         {/* Compliance Report */}
         <TabsContent value="compliance" className="space-y-6">
-          <ComplianceReport unitId={unitId} filters={complianceFilters} />
+          <ReportErrorBoundary>
+            <ComplianceReport unitId={unitId} filters={complianceFilters} />
+          </ReportErrorBoundary>
         </TabsContent>
 
         {/* Activity Report */}
         <TabsContent value="activities" className="space-y-6">
-          <ActivityReport
-            unitId={unitId}
-            filters={{
-              startDate: activityFilters.startDate ? new Date(activityFilters.startDate) : undefined,
-              endDate: activityFilters.endDate ? new Date(activityFilters.endDate) : undefined,
-              activityType: activityFilters.activityType,
-              approvalStatus: activityFilters.approvalStatus,
-              practitionerId: activityFilters.practitionerId,
-            }}
-          />
+          <ReportErrorBoundary>
+            <ActivityReport
+              unitId={unitId}
+              filters={{
+                startDate: activityFilters.startDate ? new Date(activityFilters.startDate) : undefined,
+                endDate: activityFilters.endDate ? new Date(activityFilters.endDate) : undefined,
+                activityType: activityFilters.activityType,
+                approvalStatus: activityFilters.approvalStatus,
+                practitionerId: activityFilters.practitionerId,
+              }}
+            />
+          </ReportErrorBoundary>
         </TabsContent>
 
         {/* Practitioner Detail - Placeholder for Phase 3 */}

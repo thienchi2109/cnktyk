@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client';
 import { NhatKyHeThongRepository } from '@/lib/db/repositories';
 import { z } from 'zod';
 import type { ActivityReportData } from '@/types/reports';
+import { monitorPerformance, validateDateRange } from '@/lib/utils/performance';
 
 // Validation schema for query parameters
 const ActivityReportFiltersSchema = z.object({
@@ -42,6 +43,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // 4. Tenant isolation check
     if (filters.unitId !== session.user.unitId) {
       return NextResponse.json({ error: 'Forbidden - Cannot access other units' }, { status: 403 });
+    }
+
+    // 4.5. Validate date range
+    const dateValidation = validateDateRange(filters.startDate, filters.endDate);
+    if (!dateValidation.isValid) {
+      return NextResponse.json({ error: dateValidation.error }, { status: 400 });
     }
 
     // 5. Build optimized CTE query
@@ -158,14 +165,18 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (filters.approvalStatus) params.push(filters.approvalStatus);
     if (filters.practitionerId) params.push(filters.practitionerId);
 
-    // 7. Execute query
-    const result = await db.queryOne<{
-      summary: ActivityReportData['summary'];
-      byActivityType: ActivityReportData['byActivityType'];
-      byStatus: ActivityReportData['byStatus'];
-      timeline: ActivityReportData['timeline'];
-      approvalMetrics: ActivityReportData['approvalMetrics'];
-    }>(query, params);
+    // 7. Execute query with performance monitoring
+    const result = await monitorPerformance(
+      'activity-report-query',
+      async () => db.queryOne<{
+        summary: ActivityReportData['summary'];
+        byActivityType: ActivityReportData['byActivityType'];
+        byStatus: ActivityReportData['byStatus'];
+        timeline: ActivityReportData['timeline'];
+        approvalMetrics: ActivityReportData['approvalMetrics'];
+      }>(query, params),
+      { unitId: filters.unitId, filters }
+    );
 
     if (!result) {
       return NextResponse.json({ error: 'Failed to fetch activity report data' }, { status: 500 });
