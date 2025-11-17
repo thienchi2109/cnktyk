@@ -6,10 +6,21 @@ import type { ComplianceReportData } from '@/types/reports';
 import { z } from 'zod';
 import { monitorPerformance, validateDateRange } from '@/lib/utils/performance';
 
+const DateParamSchema = z
+  .string()
+  .trim()
+  .refine(
+    (value) =>
+      /^\d{4}-\d{2}-\d{2}$/.test(value) ||
+      !Number.isNaN(Date.parse(value)),
+    { message: 'Invalid date format. Expected YYYY-MM-DD or ISO datetime string' }
+  );
+
 // Query parameter validation schema
 const QuerySchema = z.object({
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), // YYYY-MM-DD format
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), // YYYY-MM-DD format
+  // Accept either YYYY-MM-DD or full ISO datetime to match current UI requests
+  startDate: DateParamSchema.optional(),
+  endDate: DateParamSchema.optional(),
   employmentStatus: z.enum(['DangLamViec', 'DaNghi', 'TamHoan']).array().optional(),
   position: z.string().optional(),
 });
@@ -75,12 +86,12 @@ export async function GET(request: NextRequest) {
 
     // Add date range filters for activities
     if (params.startDate) {
-      dateFilter += `AND g."NgayThucHien" >= $${paramIndex++}`;
+      dateFilter += `AND g."NgayGhiNhan" >= $${paramIndex++}`;
       queryParams.push(params.startDate);
     }
 
     if (params.endDate) {
-      dateFilter += ` AND g."NgayThucHien" <= $${paramIndex++}`;
+      dateFilter += ` AND g."NgayGhiNhan" <= $${paramIndex++}`;
       queryParams.push(params.endDate);
     }
 

@@ -6,11 +6,22 @@ import { z } from 'zod';
 import type { ActivityReportData } from '@/types/reports';
 import { monitorPerformance, validateDateRange } from '@/lib/utils/performance';
 
+const DateParamSchema = z
+  .string()
+  .trim()
+  .refine(
+    (value) =>
+      /^\d{4}-\d{2}-\d{2}$/.test(value) ||
+      !Number.isNaN(Date.parse(value)),
+    { message: 'Invalid date format. Expected YYYY-MM-DD or ISO datetime string' }
+  );
+
 // Validation schema for query parameters
 const ActivityReportFiltersSchema = z.object({
   unitId: z.string().uuid(),
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), // YYYY-MM-DD format
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), // YYYY-MM-DD format
+  // Accept either YYYY-MM-DD or full ISO datetime
+  startDate: DateParamSchema.optional(),
+  endDate: DateParamSchema.optional(),
   activityType: z.enum(['KhoaHoc', 'HoiThao', 'NghienCuu', 'BaoCao']).optional(),
   approvalStatus: z.enum(['ChoDuyet', 'DaDuyet', 'TuChoi']).optional(),
   practitionerId: z.string().uuid().optional(),

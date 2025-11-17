@@ -191,69 +191,6 @@ export function ComplianceReport({ unitId, filters }: ComplianceReportProps) {
         </GlassCard>
       </div>
 
-      {/* Practitioners Table */}
-      <GlassCard className="p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
-          Danh sách người hành nghề
-        </h3>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/20">
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
-                  Họ và tên
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
-                  Số CCHN
-                </th>
-                <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
-                  Tín chỉ
-                </th>
-                <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">
-                  Trạng thái
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {practitioners.slice(0, 20).map((practitioner) => (
-                <tr
-                  key={practitioner.id}
-                  className="border-b border-white/10 hover:bg-white/10 transition-colors"
-                >
-                  <td className="py-3 px-4 text-sm text-gray-800">
-                    {practitioner.name}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-gray-600">
-                    {practitioner.licenseId}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-right font-medium text-gray-800">
-                    {practitioner.credits}/{practitioner.creditsRequired}
-                  </td>
-                  <td className="py-3 px-4 text-center">
-                    <span
-                      className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                        practitioner.status === 'compliant'
-                          ? 'bg-medical-green/20 text-medical-green'
-                          : practitioner.status === 'at_risk'
-                          ? 'bg-medical-amber/20 text-medical-amber'
-                          : 'bg-medical-red/20 text-medical-red'
-                      }`}
-                    >
-                      {practitioner.compliancePercent}%
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {practitioners.length > 20 && (
-            <p className="text-center text-sm text-gray-500 mt-4">
-              Hiển thị 20/{practitioners.length} người hành nghề
-            </p>
-          )}
-        </div>
-      </GlassCard>
-
       {/* Summary Footer */}
       <GlassCard className="p-4">
         <div className="text-sm text-gray-600 text-center">
