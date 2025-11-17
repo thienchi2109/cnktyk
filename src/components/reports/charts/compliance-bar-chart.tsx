@@ -1,6 +1,7 @@
 'use client';
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Cell } from 'recharts';
+import { useEffect, useRef, useState } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell } from 'recharts';
 import {
   ChartContainer,
   ChartTooltip,
@@ -20,6 +21,23 @@ export function ComplianceBarChart({
   limit = 10,
   showTopPerformers = true,
 }: ComplianceBarChartProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element || typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      setDimensions({ width, height });
+    });
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
   if (!data || data.length === 0) {
     return (
       <div className="h-[300px] flex items-center justify-center text-gray-500">
@@ -49,10 +67,23 @@ export function ComplianceBarChart({
     },
   };
 
+  const chartWidth = Math.max(dimensions.width, 320);
+  const chartHeight = Math.max(dimensions.height, 280);
+
   return (
-    <ChartContainer config={chartConfig} className="h-[300px]">
-      <ResponsiveContainer width="100%" height="100%">
+    <ChartContainer
+      ref={containerRef}
+      config={chartConfig}
+      className="h-[300px] w-full min-w-0"
+    >
+      {dimensions.width === 0 ? (
+        <div className="flex h-full w-full items-center justify-center text-xs text-gray-500">
+          Đang tải biểu đồ...
+        </div>
+      ) : (
         <BarChart
+          width={chartWidth}
+          height={chartHeight}
           data={chartData}
           layout="vertical"
           margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
@@ -74,7 +105,7 @@ export function ComplianceBarChart({
             ))}
           </Bar>
         </BarChart>
-      </ResponsiveContainer>
+      )}
     </ChartContainer>
   );
 }
