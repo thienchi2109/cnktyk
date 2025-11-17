@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 // Query parameter validation schema
 const QuerySchema = z.object({
-  period: z.enum(['current_month', 'last_month', 'current_quarter', 'last_quarter', 'custom']).optional().default('current_month'),
+  period: z.enum(['current_month', 'last_month', 'current_quarter', 'last_quarter', 'last_30_days', 'last_7_days', 'custom']).optional().default('current_month'),
   startDate: z.string().datetime().optional(),
   endDate: z.string().datetime().optional(),
 });
@@ -44,6 +44,18 @@ function calculateDateRange(period: string, customStart?: string, customEnd?: st
         start: new Date(year, month, 1),
         end: new Date(year, month + 3, 0, 23, 59, 59),
       };
+    }
+    case 'last_30_days': {
+      const end = new Date();
+      const start = new Date();
+      start.setDate(start.getDate() - 30);
+      return { start, end };
+    }
+    case 'last_7_days': {
+      const end = new Date();
+      const start = new Date();
+      start.setDate(start.getDate() - 7);
+      return { start, end };
     }
     case 'custom':
       if (!customStart || !customEnd) {
