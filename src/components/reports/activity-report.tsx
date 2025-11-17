@@ -266,22 +266,22 @@ export function ActivityReport({ unitId, filters }: ActivityReportProps) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left border-b border-white/30">
-                  <th className="py-3 pr-4 font-semibold text-gray-700 w-[25rem]">Hoạt động</th>
+                  <th className="py-3 pr-6 font-semibold text-gray-700 w-[25rem]">Hoạt động</th>
                   <th className="py-3 pr-4 font-semibold text-gray-700">Loại</th>
                   <th className="py-3 pr-4 font-semibold text-gray-700">Tín chỉ</th>
-                  <th className="py-3 pr-4 font-semibold text-gray-700 w-32 text-center">Trạng thái</th>
+                  <th className="py-3 pr-2 font-semibold text-gray-700 w-32 text-center">Trạng thái</th>
                   <th className="py-3 font-semibold text-gray-700 text-right">Ngày ghi nhận</th>
                 </tr>
               </thead>
               <tbody>
                 {data.recentActivities.map((item) => (
                   <tr key={item.id} className="border-b border-white/10">
-                    <td className="py-3 pr-4 text-gray-900 break-words max-w-[24rem]">
+                    <td className="py-3 pr-6 text-gray-900 break-words max-w-[24rem]">
                       {item.name}
                     </td>
                     <td className="py-3 pr-4 text-gray-700">{item.type}</td>
                     <td className="py-3 pr-4 text-gray-900 font-medium">{item.credits}</td>
-                    <td className="py-3 pr-4 text-center">
+                    <td className="py-3 pr-2 text-center">
                       <span
                         className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
                           item.status === 'DaDuyet'

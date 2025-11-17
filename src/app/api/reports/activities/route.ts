@@ -23,7 +23,7 @@ const ActivityReportFiltersSchema = z.object({
   startDate: DateParamSchema.optional(),
   endDate: DateParamSchema.optional(),
   activityType: z.enum(['KhoaHoc', 'HoiThao', 'NghienCuu', 'BaoCao']).optional(),
-  approvalStatus: z.enum(['ChoDuyet', 'DaDuyet', 'TuChoi']).optional(),
+  approvalStatus: z.enum(['ChoDuyet', 'DaDuyet', 'TuChoi', 'all']).optional(),
   practitionerId: z.string().uuid().optional(),
 });
 
