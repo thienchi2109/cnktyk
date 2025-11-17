@@ -22,7 +22,7 @@ import { LoadingNotice } from '@/components/ui/loading-notice';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { practitionerRecentSubmissionsQueryKey } from '@/hooks/use-practitioner-recent-submissions';
 import { practitionerSubmissionsSummaryQueryKey } from '@/hooks/use-practitioner-submissions-summary';
-import { Maximize } from 'lucide-react';
+import { Maximize, PenLine } from 'lucide-react';
 import { PractitionerForm } from './practitioner-form';
 import { SubmissionReview } from '@/components/submissions/submission-review';
 import {
@@ -105,7 +105,7 @@ export function PractitionerDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-5xl lg:max-w-6xl xl:max-w-7xl overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-4xl lg:max-w-5xl xl:max-w-6xl overflow-y-auto">
         <SheetHeader>
           <SheetTitle>{isEditing ? 'Chỉnh sửa người hành nghề' : 'Chi tiết người hành nghề'}</SheetTitle>
           <SheetDescription>
@@ -138,25 +138,47 @@ export function PractitionerDetailSheet({
           </div>
         ) : practitioner ? (
           <div className="mt-6 space-y-6">
-            {/* View Full Details Button */}
-            {!isEditing && practitionerId && (
-              <Button
-                variant="medical"
-                size="lg"
-                className="w-full gap-2 bg-gradient-to-r from-medical-blue to-blue-600 hover:from-medical-blue/90 hover:to-blue-600/90 text-white shadow-lg hover:shadow-xl transition-all duration-300 font-semibold"
-                onClick={() => router.push(`/practitioners/${practitionerId}`)}
-              >
-                <Maximize className="w-5 h-5" />
-                Xem Hồ Sơ Đầy Đủ
-              </Button>
-            )}
+            {/* Actions */}
+            <div className="flex flex-wrap gap-3">
+              {!isEditing && practitionerId && (
+                <Button
+                  variant="medical"
+                  size="lg"
+                  className="gap-2 bg-gradient-to-r from-medical-blue to-blue-600 hover:from-medical-blue/90 hover:to-blue-600/90 text-white shadow-lg hover:shadow-xl transition-all duration-300 font-semibold"
+                  onClick={() => router.push(`/practitioners/${practitionerId}`)}
+                >
+                  <Maximize className="w-5 h-5" />
+                  Xem Hồ Sơ Đầy Đủ
+                </Button>
+              )}
+
+              {canEdit && !isEditing && (
+                <Button
+                  variant="medical-secondary"
+                  size="lg"
+                  onClick={() => setIsEditing(true)}
+                >
+                  <PenLine className="w-4 h-4 mr-2" />
+                  Chỉnh sửa
+                </Button>
+              )}
+
+              {practitionerId && (
+                <Button
+                  variant="medical-secondary"
+                  size="lg"
+                  onClick={() => router.push(`/submissions?practitionerId=${practitionerId}`)}
+                >
+                  Xem tất cả hoạt động
+                </Button>
+              )}
+            </div>
 
             {/* Basic Information Section */}
             <BasicInfoSection
               practitioner={practitioner}
               variant="compact"
-              showEdit={canEdit && !isEditing}
-              onEdit={() => setIsEditing(true)}
+              showEdit={false}
             />
 
             {/* License Information Section */}
@@ -185,6 +207,7 @@ export function PractitionerDetailSheet({
                 practitionerId={practitionerId}
                 variant="compact"
                 userRole={userRole}
+                showViewAllButton={false}
                 onSelectSubmission={(submissionId) => {
                   setSelectedSubmissionId(submissionId);
                   setShowSubmissionDialog(true);

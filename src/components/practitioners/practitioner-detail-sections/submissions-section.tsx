@@ -28,6 +28,7 @@ export interface SubmissionsSectionProps {
   variant?: SectionVariant;
   userRole?: string;
   onSelectSubmission?: (submissionId: string) => void;
+  showViewAllButton?: boolean;
 }
 
 export function SubmissionsSection({
@@ -35,6 +36,7 @@ export function SubmissionsSection({
   variant = 'full',
   userRole,
   onSelectSubmission,
+  showViewAllButton = true,
 }: SubmissionsSectionProps) {
   const buttonSize = variant === 'compact' ? 'default' : 'lg';
 
@@ -59,15 +61,17 @@ export function SubmissionsSection({
       />
 
       {/* View All Button */}
-      <Button
-        variant="medical-secondary"
-        className="w-full gap-2"
-        size={buttonSize}
-        onClick={handleViewAll}
-      >
-        Xem tất cả hoạt động
-        <ArrowRight className="w-4 h-4" />
-      </Button>
+      {showViewAllButton && (
+        <Button
+          variant="medical-secondary"
+          className="w-full gap-2"
+          size={buttonSize}
+          onClick={handleViewAll}
+        >
+          Xem tất cả hoạt động
+          <ArrowRight className="w-4 h-4" />
+        </Button>
+      )}
     </div>
   );
 }

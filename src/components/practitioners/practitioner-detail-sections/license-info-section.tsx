@@ -14,6 +14,7 @@
  */
 
 import { Award, Calendar } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { PractitionerDetailData, SectionVariant } from './types';
 
 export interface LicenseInfoSectionProps {
@@ -43,32 +44,32 @@ export function LicenseInfoSection({
   practitioner,
   variant = 'full',
 }: LicenseInfoSectionProps) {
-  const spacing = variant === 'compact' ? 'space-y-2' : 'space-y-4';
   const textSize = variant === 'compact' ? 'text-sm' : 'text-base';
+  const contentPadding = variant === 'compact' ? 'p-4' : 'p-6';
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold flex items-center gap-2">
-        <Award className="w-5 h-5" />
-        Thông tin chứng chỉ
-      </h3>
+    <Card>
+      <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-4">
+        <Award className="w-5 h-5 text-primary" />
+        <CardTitle className="text-lg">Thông tin chứng chỉ</CardTitle>
+      </CardHeader>
 
-      <div className={`grid grid-cols-1 gap-4 p-4 bg-gray-50 rounded-lg ${spacing}`}>
-        <div>
-          <label className="text-sm font-medium text-gray-600">Số CCHN</label>
+      <CardContent className={`${contentPadding} grid grid-cols-1 gap-4`}>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted-foreground">Số CCHN</label>
           <p className={`font-mono ${textSize}`}>
             {practitioner.SoCCHN || 'Chưa có'}
           </p>
         </div>
 
-        <div>
-          <label className="text-sm font-medium text-gray-600">Ngày cấp</label>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted-foreground">Ngày cấp</label>
           <p className={`flex items-center gap-2 ${textSize}`}>
-            <Calendar className="w-4 h-4 text-gray-400" />
+            <Calendar className="w-4 h-4 text-muted-foreground" />
             {formatDate(practitioner.NgayCapCCHN)}
           </p>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -13,9 +13,10 @@
  * ```
  */
 
-import { Award, TrendingUp, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+import { Award, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { ComplianceStatusData, SectionVariant } from './types';
 
 export interface ComplianceStatusSectionProps {
@@ -51,36 +52,28 @@ function getComplianceStatusColor(status: 'compliant' | 'at_risk' | 'non_complia
   }
 }
 
-/**
- * Get progress bar color based on compliance percentage
- */
-function getProgressColor(percentage: number): string {
-  if (percentage >= 90) return 'bg-green-500';
-  if (percentage >= 70) return 'bg-yellow-500';
-  return 'bg-red-500';
-}
-
 export function ComplianceStatusSection({
   complianceStatus,
   variant = 'full',
 }: ComplianceStatusSectionProps) {
-  const spacing = variant === 'compact' ? 'space-y-2' : 'space-y-4';
   const progressHeight = variant === 'compact' ? 'h-2' : 'h-3';
+  const contentPadding = variant === 'compact' ? 'p-4' : 'p-6';
 
   const remainingCredits = Math.max(
     0,
     complianceStatus.requiredCredits - complianceStatus.totalCredits
   );
+  const progressValue = Math.min(complianceStatus.compliancePercentage, 100);
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold flex items-center gap-2">
-        <Award className="w-5 h-5" />
-        Trạng thái tuân thủ
-      </h3>
+    <Card>
+      <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-4">
+        <Award className="w-5 h-5 text-primary" />
+        <CardTitle className="text-lg">Trạng thái tuân thủ</CardTitle>
+      </CardHeader>
 
-      <div className={`p-4 bg-gray-50 rounded-lg ${spacing}`}>
-        <div className="flex items-center justify-between mb-3">
+      <CardContent className={`${contentPadding} space-y-4`}>
+        <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-2">
             {getComplianceIcon(complianceStatus.status)}
             <span
@@ -91,43 +84,42 @@ export function ComplianceStatusSection({
               {complianceStatus.compliancePercentage.toFixed(1)}% Hoàn thành
             </span>
           </div>
+          <div className="text-sm text-muted-foreground">
+            Còn thiếu <span className="font-semibold text-foreground">{remainingCredits}</span> tín chỉ
+          </div>
         </div>
 
-        <div className="relative w-full bg-gray-200 rounded-full overflow-hidden" style={{ height: progressHeight === 'h-2' ? '8px' : '12px' }}>
-          <div
-            className={`${getProgressColor(
-              complianceStatus.compliancePercentage
-            )} ${progressHeight} rounded-full transition-all duration-300`}
-            style={{
-              width: `${Math.min(complianceStatus.compliancePercentage, 100)}%`,
-            }}
+        <div className="space-y-2">
+          <Progress
+            value={progressValue}
+            className={progressHeight}
           />
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>Tín chỉ đạt</span>
+            <span>{progressValue.toFixed(1)}%</span>
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
-          <div>
-            <label className="text-gray-500">Tín chỉ hiện có</label>
-            <p className="font-semibold text-lg">
+        <div className="h-px bg-border" />
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-muted-foreground">Tín chỉ hiện có</label>
+            <p className={`font-semibold ${variant === 'compact' ? 'text-base' : 'text-xl'}`}>
               {complianceStatus.totalCredits}
             </p>
           </div>
-          <div>
-            <label className="text-gray-500">Tín chỉ yêu cầu</label>
-            <p className="font-semibold text-lg">
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-muted-foreground">Tín chỉ yêu cầu</label>
+            <p className={`font-semibold ${variant === 'compact' ? 'text-base' : 'text-xl'}`}>
               {complianceStatus.requiredCredits}
             </p>
           </div>
         </div>
 
-        <div className="pt-3 mt-3 border-t border-gray-200">
-          <div className="text-sm text-gray-600">
-            <strong>Còn thiếu:</strong> {remainingCredits} tín chỉ
-          </div>
-        </div>
-
         {/* Contextual alerts */}
         {complianceStatus.status === 'non_compliant' && (
-          <Alert variant="destructive" className="mt-3">
+          <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
               Mức tuân thủ dưới 70%. Cần thực hiện ngay.
@@ -136,14 +128,14 @@ export function ComplianceStatusSection({
         )}
 
         {complianceStatus.status === 'at_risk' && (
-          <Alert className="mt-3 border-yellow-200 bg-yellow-50">
+          <Alert className="border-yellow-200 bg-yellow-50">
             <Clock className="h-4 w-4 text-yellow-600" />
             <AlertDescription className="text-yellow-800">
               Mức tuân thủ 70–89%. Nên ghi nhận thêm hoạt động.
             </AlertDescription>
           </Alert>
         )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

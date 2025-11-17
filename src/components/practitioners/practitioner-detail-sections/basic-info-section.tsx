@@ -18,6 +18,7 @@
 import { User, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { PractitionerDetailData, SectionVariant } from './types';
 
 export interface BasicInfoSectionProps {
@@ -57,54 +58,54 @@ export function BasicInfoSection({
   showEdit = false,
   onEdit,
 }: BasicInfoSectionProps) {
-  const spacing = variant === 'compact' ? 'space-y-2' : 'space-y-4';
   const textSize = variant === 'compact' ? 'text-sm' : 'text-base';
   const buttonSize = variant === 'compact' ? 'sm' : 'default';
+  const contentPadding = variant === 'compact' ? 'p-4' : 'p-6';
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <User className="w-5 h-5" />
-          Thông tin cơ bản
-        </h3>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+        <div className="flex items-center gap-2">
+          <User className="w-5 h-5 text-primary" />
+          <CardTitle className="text-lg">Thông tin cơ bản</CardTitle>
+        </div>
         {showEdit && onEdit && (
           <Button onClick={onEdit} size={buttonSize} variant="outline">
             <Edit className="w-4 h-4 mr-2" />
             Chỉnh sửa
           </Button>
         )}
-      </div>
+      </CardHeader>
 
-      <div className={`grid grid-cols-1 gap-4 p-4 bg-gray-50 rounded-lg ${spacing}`}>
-        <div>
-          <label className="text-sm font-medium text-gray-600">Họ và tên</label>
+      <CardContent className={`${contentPadding} grid grid-cols-1 md:grid-cols-2 gap-4`}>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted-foreground">Họ và tên</label>
           <p className={`font-semibold ${textSize === 'text-sm' ? 'text-base' : 'text-lg'}`}>
             {practitioner.HoVaTen}
           </p>
         </div>
 
         {practitioner.MaNhanVienNoiBo && (
-          <div>
-            <label className="text-sm font-medium text-gray-600">Mã nhân viên nội bộ</label>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">Mã nhân viên nội bộ</label>
             <p className={textSize}>{practitioner.MaNhanVienNoiBo}</p>
           </div>
         )}
 
-        <div>
-          <label className="text-sm font-medium text-gray-600">Chức danh</label>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted-foreground">Chức danh</label>
           <p className={textSize}>
             {getCombinedTitle(practitioner.ChucDanh, practitioner.KhoaPhong)}
           </p>
         </div>
 
-        <div>
-          <label className="text-sm font-medium text-gray-600">Trạng thái làm việc</label>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted-foreground">Trạng thái làm việc</label>
           <div className="mt-1">
             {getStatusBadge(practitioner.TrangThaiLamViec)}
           </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
