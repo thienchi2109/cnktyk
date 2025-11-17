@@ -5,7 +5,8 @@ import { Building, BarChart3 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PerformanceSummaryReport } from '@/components/reports/performance-summary';
 import { ComplianceReport } from '@/components/reports/compliance-report';
-import type { ReportType, ReportFilters, ComplianceReportFilters } from '@/types/reports';
+import { ActivityReport } from '@/components/reports/activity-report';
+import type { ReportType, ReportFilters, ComplianceReportFilters, ActivityReportFilters } from '@/types/reports';
 import { subDays } from 'date-fns';
 
 interface ReportsPageClientProps {
@@ -26,6 +27,14 @@ export function ReportsPageClient({ unitId, userId }: ReportsPageClientProps) {
     startDate: subDays(new Date(), 30).toISOString(),
     endDate: new Date().toISOString(),
     preset: 'last_30_days',
+  });
+
+  // Activity-specific filters
+  const [activityFilters, setActivityFilters] = useState<ActivityReportFilters>({
+    startDate: subDays(new Date(), 30).toISOString(),
+    endDate: new Date().toISOString(),
+    preset: 'last_30_days',
+    approvalStatus: 'all',
   });
 
   return (
@@ -92,17 +101,18 @@ export function ReportsPageClient({ unitId, userId }: ReportsPageClientProps) {
           <ComplianceReport unitId={unitId} filters={complianceFilters} />
         </TabsContent>
 
-        {/* Activity Report - Placeholder for Phase 2 */}
+        {/* Activity Report */}
         <TabsContent value="activities" className="space-y-6">
-          <div className="glass-card p-12 text-center">
-            <BarChart3 className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">
-              Báo cáo hoạt động
-            </h3>
-            <p className="text-gray-600">
-              Tính năng này sẽ được triển khai trong Phase 2
-            </p>
-          </div>
+          <ActivityReport
+            unitId={unitId}
+            filters={{
+              startDate: activityFilters.startDate ? new Date(activityFilters.startDate) : undefined,
+              endDate: activityFilters.endDate ? new Date(activityFilters.endDate) : undefined,
+              activityType: activityFilters.activityType,
+              approvalStatus: activityFilters.approvalStatus,
+              practitionerId: activityFilters.practitionerId,
+            }}
+          />
         </TabsContent>
 
         {/* Practitioner Detail - Placeholder for Phase 3 */}
