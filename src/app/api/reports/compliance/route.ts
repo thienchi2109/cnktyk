@@ -60,6 +60,7 @@ export async function GET(request: NextRequest) {
     let paramIndex = 2;
     let employmentFilter = '';
     let positionFilter = '';
+    let dateFilter = '';
 
     if (params.employmentStatus && params.employmentStatus.length > 0) {
       const placeholders = params.employmentStatus.map(() => `$${paramIndex++}`).join(', ');
@@ -70,6 +71,17 @@ export async function GET(request: NextRequest) {
     if (params.position) {
       positionFilter = `AND n."ChucDanh" = $${paramIndex++}`;
       queryParams.push(params.position);
+    }
+
+    // Add date range filters for activities
+    if (params.startDate) {
+      dateFilter += `AND g."NgayThucHien" >= $${paramIndex++}`;
+      queryParams.push(params.startDate);
+    }
+
+    if (params.endDate) {
+      dateFilter += ` AND g."NgayThucHien" <= $${paramIndex++}`;
+      queryParams.push(params.endDate);
     }
 
     // 6. Fetch compliance data using optimized CTE query with performance monitoring
@@ -107,6 +119,7 @@ export async function GET(request: NextRequest) {
         WHERE n."MaDonVi" = $1
           ${employmentFilter}
           ${positionFilter}
+          ${dateFilter}
         GROUP BY n."MaNhanVien", n."HoVaTen", n."SoCCHN", n."ChucDanh", n."TrangThaiLamViec"
       ),
       -- CTE 2: Categorize by compliance status
