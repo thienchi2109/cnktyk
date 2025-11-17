@@ -130,6 +130,16 @@ export interface ApprovalMetrics {
   slowestApproval: number;
 }
 
+export interface ActivityListItem {
+  id: string;
+  name: string;
+  type: string;
+  status: 'ChoDuyet' | 'DaDuyet' | 'TuChoi';
+  submittedAt: string;
+  approvedAt: string | null;
+  credits: number;
+}
+
 export interface ActivityReportData {
   summary: {
     totalSubmissions: number;
@@ -142,6 +152,7 @@ export interface ActivityReportData {
   byStatus: ActivityStatusDistribution[];
   timeline: ActivityTimeline[];
   approvalMetrics: ApprovalMetrics;
+  recentActivities: ActivityListItem[];
 }
 
 // Practitioner Detail Report Data

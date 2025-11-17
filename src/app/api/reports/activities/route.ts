@@ -62,7 +62,44 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: dateValidation.error }, { status: 400 });
     }
 
-    // 5. Build optimized CTE query
+    // 5. Build parameterized WHERE clause once for reuse in aggregates + recent list
+    const whereClauses: string[] = ['n."MaDonVi" = $1'];
+    const params: (string | Date)[] = [filters.unitId];
+    let paramIndex = 2;
+
+    if (filters.startDate) {
+      whereClauses.push(`g."NgayGhiNhan" >= $${paramIndex}::date`);
+      params.push(new Date(filters.startDate));
+      paramIndex += 1;
+    }
+
+    if (filters.endDate) {
+      whereClauses.push(`g."NgayGhiNhan" <= $${paramIndex}::date`);
+      params.push(new Date(filters.endDate));
+      paramIndex += 1;
+    }
+
+    if (filters.activityType) {
+      whereClauses.push(`COALESCE(dm."LoaiHoatDong", 'KhoaHoc') = $${paramIndex}`);
+      params.push(filters.activityType);
+      paramIndex += 1;
+    }
+
+    if (filters.approvalStatus && filters.approvalStatus !== 'all') {
+      whereClauses.push(`g."TrangThaiDuyet" = $${paramIndex}`);
+      params.push(filters.approvalStatus);
+      paramIndex += 1;
+    }
+
+    if (filters.practitionerId) {
+      whereClauses.push(`g."MaNhanVien" = $${paramIndex}`);
+      params.push(filters.practitionerId);
+      paramIndex += 1;
+    }
+
+    const whereClause = `WHERE ${whereClauses.join('\n          AND ')}`;
+
+    // 6. Build optimized CTE query (reuse whereClause for recent list)
     const query = `
       WITH activity_data AS (
         SELECT
@@ -71,6 +108,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           g."NgayGhiNhan",
           g."NgayDuyet",
           g."TrangThaiDuyet",
+          g."SoGioTinChiQuyDoi",
           COALESCE(dm."LoaiHoatDong", 'KhoaHoc') as "LoaiHoatDong",
           CASE
             WHEN g."NgayDuyet" IS NOT NULL AND g."NgayGhiNhan" IS NOT NULL
@@ -81,18 +119,20 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         FROM "GhiNhanHoatDong" g
         JOIN "NhanVien" n ON g."MaNhanVien" = n."MaNhanVien"
         LEFT JOIN "DanhMucHoatDong" dm ON g."MaDanhMuc" = dm."MaDanhMuc"
-        WHERE n."MaDonVi" = $1
-          ${filters.startDate ? `AND g."NgayGhiNhan" >= $2::date` : ''}
-          ${filters.endDate ? `AND g."NgayGhiNhan" <= $${filters.startDate ? '3' : '2'}::date` : ''}
-          ${filters.activityType ? `AND dm."LoaiHoatDong" = $${filters.startDate && filters.endDate ? '4' : filters.startDate || filters.endDate ? '3' : '2'}` : ''}
-          ${filters.approvalStatus ? `AND g."TrangThaiDuyet" = $${
-            filters.startDate && filters.endDate && filters.activityType ? '5' :
-            (filters.startDate && filters.endDate) || (filters.startDate && filters.activityType) || (filters.endDate && filters.activityType) ? '4' :
-            filters.startDate || filters.endDate || filters.activityType ? '3' : '2'
-          }` : ''}
-          ${filters.practitionerId ? `AND g."MaNhanVien" = $${
-            [filters.startDate, filters.endDate, filters.activityType, filters.approvalStatus].filter(Boolean).length + 2
-          }` : ''}
+        ${whereClause}
+      ),
+      recent_activities AS (
+        SELECT
+          "MaGhiNhan" as id,
+          "TenHoatDong" as name,
+          "LoaiHoatDong" as type,
+          "TrangThaiDuyet" as status,
+          "NgayGhiNhan" as submitted_at,
+          "NgayDuyet" as approved_at,
+          COALESCE("SoGioTinChiQuyDoi", 0) as credits
+        FROM activity_data
+        ORDER BY "NgayGhiNhan" DESC
+        LIMIT 10
       ),
       status_summary AS (
         SELECT
@@ -165,16 +205,20 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           'avgDaysToApproval', COALESCE((SELECT avg_days FROM approval_metrics), 0),
           'fastestApproval', COALESCE((SELECT fastest FROM approval_metrics), 0),
           'slowestApproval', COALESCE((SELECT slowest FROM approval_metrics), 0)
-        ) as "approvalMetrics"
+        ) as "approvalMetrics",
+        COALESCE(
+          (SELECT json_agg(json_build_object(
+            'id', id,
+            'name', name,
+            'type', type,
+            'status', status,
+            'submittedAt', submitted_at,
+            'approvedAt', approved_at,
+            'credits', credits
+          )) FROM recent_activities),
+          '[]'::json
+        ) as "recentActivities"
     `;
-
-    // 6. Build query parameters array
-    const params: (string | Date)[] = [filters.unitId];
-    if (filters.startDate) params.push(new Date(filters.startDate));
-    if (filters.endDate) params.push(new Date(filters.endDate));
-    if (filters.activityType) params.push(filters.activityType);
-    if (filters.approvalStatus) params.push(filters.approvalStatus);
-    if (filters.practitionerId) params.push(filters.practitionerId);
 
     // 7. Execute query with performance monitoring
     const result = await monitorPerformance(
@@ -185,6 +229,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         byStatus: ActivityReportData['byStatus'];
         timeline: ActivityReportData['timeline'];
         approvalMetrics: ActivityReportData['approvalMetrics'];
+        recentActivities: ActivityReportData['recentActivities'];
       }>(query, params),
       { unitId: filters.unitId, filters }
     );
@@ -199,6 +244,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       byStatus: result.byStatus,
       timeline: result.timeline,
       approvalMetrics: result.approvalMetrics,
+      recentActivities: result.recentActivities,
     };
 
     // 8. Audit logging
