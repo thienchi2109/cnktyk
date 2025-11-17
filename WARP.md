@@ -95,6 +95,45 @@ Apply initial schema migration:
 # Connect to Neon and run v_1_init_schema.sql manually via psql or Neon SQL editor
 ```
 
+## Git Workflow
+
+### Conventional Commits
+
+This project follows **Conventional Commits** specification for all commit messages. This ensures clear, standardized messages that answer: **What did you do?** and **Why?**
+
+**Format:** `<type>: <subject>`
+
+**Main types:**
+- **feat**: Add a new feature
+- **fix**: Fix a bug
+- **docs**: Update documentation only
+- **refactor**: Refactor code (optimize, restructure) without adding features or fixing bugs
+- **style**: Format code (whitespace, semicolons, indentation)
+- **test**: Add or update tests
+- **chore**: Update build tasks, configs, dependencies
+- **perf**: Performance improvements
+
+**Subject:** Brief description (under 100 characters) in imperative mood, present tense.
+
+**Examples:**
+```powershell
+git commit -m "fix: Correct login logic for admin user"
+git commit -m "feat: Add Google login button to homepage"
+git commit -m "docs: Update API documentation for user endpoints"
+git commit -m "refactor: Optimize database query performance in practitioners list"
+git commit -m "style: Fix indentation in auth components"
+git commit -m "test: Add unit tests for credit calculation"
+```
+
+**Best practices:**
+1. Be specific about what changed
+2. Use imperative mood ("Add" not "Added" or "Adds")
+3. Keep subject under 100 characters
+4. Don't end with a period
+5. Reference issues when relevant: `fix: Resolve login error (#123)`
+
+See **CLAUDE.md** for comprehensive commit message guidelines.
+
 ## Architecture
 
 ### Multi-Tenant Role-Based System
