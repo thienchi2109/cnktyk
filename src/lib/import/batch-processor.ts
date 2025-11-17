@@ -17,6 +17,12 @@ export interface PractitionerBatchRow {
   trangThaiLamViec: string;
   chucDanh: string | null;
   maNhanVienNoiBo: string | null;
+  // Extended fields from Excel template
+  ngaySinh: Date | null;
+  gioiTinh: string | null;
+  khoaPhong: string | null;
+  noiCapCCHN: string | null;
+  phamViChuyenMon: string | null;
 }
 
 export interface ActivityBatchRow {
@@ -59,7 +65,7 @@ export class BatchProcessor {
 
       batch.forEach((p) => {
         valueGroups.push(
-          `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6})`
+          `($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}, $${paramIndex + 5}, $${paramIndex + 6}, $${paramIndex + 7}, $${paramIndex + 8}, $${paramIndex + 9}, $${paramIndex + 10}, $${paramIndex + 11})`
         );
         params.push(
           p.hoVaTen,
@@ -68,22 +74,33 @@ export class BatchProcessor {
           p.maDonVi,
           p.trangThaiLamViec,
           p.chucDanh,
-          p.maNhanVienNoiBo
+          p.maNhanVienNoiBo,
+          p.ngaySinh,
+          p.gioiTinh,
+          p.khoaPhong,
+          p.noiCapCCHN,
+          p.phamViChuyenMon
         );
-        paramIndex += 7;
+        paramIndex += 12;
       });
 
       const sql = `
         INSERT INTO "NhanVien" (
           "HoVaTen", "SoCCHN", "NgayCapCCHN", "MaDonVi",
-          "TrangThaiLamViec", "ChucDanh", "MaNhanVienNoiBo"
+          "TrangThaiLamViec", "ChucDanh", "MaNhanVienNoiBo",
+          "NgaySinh", "GioiTinh", "KhoaPhong", "NoiCapCCHN", "PhamViChuyenMon"
         ) VALUES ${valueGroups.join(', ')}
         ON CONFLICT ("SoCCHN") DO UPDATE SET
           "HoVaTen" = EXCLUDED."HoVaTen",
           "NgayCapCCHN" = EXCLUDED."NgayCapCCHN",
-          "ChucDanh" = EXCLUDED."ChucDanh",
+          "ChucDanh" = COALESCE(EXCLUDED."ChucDanh", "NhanVien"."ChucDanh"),
           "TrangThaiLamViec" = EXCLUDED."TrangThaiLamViec",
-          "MaNhanVienNoiBo" = EXCLUDED."MaNhanVienNoiBo"
+          "MaNhanVienNoiBo" = COALESCE(EXCLUDED."MaNhanVienNoiBo", "NhanVien"."MaNhanVienNoiBo"),
+          "NgaySinh" = COALESCE(EXCLUDED."NgaySinh", "NhanVien"."NgaySinh"),
+          "GioiTinh" = COALESCE(EXCLUDED."GioiTinh", "NhanVien"."GioiTinh"),
+          "KhoaPhong" = COALESCE(EXCLUDED."KhoaPhong", "NhanVien"."KhoaPhong"),
+          "NoiCapCCHN" = COALESCE(EXCLUDED."NoiCapCCHN", "NhanVien"."NoiCapCCHN"),
+          "PhamViChuyenMon" = COALESCE(EXCLUDED."PhamViChuyenMon", "NhanVien"."PhamViChuyenMon")
         WHERE "NhanVien"."MaDonVi" = EXCLUDED."MaDonVi"
         RETURNING "MaNhanVien", "SoCCHN", (xmax = 0) AS is_new
       `;

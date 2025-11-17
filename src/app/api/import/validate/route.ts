@@ -118,27 +118,15 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Build valid CCHNs set (from file + database)
-    const validCCHNs = new Set<string>();
-    parsedData.practitioners.forEach(p => {
-      if (p.soCCHN) validCCHNs.add(p.soCCHN);
-    });
-    existingCCHNs.forEach(cchn => validCCHNs.add(cchn));
-
-    // Validate activities
-    const activityErrors = validator.validateActivities(parsedData.activities, validCCHNs);
-
-    // Combine all errors
-    const allErrors = [...practitionerErrors, ...activityErrors];
-    const errors = allErrors.filter(e => e.severity === 'error');
-    const warnings = allErrors.filter(e => e.severity === 'warning');
+    // Separate errors and warnings
+    const errors = practitionerErrors.filter(e => e.severity === 'error');
+    const warnings = practitionerErrors.filter(e => e.severity === 'warning');
 
     const result: ValidationResult = {
       isValid: errors.length === 0,
       errors,
       warnings,
-      practitionersCount: parsedData.practitioners.length,
-      activitiesCount: parsedData.activities.length
+      practitionersCount: parsedData.practitioners.length
     };
 
     return NextResponse.json({

@@ -479,6 +479,7 @@ export class NhanVienRepository extends BaseRepository<NhanVien, CreateNhanVien,
       Email: row.Email,
       DienThoai: row.DienThoai,
       ChucDanh: row.ChucDanh,
+      KhoaPhong: row.KhoaPhong ?? null,
       complianceStatus: {
         totalCredits: parseFloat(row.total_credits),
         requiredCredits: parseInt(row.required_credits),
