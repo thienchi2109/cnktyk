@@ -8,8 +8,8 @@ import { z } from 'zod';
 // Query parameter validation schema
 const QuerySchema = z.object({
   period: z.enum(['current_month', 'last_month', 'current_quarter', 'last_quarter', 'last_30_days', 'last_7_days', 'custom']).optional().default('current_month'),
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), // YYYY-MM-DD format
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), // YYYY-MM-DD format
 });
 
 // Helper function to calculate date ranges based on period

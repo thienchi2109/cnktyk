@@ -9,8 +9,8 @@ import { monitorPerformance, validateDateRange } from '@/lib/utils/performance';
 // Validation schema for query parameters
 const ActivityReportFiltersSchema = z.object({
   unitId: z.string().uuid(),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), // YYYY-MM-DD format
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), // YYYY-MM-DD format
   activityType: z.enum(['KhoaHoc', 'HoiThao', 'NghienCuu', 'BaoCao']).optional(),
   approvalStatus: z.enum(['ChoDuyet', 'DaDuyet', 'TuChoi']).optional(),
   practitionerId: z.string().uuid().optional(),

@@ -8,8 +8,8 @@ import { monitorPerformance, validateDateRange } from '@/lib/utils/performance';
 
 // Query parameter validation schema
 const QuerySchema = z.object({
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), // YYYY-MM-DD format
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), // YYYY-MM-DD format
   employmentStatus: z.enum(['DangLamViec', 'DaNghi', 'TamHoan']).array().optional(),
   position: z.string().optional(),
 });
