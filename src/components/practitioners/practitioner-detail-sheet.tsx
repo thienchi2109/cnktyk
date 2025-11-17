@@ -220,8 +220,11 @@ export function PractitionerDetailSheet({
                   onBack={() => setShowSubmissionDialog(false)}
                   onReviewComplete={() => {
                     if (practitionerId) {
+                      // Invalidate submission queries
                       queryClient.invalidateQueries({ queryKey: practitionerRecentSubmissionsQueryKey(practitionerId) });
                       queryClient.invalidateQueries({ queryKey: practitionerSubmissionsSummaryQueryKey(practitionerId) });
+                      // Refresh practitioner data to update compliance status/credits
+                      fetchPractitionerDetails();
                     }
                   }}
                 />
