@@ -13,45 +13,64 @@ interface ActivityReportProps {
   filters: Omit<ActivityReportFilters, 'startDate' | 'endDate'> & { startDate?: Date; endDate?: Date };
 }
 
+type RangePreset = 'this_month' | 'last_6_months' | 'this_year' | 'all_time' | 'custom';
+
+const getPresetRange = (preset: RangePreset) => {
+  const now = new Date();
+  let startDate: Date | undefined;
+  let endDate: Date | undefined = now;
+
+  switch (preset) {
+    case 'this_month':
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      break;
+    case 'last_6_months':
+      startDate = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+      break;
+    case 'this_year':
+      startDate = new Date(now.getFullYear(), 0, 1);
+      break;
+    case 'all_time':
+      startDate = undefined;
+      endDate = undefined;
+      break;
+    default:
+      break;
+  }
+
+  return { startDate, endDate };
+};
+
 export function ActivityReport({ unitId, filters }: ActivityReportProps) {
-  const [rangePreset, setRangePreset] = useState<'this_month' | 'last_6_months' | 'this_year' | 'all_time' | 'custom'>('this_month');
-  const [dateRange, setDateRange] = useState<{ startDate?: Date; endDate?: Date }>({
-    startDate: filters.startDate,
-    endDate: filters.endDate,
+  const initialPreset: RangePreset = filters.startDate || filters.endDate ? 'custom' : 'this_month';
+  const [rangePreset, setRangePreset] = useState<RangePreset>(initialPreset);
+  const [dateRange, setDateRange] = useState<{ startDate?: Date; endDate?: Date }>(() => {
+    if (filters.startDate || filters.endDate) {
+      return { startDate: filters.startDate, endDate: filters.endDate };
+    }
+    return getPresetRange('this_month');
   });
 
   useEffect(() => {
     if (filters.startDate || filters.endDate) {
       setDateRange({ startDate: filters.startDate, endDate: filters.endDate });
       setRangePreset('custom');
+      return;
     }
+
+    setRangePreset('this_month');
+    setDateRange((current) => {
+      const presetRange = getPresetRange('this_month');
+      const sameStart = current.startDate?.getTime() === presetRange.startDate?.getTime();
+      const sameEnd = current.endDate?.getTime() === presetRange.endDate?.getTime();
+      return sameStart && sameEnd ? current : presetRange;
+    });
   }, [filters.startDate?.toISOString(), filters.endDate?.toISOString()]);
 
   const handlePresetChange = (preset: typeof rangePreset) => {
-    const now = new Date();
-    let startDate: Date | undefined;
-    let endDate: Date | undefined = now;
-
-    switch (preset) {
-      case 'this_month':
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        break;
-      case 'last_6_months':
-        startDate = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-        break;
-      case 'this_year':
-        startDate = new Date(now.getFullYear(), 0, 1);
-        break;
-      case 'all_time':
-        startDate = undefined;
-        endDate = undefined;
-        break;
-      default:
-        break;
-    }
-
+    const presetRange = getPresetRange(preset);
     setRangePreset(preset);
-    setDateRange({ startDate, endDate });
+    setDateRange(presetRange);
   };
 
   const buttonClass = (preset: typeof rangePreset) =>
