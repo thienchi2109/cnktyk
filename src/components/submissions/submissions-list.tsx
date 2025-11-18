@@ -23,7 +23,8 @@ import {
   EllipsisVertical,
   ChevronDown,
   User,
-  FolderPlus
+  FolderPlus,
+  Edit
 } from 'lucide-react';
 
 import { GlassCard } from '@/components/ui/glass-card';
@@ -947,6 +948,26 @@ export function SubmissionsList({
                                 </TooltipTrigger>
                                 <TooltipContent>Xem chi tiết</TooltipContent>
                               </Tooltip>
+
+                              {reviewerRole && submission.TrangThaiDuyet === 'ChoDuyet' && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      aria-label="Chỉnh sửa"
+                                      className="text-medical-blue hover:text-medical-blue/80"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleViewSubmission(submission.MaGhiNhan);
+                                      }}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Chỉnh sửa</TooltipContent>
+                                </Tooltip>
+                              )}
 
                               {submission.FileMinhChungUrl && (
                                 <>
