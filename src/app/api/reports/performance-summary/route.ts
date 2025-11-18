@@ -5,11 +5,22 @@ import { NhatKyHeThongRepository } from '@/lib/db/repositories';
 import type { PerformanceSummaryData } from '@/types/reports';
 import { z } from 'zod';
 
+const DateParamSchema = z
+  .string()
+  .trim()
+  .refine(
+    (value) =>
+      /^\d{4}-\d{2}-\d{2}$/.test(value) ||
+      !Number.isNaN(Date.parse(value)),
+    { message: 'Invalid date format. Expected YYYY-MM-DD or ISO datetime string' }
+  );
+
 // Query parameter validation schema
 const QuerySchema = z.object({
   period: z.enum(['current_month', 'last_month', 'current_quarter', 'last_quarter', 'last_30_days', 'last_7_days', 'custom']).optional().default('current_month'),
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), // YYYY-MM-DD format
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), // YYYY-MM-DD format
+  // Accept either YYYY-MM-DD or full ISO datetime
+  startDate: DateParamSchema.optional(),
+  endDate: DateParamSchema.optional(),
 });
 
 // Helper function to calculate date ranges based on period

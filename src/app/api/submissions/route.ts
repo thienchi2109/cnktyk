@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
     const submissionSchema = z.object({
       MaNhanVien: z.string().uuid(),
       MaDanhMuc: z.string().uuid().nullable().optional(),
-      TenHoatDong: z.string().min(1, 'Activity name is required'),
+      TenHoatDong: z.string().trim().min(1, 'Activity name is required'),
       HinhThucCapNhatKienThucYKhoa: z.string().nullable().optional(),
       ChiTietVaiTro: z.string().nullable().optional(),
       DonViToChuc: z.string().nullable().optional(),
@@ -189,6 +189,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate credits based on activity catalog or manual entry
+    const normalizedActivityName = validatedData.TenHoatDong.trim();
+    const hasDuplicateActivity = await ghiNhanHoatDongRepo.existsByPractitionerAndName(
+      practitionerId,
+      normalizedActivityName,
+    );
+
+    if (hasDuplicateActivity) {
+      return NextResponse.json(
+        {
+          error: 'Nhân viên này đã có một ghi nhận với tên hoạt động này. Vui lòng chỉnh sửa bản ghi hiện có hoặc dùng tên khác.',
+        },
+        { status: 409 },
+      );
+    }
+
     let calculatedCredits = validatedData.SoGioTinChiQuyDoi || 0;
     
     if (validatedData.MaDanhMuc) {
@@ -202,7 +217,7 @@ export async function POST(request: NextRequest) {
     const submissionData: CreateGhiNhanHoatDong = {
       MaNhanVien: practitionerId,
       MaDanhMuc: validatedData.MaDanhMuc ?? null,
-      TenHoatDong: validatedData.TenHoatDong,
+      TenHoatDong: normalizedActivityName,
       FileMinhChungUrl: validatedData.FileMinhChungUrl ?? null,
       NguoiNhap: activeUser.id,
       CreationMethod: 'individual',
@@ -279,6 +294,21 @@ export async function POST(request: NextRequest) {
           requestId,
         },
         { status: 500 }
+      );
+    }
+
+    const isDuplicateActivity =
+      error instanceof Error && /uniq_ghinhan_prac_activity|duplicate key value violates unique constraint "uniq_ghinhan_prac_activity"/i.test(error.message);
+
+    if (isDuplicateActivity) {
+      console.error('Duplicate activity submission detected', baseLog);
+
+      return NextResponse.json(
+        {
+          error: 'Nhân viên này đã có một ghi nhận với tên hoạt động này. Vui lòng chỉnh sửa bản ghi hiện có hoặc dùng tên khác.',
+          requestId,
+        },
+        { status: 409 }
       );
     }
 

@@ -688,6 +688,20 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
     return db.query<GhiNhanHoatDong>(query, params);
   }
 
+  async existsByPractitionerAndName(practitionerId: string, activityName: string): Promise<boolean> {
+    const normalizedName = activityName.trim();
+    const row = await db.queryOne<{ exists: boolean }>(
+      `SELECT EXISTS(
+        SELECT 1 FROM "${this.tableName}"
+        WHERE "MaNhanVien" = $1
+          AND LOWER("TenHoatDong") = LOWER($2)
+      ) as "exists"`,
+      [practitionerId, normalizedName],
+    );
+
+    return !!row?.exists;
+  }
+
   async findDuplicatePractitionerIds(
     activityId: string,
     practitionerIds: string[],

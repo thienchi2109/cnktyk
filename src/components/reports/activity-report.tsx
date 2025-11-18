@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import { useActivityReport } from '@/hooks/use-activity-report';
 import type { ActivityReportFilters } from '@/types/reports';
 import { ActivityDonutChart } from './charts/activity-donut-chart';
@@ -12,8 +13,86 @@ interface ActivityReportProps {
   filters: Omit<ActivityReportFilters, 'startDate' | 'endDate'> & { startDate?: Date; endDate?: Date };
 }
 
+type RangePreset = 'this_month' | 'last_6_months' | 'this_year' | 'all_time' | 'custom';
+
+const getPresetRange = (preset: RangePreset) => {
+  const now = new Date();
+  let startDate: Date | undefined;
+  let endDate: Date | undefined = now;
+
+  switch (preset) {
+    case 'this_month':
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      break;
+    case 'last_6_months':
+      startDate = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+      break;
+    case 'this_year':
+      startDate = new Date(now.getFullYear(), 0, 1);
+      break;
+    case 'all_time':
+      startDate = undefined;
+      endDate = undefined;
+      break;
+    default:
+      break;
+  }
+
+  return { startDate, endDate };
+};
+
 export function ActivityReport({ unitId, filters }: ActivityReportProps) {
-  const { data, isLoading, error } = useActivityReport(unitId, filters);
+  const initialPreset: RangePreset = filters.startDate || filters.endDate ? 'custom' : 'this_month';
+  const [rangePreset, setRangePreset] = useState<RangePreset>(initialPreset);
+  const [dateRange, setDateRange] = useState<{ startDate?: Date; endDate?: Date }>(() => {
+    if (filters.startDate || filters.endDate) {
+      return { startDate: filters.startDate, endDate: filters.endDate };
+    }
+    return getPresetRange('this_month');
+  });
+
+  useEffect(() => {
+    if (filters.startDate || filters.endDate) {
+      setDateRange({ startDate: filters.startDate, endDate: filters.endDate });
+      setRangePreset('custom');
+      return;
+    }
+
+    setRangePreset('this_month');
+    setDateRange((current) => {
+      const presetRange = getPresetRange('this_month');
+      const sameStart = current.startDate?.getTime() === presetRange.startDate?.getTime();
+      const sameEnd = current.endDate?.getTime() === presetRange.endDate?.getTime();
+      return sameStart && sameEnd ? current : presetRange;
+    });
+  }, [filters.startDate?.toISOString(), filters.endDate?.toISOString()]);
+
+  const handlePresetChange = (preset: typeof rangePreset) => {
+    const presetRange = getPresetRange(preset);
+    setRangePreset(preset);
+    setDateRange(presetRange);
+  };
+
+  const buttonClass = (preset: typeof rangePreset) =>
+    `px-3 py-1 text-sm rounded-lg border transition-colors ${
+      rangePreset === preset
+        ? 'bg-medical-blue/20 text-medical-blue border-medical-blue/40'
+        : 'bg-white/30 text-gray-700 border-white/60 hover:bg-white/50'
+    }`;
+
+  const effectiveFilters = useMemo(
+    () => ({
+      ...filters,
+      startDate: dateRange.startDate,
+      endDate: dateRange.endDate,
+    }),
+    [filters, dateRange.startDate, dateRange.endDate]
+  );
+
+  const { data, isLoading, error } = useActivityReport(unitId, effectiveFilters);
+
+  const formatDate = (value?: string | null) =>
+    value ? new Date(value).toLocaleDateString('vi-VN') : '—';
 
   // Loading state
   if (isLoading) {
@@ -66,6 +145,34 @@ export function ActivityReport({ unitId, filters }: ActivityReportProps) {
 
   return (
     <div className="space-y-6">
+      {/* Quick date presets */}
+      <div className="flex flex-wrap gap-2 justify-end">
+        <button
+          className={buttonClass('this_month')}
+          onClick={() => handlePresetChange('this_month')}
+        >
+          Trong tháng
+        </button>
+        <button
+          className={buttonClass('last_6_months')}
+          onClick={() => handlePresetChange('last_6_months')}
+        >
+          6 tháng
+        </button>
+        <button
+          className={buttonClass('this_year')}
+          onClick={() => handlePresetChange('this_year')}
+        >
+          Trong năm
+        </button>
+        <button
+          className={buttonClass('all_time')}
+          onClick={() => handlePresetChange('all_time')}
+        >
+          Tất cả
+        </button>
+      </div>
+
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Total Submissions */}
@@ -159,6 +266,64 @@ export function ActivityReport({ unitId, filters }: ActivityReportProps) {
           Xu hướng theo tháng
         </h3>
         <ActivityTimelineChart data={data.timeline} />
+      </div>
+
+      {/* Recent activities table */}
+      <div className="glass-card p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Hoạt động gần đây</h3>
+            <p className="text-sm text-gray-600">10 hoạt động mới nhất trong phạm vi lọc</p>
+          </div>
+        </div>
+        {data.recentActivities.length === 0 ? (
+          <p className="text-sm text-gray-600 text-center py-6">
+            Chưa có hoạt động nào trong khoảng thời gian này.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left border-b border-white/30">
+                  <th className="py-3 pr-6 font-semibold text-gray-700 w-[25rem]">Hoạt động</th>
+                  <th className="py-3 pr-4 font-semibold text-gray-700">Loại</th>
+                  <th className="py-3 pr-4 font-semibold text-gray-700">Tín chỉ</th>
+                  <th className="py-3 pr-2 font-semibold text-gray-700 w-32 text-center">Trạng thái</th>
+                  <th className="py-3 font-semibold text-gray-700 text-right">Ngày ghi nhận</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.recentActivities.map((item) => (
+                  <tr key={item.id} className="border-b border-white/10">
+                    <td className="py-3 pr-6 text-gray-900 break-words max-w-[24rem]">
+                      {item.name}
+                    </td>
+                    <td className="py-3 pr-4 text-gray-700">{item.type}</td>
+                    <td className="py-3 pr-4 text-gray-900 font-medium">{item.credits}</td>
+                    <td className="py-3 pr-2 text-center">
+                      <span
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                          item.status === 'DaDuyet'
+                            ? 'bg-medical-green/20 text-medical-green'
+                            : item.status === 'ChoDuyet'
+                            ? 'bg-medical-amber/20 text-medical-amber'
+                            : 'bg-medical-red/20 text-medical-red'
+                        }`}
+                      >
+                        {item.status === 'DaDuyet'
+                          ? 'Đã duyệt'
+                          : item.status === 'ChoDuyet'
+                          ? 'Chờ duyệt'
+                          : 'Từ chối'}
+                      </span>
+                    </td>
+                    <td className="py-3 text-right text-gray-700">{formatDate(item.submittedAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Approval Efficiency Metrics */}
