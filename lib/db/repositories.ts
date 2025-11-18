@@ -344,6 +344,90 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
       rejected: parseInt(rejected?.count || '0', 10),
     };
   }
+
+  async updateSubmission(
+    id: string,
+    data: Partial<UpdateGhiNhanHoatDong>,
+    unitId?: string
+  ): Promise<{ success: boolean; submission?: GhiNhanHoatDong; error?: string }> {
+    try {
+      // 1. Verify submission exists
+      const submission = await this.findById(id);
+      if (!submission) {
+        return { success: false, error: 'Submission not found' };
+      }
+
+      // 2. Check status - only ChoDuyet (pending) submissions can be edited
+      if (submission.TrangThaiDuyet !== 'ChoDuyet') {
+        return { success: false, error: 'Only pending submissions can be edited' };
+      }
+
+      // 3. Enforce tenant isolation for DonVi role
+      if (unitId) {
+        const practitioner = await nhanVienRepo.findById(submission.MaNhanVien);
+        if (!practitioner) {
+          return { success: false, error: 'Practitioner not found' };
+        }
+        if (practitioner.MaDonVi !== unitId) {
+          return { success: false, error: 'Access denied: submission belongs to different unit' };
+        }
+      }
+
+      // 4. Filter allowed fields (exclude system fields and immutable fields)
+      const allowedFields = [
+        'TenHoatDong',
+        'HinhThucCapNhatKienThucYKhoa',
+        'ChiTietVaiTro',
+        'DonViToChuc',
+        'NgayBatDau',
+        'NgayKetThuc',
+        'SoTiet',
+        'BangChungSoGiayChungNhan',
+        'SoGioTinChiQuyDoi',
+        'FileMinhChungUrl',
+        'MaDanhMuc',
+      ];
+
+      const updateData: Partial<GhiNhanHoatDong> = {};
+      let hasChanges = false;
+
+      for (const key of allowedFields) {
+        if (key in data) {
+          const value = (data as any)[key];
+          // Convert empty strings to null for nullable fields
+          if (value === '') {
+            updateData[key as keyof GhiNhanHoatDong] = null as any;
+          } else {
+            updateData[key as keyof GhiNhanHoatDong] = value;
+          }
+          hasChanges = true;
+        }
+      }
+
+      if (!hasChanges) {
+        return { success: false, error: 'No valid fields to update' };
+      }
+
+      // 5. Update the database
+      const results = await db.update<GhiNhanHoatDong>(
+        this.tableName,
+        updateData,
+        { MaGhiNhan: id }
+      );
+
+      if (results.length === 0) {
+        return { success: false, error: 'Failed to update submission' };
+      }
+
+      return { success: true, submission: results[0] };
+    } catch (error) {
+      console.error('Error updating submission:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  }
 }
 
 // DonVi (Healthcare Unit) Repository

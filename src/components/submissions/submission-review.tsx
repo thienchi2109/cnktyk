@@ -38,6 +38,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { FileUpload, UploadedFile } from '@/components/ui/file-upload';
 import { useSubmission, useReviewSubmissionMutation, useEditSubmissionMutation, useDeleteSubmissionMutation } from '@/hooks/use-submission';
 import { useEvidenceFile } from '@/hooks/use-evidence-file';
 
@@ -132,6 +133,8 @@ export function SubmissionReview({
   const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | 'request_info' | null>(null);
   const [comments, setComments] = useState('');
   const [reason, setReason] = useState('');
+  const [editUploadedFiles, setEditUploadedFiles] = useState<UploadedFile[]>([]);
+  const [editFileUploadError, setEditFileUploadError] = useState<string | null>(null);
 
   const reviewMutation = useReviewSubmissionMutation();
   const editMutation = useEditSubmissionMutation();
@@ -618,12 +621,19 @@ export function SubmissionReview({
       )}
 
       {/* Edit Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+      <Dialog open={showEditDialog} onOpenChange={(open) => {
+        setShowEditDialog(open);
+        if (!open) {
+          // Reset file upload state when closing
+          setEditUploadedFiles([]);
+          setEditFileUploadError(null);
+        }
+      }}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Chỉnh sửa hoạt động</DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div>
               <Label htmlFor="edit-ten-hoat-dong">Tên hoạt động *</Label>
@@ -665,6 +675,67 @@ export function SubmissionReview({
               />
             </div>
 
+            {/* Evidence File Section */}
+            <div>
+              <Label>Tệp minh chứng</Label>
+
+              {/* Show current evidence file if exists */}
+              {submission?.FileMinhChungUrl && editUploadedFiles.length === 0 && (
+                <div className="mt-2 p-3 rounded-lg bg-gray-50 border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-medical-blue/10 text-xs font-semibold text-medical-blue">
+                        {evidenceFileExtension || 'FILE'}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{evidenceFileName || 'Tệp minh chứng hiện tại'}</p>
+                        <p className="text-xs text-gray-500">Đã tải lên trước đó</p>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => submission.FileMinhChungUrl && evidenceFile.viewFile(submission.FileMinhChungUrl)}
+                      disabled={evidenceFile.isLoading}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* File Upload Component */}
+              <div className="mt-2">
+                <FileUpload
+                  onUpload={(files) => {
+                    setEditUploadedFiles(files);
+                    setEditFileUploadError(null);
+                  }}
+                  onError={(error) => {
+                    setEditFileUploadError(error);
+                  }}
+                  maxFiles={1}
+                  maxSize={10}
+                  acceptedTypes={['application/pdf', 'image/jpeg', 'image/png', 'image/jpg']}
+                />
+                {editFileUploadError && (
+                  <Alert className="mt-2 border-red-200 bg-red-50">
+                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                    <AlertDescription className="text-red-700 text-sm">
+                      {editFileUploadError}
+                    </AlertDescription>
+                  </Alert>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  {editUploadedFiles.length > 0
+                    ? 'Tệp mới sẽ thay thế tệp hiện tại'
+                    : submission?.FileMinhChungUrl
+                      ? 'Tải lên tệp mới để thay thế (không bắt buộc)'
+                      : 'Tải lên tệp minh chứng (PDF, JPG, PNG, tối đa 10MB)'}
+                </p>
+              </div>
+            </div>
+
             <Alert className="border-medical-blue bg-medical-blue/5">
               <Info className="h-4 w-4 text-medical-blue" />
               <AlertDescription className="text-sm text-gray-700">
@@ -678,7 +749,11 @@ export function SubmissionReview({
             <Button
               type="button"
               variant="outline-accent"
-              onClick={() => setShowEditDialog(false)}
+              onClick={() => {
+                setShowEditDialog(false);
+                setEditUploadedFiles([]);
+                setEditFileUploadError(null);
+              }}
               disabled={editMutation.isPending}
             >
               Hủy
@@ -687,11 +762,16 @@ export function SubmissionReview({
               type="button"
               onClick={async () => {
                 if (!submission) return;
-                
+
                 const tenHoatDong = (document.getElementById('edit-ten-hoat-dong') as HTMLInputElement)?.value;
                 const soTiet = (document.getElementById('edit-so-tiet') as HTMLInputElement)?.value;
                 const soGioTinChi = (document.getElementById('edit-so-gio-tin-chi') as HTMLInputElement)?.value;
                 const donViToChuc = (document.getElementById('edit-don-vi-to-chuc') as HTMLInputElement)?.value;
+
+                // Determine file URL: use new upload if exists, otherwise keep existing
+                const fileUrl = editUploadedFiles.length > 0
+                  ? editUploadedFiles[0].url
+                  : submission.FileMinhChungUrl;
 
                 try {
                   await editMutation.mutateAsync({
@@ -701,9 +781,12 @@ export function SubmissionReview({
                       SoTiet: soTiet ? parseFloat(soTiet) : null,
                       SoGioTinChiQuyDoi: soGioTinChi ? parseFloat(soGioTinChi) : undefined,
                       DonViToChuc: donViToChuc || null,
+                      FileMinhChungUrl: fileUrl,
                     },
                   });
                   setShowEditDialog(false);
+                  setEditUploadedFiles([]);
+                  setEditFileUploadError(null);
                   if (onReviewComplete) onReviewComplete();
                 } catch (err) {
                   // Error handled by mutation
