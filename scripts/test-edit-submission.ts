@@ -52,8 +52,10 @@ async function runTests() {
           BangChungSoGiayChungNhan: null,
           FileMinhChungUrl: null,
           MaDanhMuc: null,
-          CreatedBy: null,
+          NguoiNhap: '00000000-0000-0000-0000-000000000001', // Test user ID
           CreationMethod: 'individual',
+          NgayDuyet: null,
+          GhiChuDuyet: null,
         };
 
         const created = await ghiNhanHoatDongRepo.create(testSubmission);
