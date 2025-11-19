@@ -105,6 +105,7 @@ interface SubmissionsListProps {
   userRole: string;
   onCreateSubmission?: () => void;
   onViewSubmission?: (submissionId: string) => void;
+  onEditSubmission?: (submissionId: string) => void;
   refreshKey?: number;
   practitioners?: PractitionerInfo[];
 }
@@ -136,10 +137,11 @@ const activityTypeLabels = {
 
 const PAGE_SIZE = 10;
 
-export function SubmissionsList({ 
-  userRole, 
-  onCreateSubmission, 
+export function SubmissionsList({
+  userRole,
+  onCreateSubmission,
   onViewSubmission,
+  onEditSubmission,
   refreshKey,
   practitioners = [],
 }: SubmissionsListProps) {
@@ -949,7 +951,7 @@ export function SubmissionsList({
                                 <TooltipContent>Xem chi tiết</TooltipContent>
                               </Tooltip>
 
-                              {reviewerRole && submission.TrangThaiDuyet === 'ChoDuyet' && (
+                              {reviewerRole && submission.TrangThaiDuyet === 'ChoDuyet' && onEditSubmission && (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button
@@ -959,7 +961,7 @@ export function SubmissionsList({
                                       className="text-medical-blue hover:text-medical-blue/80"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        handleViewSubmission(submission.MaGhiNhan);
+                                        onEditSubmission(submission.MaGhiNhan);
                                       }}
                                     >
                                       <Edit className="h-4 w-4" />
