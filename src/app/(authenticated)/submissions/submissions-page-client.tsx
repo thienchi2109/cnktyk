@@ -306,17 +306,19 @@ export function SubmissionsPageClient({ userRole, practitioners, initialPractiti
             <div className="py-8 text-center text-gray-500">Đang tải...</div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               type="button"
-              variant="outline-accent"
+              variant="outline"
               onClick={() => handleEditDialogClose(false)}
               disabled={editMutation.isPending}
             >
               Hủy
             </Button>
             <Button
-              type="button"
+              type="submit"
+              variant="default"
+              className="bg-medical-blue hover:bg-medical-blue/90"
               onClick={async () => {
                 if (!editSubmission || !selectedEditSubmissionId) return;
 
@@ -349,9 +351,15 @@ export function SubmissionsPageClient({ userRole, practitioners, initialPractiti
               disabled={editMutation.isPending || !editSubmission}
             >
               {editMutation.isPending ? (
-                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Đang lưu...</>
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang lưu...
+                </>
               ) : (
-                <><Edit className="h-4 w-4 mr-2" /> Lưu thay đổi</>
+                <>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Lưu thay đổi
+                </>
               )}
             </Button>
           </DialogFooter>
