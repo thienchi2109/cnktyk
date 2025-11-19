@@ -44,22 +44,40 @@ describe('credit-utils', () => {
       expect(credits).toBe(5);
     });
 
-    it('returns 0 when submission is not approved', () => {
+    it('returns calculated credits for pending submissions', () => {
       const credits = calculateEffectiveCredits({
         submission: { ...baseSubmission, TrangThaiDuyet: 'ChoDuyet' },
+        activity: baseActivity,
+      });
+
+      expect(credits).toBe(5);
+    });
+
+    it('returns 0 when submission is rejected', () => {
+      const credits = calculateEffectiveCredits({
+        submission: { ...baseSubmission, TrangThaiDuyet: 'TuChoi' },
         activity: baseActivity,
       });
 
       expect(credits).toBe(0);
     });
 
-    it('returns 0 when evidence required but missing', () => {
+    it('returns 0 when approved submission has evidence required but missing', () => {
       const credits = calculateEffectiveCredits({
         submission: baseSubmission,
         activity: { ...baseActivity, YeuCauMinhChung: true },
       });
 
       expect(credits).toBe(0);
+    });
+
+    it('returns calculated credits for pending submissions even when evidence is missing', () => {
+      const credits = calculateEffectiveCredits({
+        submission: { ...baseSubmission, TrangThaiDuyet: 'ChoDuyet', FileMinhChungUrl: null },
+        activity: { ...baseActivity, YeuCauMinhChung: true },
+      });
+
+      expect(credits).toBe(5);
     });
 
     it('calculates credits based on hours when stored value is undefined', () => {
