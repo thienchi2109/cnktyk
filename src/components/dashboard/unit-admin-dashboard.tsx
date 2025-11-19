@@ -187,11 +187,11 @@ export function UnitAdminDashboard({ userId, unitId, units = [] }: UnitAdminDash
           name: p.HoVaTen,
           licenseId: p.SoCCHN || 'N/A',
           position: p.ChucDanh || 'Không xác định',
-          compliancePercent: p.complianceStatus?.compliancePercent || 0,
+          compliancePercent: p.complianceStatus?.compliancePercentage || 0,
           status: p.TrangThaiLamViec,
           lastActivityDate: p.lastActivityDate,
-          creditsEarned: p.complianceStatus?.creditsEarned || 0,
-          creditsRequired: p.complianceStatus?.creditsRequired || 120,
+          creditsEarned: p.complianceStatus?.totalCredits || 0,
+          creditsRequired: p.complianceStatus?.requiredCredits || 120,
         })));
 
         if (result.pagination) {
