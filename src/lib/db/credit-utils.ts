@@ -34,12 +34,18 @@ export function calculateEffectiveCredits({
   submission: SubmissionForCredit;
   activity?: ActivityForCredit | null | undefined;
 }): number {
-  if (submission.TrangThaiDuyet !== 'DaDuyet') {
+  // Only return 0 for rejected submissions
+  // Show calculated credits for both pending (ChoDuyet) and approved (DaDuyet) submissions
+  if (submission.TrangThaiDuyet === 'TuChoi') {
     return 0;
   }
 
-  if (!isEvidenceSatisfied(activity?.YeuCauMinhChung, submission.FileMinhChungUrl)) {
-    return 0;
+  // For pending submissions, skip evidence validation to show potential credits
+  // For approved submissions, enforce evidence requirement
+  if (submission.TrangThaiDuyet === 'DaDuyet') {
+    if (!isEvidenceSatisfied(activity?.YeuCauMinhChung, submission.FileMinhChungUrl)) {
+      return 0;
+    }
   }
 
   const baseCredits =
