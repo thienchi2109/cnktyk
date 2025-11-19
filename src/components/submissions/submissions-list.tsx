@@ -972,45 +972,40 @@ export function SubmissionsList({
                               )}
 
                               {submission.FileMinhChungUrl && (
-                                <>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        aria-label="Xem minh chứng"
-                                        onClick={(event) => handleViewEvidence(event, submission)}
-                                        disabled={evidenceFile.isLoading && isActiveEvidenceRow}
-                                      >
-                                        {isViewingEvidence ? (
-                                          <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                          <FileSearch className="h-4 w-4" />
-                                        )}
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Xem minh chứng</TooltipContent>
-                                  </Tooltip>
-
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        aria-label="Tải minh chứng"
-                                        onClick={(event) => handleDownloadEvidence(event, submission)}
-                                        disabled={evidenceFile.isLoading && isActiveEvidenceRow}
-                                      >
-                                        {isDownloadingEvidence ? (
-                                          <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                          <DownloadCloud className="h-4 w-4" />
-                                        )}
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Tải xuống</TooltipContent>
-                                  </Tooltip>
-                                </>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 gap-1"
+                                      disabled={evidenceFile.isLoading && isActiveEvidenceRow}
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      {evidenceFile.isLoading && isActiveEvidenceRow ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <FileText className="h-4 w-4" />
+                                      )}
+                                      <span className="text-xs">Bằng chứng</span>
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                      onClick={(event) => handleViewEvidence(event, submission)}
+                                      disabled={evidenceFile.isLoading && isActiveEvidenceRow}
+                                    >
+                                      <FileSearch className="h-4 w-4 mr-2" />
+                                      Xem
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={(event) => handleDownloadEvidence(event, submission)}
+                                      disabled={evidenceFile.isLoading && isActiveEvidenceRow}
+                                    >
+                                      <DownloadCloud className="h-4 w-4 mr-2" />
+                                      Tải xuống
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               )}
 
                               {canDelete(submission) && (
