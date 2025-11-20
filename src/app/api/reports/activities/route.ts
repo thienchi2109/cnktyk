@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { NhatKyHeThongRepository } from '@/lib/db/repositories';
+import { asyncAuditLog } from '@/lib/utils/async-audit';
 import { z } from 'zod';
 import type { ActivityReportData } from '@/types/reports';
 import { monitorPerformance, validateDateRange } from '@/lib/utils/performance';
@@ -247,9 +248,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       recentActivities: result.recentActivities,
     };
 
-    // 8. Audit logging
+    // 8. Async audit logging (non-blocking)
     const auditRepo = new NhatKyHeThongRepository();
-    await auditRepo.create({
+    asyncAuditLog(auditRepo, {
       MaTaiKhoan: session.user.id,
       HanhDong: 'READ',
       Bang: 'GhiNhanHoatDong',
@@ -268,7 +269,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       DiaChiIP: request.headers.get('x-forwarded-for') || 'unknown',
     });
 
-    // 9. Return report data
+    // 9. Return report data immediately (don't wait for audit log)
     return NextResponse.json(reportData);
   } catch (error) {
     if (error instanceof z.ZodError) {

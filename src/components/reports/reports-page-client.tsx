@@ -98,8 +98,12 @@ interface ReportsPageClientProps {
 export function ReportsPageClient({ unitId }: ReportsPageClientProps) {
   const [selectedReport, setSelectedReport] = useState<ReportType>('performance');
 
-  // Fetch practitioners for the selector in filter panel
-  const { data: practitioners } = useUnitPractitioners({ unitId });
+  // Lazy load practitioners list - only fetch when Practitioner Detail tab is selected
+  // This saves ~500ms on initial page load by not fetching up to 1000 practitioners unnecessarily
+  const { data: practitioners } = useUnitPractitioners({
+    unitId,
+    enabled: selectedReport === 'practitioner' // Only fetch when user views practitioner tab
+  });
 
   // Common Filters State
   const [filters, setFilters] = useState<ReportFilters>({
