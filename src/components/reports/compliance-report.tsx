@@ -23,9 +23,10 @@ import type { ComplianceReportFilters } from '@/types/reports';
 interface ComplianceReportProps {
   unitId: string;
   filters: ComplianceReportFilters;
+  onNavigateToPractitioner?: (practitionerId: string) => void;
 }
 
-export function ComplianceReport({ unitId, filters }: ComplianceReportProps) {
+export function ComplianceReport({ unitId, filters, onNavigateToPractitioner }: ComplianceReportProps) {
   const { data, isLoading, error } = useComplianceReport(unitId, filters);
   const [showTopPerformers, setShowTopPerformers] = useState(true);
 
@@ -187,6 +188,7 @@ export function ComplianceReport({ unitId, filters }: ComplianceReportProps) {
             data={practitioners}
             limit={10}
             showTopPerformers={showTopPerformers}
+            onBarClick={onNavigateToPractitioner}
           />
         </GlassCard>
       </div>
