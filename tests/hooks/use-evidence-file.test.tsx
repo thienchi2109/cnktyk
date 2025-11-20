@@ -57,6 +57,7 @@ describe('useEvidenceFile', () => {
 
     await act(async () => {
       const pending = result.current.downloadFile('/api/files/foo', 'foo.pdf');
+      await Promise.resolve(); // flush state update
       expect(result.current.isLoading).toBe(true);
       expect(result.current.activeAction).toBe('download');
 
@@ -101,6 +102,7 @@ describe('useEvidenceFile', () => {
 
     await act(async () => {
       const pending = result.current.viewFile('/api/files/missing');
+      await Promise.resolve(); // flush state update
       expect(result.current.isLoading).toBe(true);
       expect(result.current.activeAction).toBe('view');
       await pending;
@@ -144,10 +146,29 @@ describe('useEvidenceFile', () => {
 
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({
-        description: expect.stringMatching(/vui l?ng th? l?i/i),
+        description: expect.stringMatching(/vui lòng thử lại/i),
       })
     );
     expect(result.current.isLoading).toBe(false);
+  });
+
+  it('normalizes direct R2 URLs to use the local signing endpoint', async () => {
+    (global.fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => ({ signedUrl: 'https://inline-url' }),
+    });
+    (window.open as any).mockReturnValue({});
+    const { result } = renderHook(() => useEvidenceFile());
+    const r2Url =
+      'https://pub-3e9de70adc454c988e484c10a520c045.r2.dev/evidence/sample.pdf';
+
+    await act(async () => {
+      await result.current.viewFile(r2Url);
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      `${window.location.origin}/api/files/evidence/sample.pdf?action=signed-url&disposition=inline`
+    );
   });
 
   it('validates empty fileUrl before fetching', async () => {
@@ -160,7 +181,7 @@ describe('useEvidenceFile', () => {
     expect(global.fetch).not.toHaveBeenCalled();
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({
-        description: expect.stringContaining('Thi?u'),
+        description: expect.stringContaining('Thiếu'),
       })
     );
     expect(result.current.isLoading).toBe(false);

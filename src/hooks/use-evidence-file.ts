@@ -13,11 +13,49 @@ export interface UseEvidenceFileResult {
   viewFile: (fileUrl: string) => Promise<void>;
 }
 
+const stripQuery = (value: string) => value.split('?')[0] || '';
+
 const buildSignedUrlEndpoint = (fileUrl: string, disposition: 'inline' | 'attachment') => {
   const target = new URL(fileUrl, window.location.origin);
   target.searchParams.set('action', 'signed-url');
   target.searchParams.set('disposition', disposition);
   return target.toString();
+};
+
+const normalizeFileEndpoint = (fileUrl: string) => {
+  const trimmed = fileUrl.trim();
+  if (!trimmed) {
+    throw new Error('Thiếu đường dẫn tệp minh chứng.');
+  }
+
+  if (trimmed.startsWith('/api/files/')) {
+    return `${window.location.origin}${stripQuery(trimmed)}`;
+  }
+
+  if (trimmed.startsWith('api/files/')) {
+    return `${window.location.origin}/${stripQuery(trimmed)}`;
+  }
+
+  try {
+    const parsed = new URL(trimmed, window.location.origin);
+    const path = stripQuery(parsed.pathname).replace(/^\/+/, '');
+
+    if (!path) {
+      throw new Error('Thiếu đường dẫn tệp minh chứng.');
+    }
+
+    if (path.startsWith('api/files/')) {
+      return `${window.location.origin}/${path}`;
+    }
+
+    return `${window.location.origin}/api/files/${path}`;
+  } catch {
+    const normalizedPath = stripQuery(trimmed.replace(/^\/+/, ''));
+    if (!normalizedPath) {
+      throw new Error('Thiếu đường dẫn tệp minh chứng.');
+    }
+    return `${window.location.origin}/api/files/${normalizedPath}`;
+  }
 };
 
 const triggerDownload = (signedUrl: string, filename?: string | null) => {
@@ -35,7 +73,7 @@ const triggerDownload = (signedUrl: string, filename?: string | null) => {
 
 const showErrorToast = (message: string) => {
   toast({
-    title: 'Kh�ng th? truy c?p t?p minh ch?ng',
+    title: 'Không thể truy cập tệp minh chứng',
     description: message,
     variant: 'destructive',
   });
@@ -45,20 +83,17 @@ export function useEvidenceFile(): UseEvidenceFileResult {
   const [activeAction, setActiveAction] = useState<EvidenceFileAction | null>(null);
 
   const fetchSignedUrl = useCallback(async (fileUrl: string, disposition: 'inline' | 'attachment') => {
-    if (!fileUrl) {
-      throw new Error('Thi?u du?ng d?n t?p minh ch?ng.');
-    }
-
-    const endpoint = buildSignedUrlEndpoint(fileUrl, disposition);
+    const normalizedUrl = normalizeFileEndpoint(fileUrl);
+    const endpoint = buildSignedUrlEndpoint(normalizedUrl, disposition);
     const response = await fetch(endpoint);
     const payload = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      throw new Error(payload?.error || 'Kh�ng th? sinh URL b?o m?t cho t?p n�y.');
+      throw new Error(payload?.error || 'Không thể sinh URL bảo mật cho tệp này.');
     }
 
     if (!payload?.signedUrl) {
-      throw new Error('Kh�ng n?m b?t du?c URL t?p minh ch?ng.');
+      throw new Error('Không nắm bắt được URL tệp minh chứng.');
     }
 
     return payload.signedUrl as string;
@@ -77,12 +112,12 @@ export function useEvidenceFile(): UseEvidenceFileResult {
 
         const popup = window.open(signedUrl, '_blank', 'noopener');
         if (!popup) {
-          showErrorToast('Popup b? ch?n - vui l�ng cho ph�p popup d? xem t?p.');
+          showErrorToast('Popup bị chặn - vui lòng cho phép popup để xem tệp.');
         }
       } catch (error) {
         console.error('Evidence file action failed', error);
         const defaultMessage =
-          action === 'download' ? 'Kh?ng th? t?i xu?ng t?p.' : 'Kh?ng th? xem t?p minh ch?ng.';
+          action === 'download' ? 'Không thể tải xuống tệp.' : 'Không thể xem tệp minh chứng.';
         const isNetworkError =
           error instanceof TypeError ||
           (error instanceof Error && /Failed to fetch/i.test(error.message || ''));
@@ -93,7 +128,7 @@ export function useEvidenceFile(): UseEvidenceFileResult {
             : defaultMessage;
 
         if (isNetworkError) {
-          message = 'Kh?ng th? k?t n?i t?i m?y ch? - vui l?ng th? l?i.';
+          message = 'Không thể kết nối tới máy chủ - vui lòng thử lại.';
         }
 
         showErrorToast(message);

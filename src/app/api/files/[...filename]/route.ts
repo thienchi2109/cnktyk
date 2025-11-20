@@ -7,15 +7,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/server';
 import { r2Client } from '@/lib/storage/r2-client';
 
+type Awaitable<T> = T | Promise<T>;
+
 interface RouteParams {
-  params: {
+  params: Awaitable<{
     filename?: string[];
-  };
+  }>;
 }
 
 type DispositionMode = 'inline' | 'attachment';
 
-const buildFilenameFromParams = (params: RouteParams['params']): string | null => {
+type ResolvedParams = Awaited<RouteParams['params']>;
+
+const buildFilenameFromParams = (params: ResolvedParams): string | null => {
   const segments = params.filename ?? [];
   if (!Array.isArray(segments) || segments.length === 0) {
     return null;
@@ -40,6 +44,7 @@ export async function GET(
   { params }: RouteParams
 ) {
   try {
+    const resolvedParams = await params;
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json(
@@ -48,7 +53,7 @@ export async function GET(
       );
     }
 
-    const filename = buildFilenameFromParams(params);
+    const filename = buildFilenameFromParams(resolvedParams);
     if (!filename) {
       return NextResponse.json(
         { error: 'Filename is required' },
@@ -74,8 +79,21 @@ export async function GET(
         return NextResponse.json({ metadata });
       }
       case 'signed-url': {
-        const signedUrl = await r2Client.getSignedUrl(filename, expiresIn, disposition);
-        return NextResponse.json({ signedUrl });
+        const exists = await r2Client.fileExists(filename);
+        if (!exists) {
+          console.warn(`File HEAD missing for ${filename}, returning signed URL anyway`);
+        }
+
+        try {
+          const signedUrl = await r2Client.getSignedUrl(filename, expiresIn, disposition);
+          return NextResponse.json({ signedUrl });
+        } catch (err) {
+          console.error(`Failed to sign URL for ${filename}:`, err);
+          return NextResponse.json(
+            { error: 'File not found' },
+            { status: 404 }
+          );
+        }
       }
       case 'exists': {
         const exists = await r2Client.fileExists(filename);
@@ -108,6 +126,7 @@ export async function DELETE(
   { params }: RouteParams
 ) {
   try {
+    const resolvedParams = await params;
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json(
@@ -123,7 +142,7 @@ export async function DELETE(
       );
     }
 
-    const filename = buildFilenameFromParams(params);
+    const filename = buildFilenameFromParams(resolvedParams);
     if (!filename) {
       return NextResponse.json(
         { error: 'Filename is required' },
