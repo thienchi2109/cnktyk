@@ -54,6 +54,9 @@ export async function GET(
     }
 
     const filename = buildFilenameFromParams(resolvedParams);
+    console.log('[File API Debug] Received filename params:', resolvedParams.filename);
+    console.log('[File API Debug] Built filename:', filename);
+
     if (!filename) {
       return NextResponse.json(
         { error: 'Filename is required' },
@@ -79,18 +82,36 @@ export async function GET(
         return NextResponse.json({ metadata });
       }
       case 'signed-url': {
-        const exists = await r2Client.fileExists(filename);
+        console.log('[File API Debug] Checking file existence for:', filename);
+        let actualFilename = filename;
+        let exists = await r2Client.fileExists(filename);
+
+        // Fallback: If file doesn't exist with evidence/ prefix, try without it
+        // This handles files uploaded before the path structure change
+        if (!exists && filename.startsWith('evidence/')) {
+          const filenameWithoutPrefix = filename.replace(/^evidence\//, '');
+          console.log('[File API Debug] File not found with prefix, trying without:', filenameWithoutPrefix);
+          const existsWithoutPrefix = await r2Client.fileExists(filenameWithoutPrefix);
+
+          if (existsWithoutPrefix) {
+            console.log('[File API Debug] File found without prefix!'); actualFilename = filenameWithoutPrefix;
+            exists = true;
+          }
+        }
+
         if (!exists) {
-          console.warn(`File HEAD missing for ${filename}, returning signed URL anyway`);
+          console.warn(`[File API Debug] File not found at any path, tried: ${filename} and fallback paths`);
         }
 
         try {
-          const signedUrl = await r2Client.getSignedUrl(filename, expiresIn, disposition);
+          console.log('[File API Debug] Generating signed URL for:', actualFilename, 'with disposition:', disposition);
+          const signedUrl = await r2Client.getSignedUrl(actualFilename, expiresIn, disposition);
+          console.log('[File API Debug] Successfully generated signed URL');
           return NextResponse.json({ signedUrl });
         } catch (err) {
-          console.error(`Failed to sign URL for ${filename}:`, err);
+          console.error(`[File API Debug] Failed to sign URL for ${actualFilename}:`, err);
           return NextResponse.json(
-            { error: 'File not found' },
+            { error: `File not found: ${filename}` },
             { status: 404 }
           );
         }
