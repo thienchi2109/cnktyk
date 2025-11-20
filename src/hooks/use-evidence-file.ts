@@ -24,22 +24,17 @@ const buildSignedUrlEndpoint = (fileUrl: string, disposition: 'inline' | 'attach
 
 const normalizeFileEndpoint = (fileUrl: string) => {
   const trimmed = fileUrl.trim();
-  console.log('[Evidence File Debug] Input URL:', trimmed);
 
   if (!trimmed) {
     throw new Error('Thiếu đường dẫn tệp minh chứng.');
   }
 
   if (trimmed.startsWith('/api/files/')) {
-    const normalized = `${window.location.origin}${stripQuery(trimmed)}`;
-    console.log('[Evidence File Debug] Normalized from /api/files/:', normalized);
-    return normalized;
+    return `${window.location.origin}${stripQuery(trimmed)}`;
   }
 
   if (trimmed.startsWith('api/files/')) {
-    const normalized = `${window.location.origin}/${stripQuery(trimmed)}`;
-    console.log('[Evidence File Debug] Normalized from api/files/:', normalized);
-    return normalized;
+    return `${window.location.origin}/${stripQuery(trimmed)}`;
   }
 
   try {
@@ -51,22 +46,16 @@ const normalizeFileEndpoint = (fileUrl: string) => {
     }
 
     if (path.startsWith('api/files/')) {
-      const normalized = `${window.location.origin}/${path}`;
-      console.log('[Evidence File Debug] Normalized from URL with api/files/:', normalized);
-      return normalized;
+      return `${window.location.origin}/${path}`;
     }
 
-    const normalized = `${window.location.origin}/api/files/${path}`;
-    console.log('[Evidence File Debug] Normalized from URL path:', normalized);
-    return normalized;
+    return `${window.location.origin}/api/files/${path}`;
   } catch {
     const normalizedPath = stripQuery(trimmed.replace(/^\/+/, ''));
     if (!normalizedPath) {
       throw new Error('Thiếu đường dẫn tệp minh chứng.');
     }
-    const normalized = `${window.location.origin}/api/files/${normalizedPath}`;
-    console.log('[Evidence File Debug] Normalized from fallback:', normalized);
-    return normalized;
+    return `${window.location.origin}/api/files/${normalizedPath}`;
   }
 };
 
@@ -97,26 +86,18 @@ export function useEvidenceFile(): UseEvidenceFileResult {
   const fetchSignedUrl = useCallback(async (fileUrl: string, disposition: 'inline' | 'attachment') => {
     const normalizedUrl = normalizeFileEndpoint(fileUrl);
     const endpoint = buildSignedUrlEndpoint(normalizedUrl, disposition);
-    console.log('[Evidence File Debug] Fetching signed URL from endpoint:', endpoint);
 
     const response = await fetch(endpoint);
     const payload = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      console.error('[Evidence File Debug] Failed to get signed URL:', {
-        status: response.status,
-        statusText: response.statusText,
-        error: payload?.error,
-      });
       throw new Error(payload?.error || 'Không thể sinh URL bảo mật cho tệp này.');
     }
 
     if (!payload?.signedUrl) {
-      console.error('[Evidence File Debug] No signed URL in response:', payload);
       throw new Error('Không nắm bắt được URL tệp minh chứng.');
     }
 
-    console.log('[Evidence File Debug] Successfully received signed URL');
     return payload.signedUrl as string;
   }, []);
 

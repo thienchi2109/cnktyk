@@ -54,8 +54,6 @@ export async function GET(
     }
 
     const filename = buildFilenameFromParams(resolvedParams);
-    console.log('[File API Debug] Received filename params:', resolvedParams.filename);
-    console.log('[File API Debug] Built filename:', filename);
 
     if (!filename) {
       return NextResponse.json(
@@ -82,7 +80,6 @@ export async function GET(
         return NextResponse.json({ metadata });
       }
       case 'signed-url': {
-        console.log('[File API Debug] Checking file existence for:', filename);
         let actualFilename = filename;
         let exists = await r2Client.fileExists(filename);
 
@@ -90,26 +87,19 @@ export async function GET(
         // This handles files uploaded before the path structure change
         if (!exists && filename.startsWith('evidence/')) {
           const filenameWithoutPrefix = filename.replace(/^evidence\//, '');
-          console.log('[File API Debug] File not found with prefix, trying without:', filenameWithoutPrefix);
           const existsWithoutPrefix = await r2Client.fileExists(filenameWithoutPrefix);
 
           if (existsWithoutPrefix) {
-            console.log('[File API Debug] File found without prefix!'); actualFilename = filenameWithoutPrefix;
+            actualFilename = filenameWithoutPrefix;
             exists = true;
           }
         }
 
-        if (!exists) {
-          console.warn(`[File API Debug] File not found at any path, tried: ${filename} and fallback paths`);
-        }
-
         try {
-          console.log('[File API Debug] Generating signed URL for:', actualFilename, 'with disposition:', disposition);
           const signedUrl = await r2Client.getSignedUrl(actualFilename, expiresIn, disposition);
-          console.log('[File API Debug] Successfully generated signed URL');
           return NextResponse.json({ signedUrl });
         } catch (err) {
-          console.error(`[File API Debug] Failed to sign URL for ${actualFilename}:`, err);
+          console.error(`Failed to sign URL for ${actualFilename}:`, err);
           return NextResponse.json(
             { error: `File not found: ${filename}` },
             { status: 404 }
