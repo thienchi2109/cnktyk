@@ -9,6 +9,8 @@ export type ReportType = 'performance' | 'compliance' | 'activities' | 'practiti
 export type DateRangePreset =
   | 'last_30_days'
   | 'last_90_days'
+  | 'this_month'
+  | 'last_month'
   | 'this_quarter'
   | 'this_year'
   | 'current_cycle'

@@ -14,12 +14,14 @@ interface ComplianceBarChartProps {
   data: PractitionerComplianceSummary[];
   limit?: number;
   showTopPerformers?: boolean;
+  onBarClick?: (practitionerId: string) => void;
 }
 
 export function ComplianceBarChart({
   data,
   limit = 10,
   showTopPerformers = true,
+  onBarClick,
 }: ComplianceBarChartProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -54,6 +56,7 @@ export function ComplianceBarChart({
 
   // Transform data for Recharts
   const chartData = limitedData.map((item) => ({
+    id: item.id,
     name: item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name,
     fullName: item.name,
     credits: item.credits,
@@ -98,7 +101,12 @@ export function ComplianceBarChart({
           <Bar
             dataKey="credits"
             radius={[0, 4, 4, 0]}
-            className="hover:opacity-80 transition-opacity"
+            className={onBarClick ? "cursor-pointer hover:opacity-80 transition-opacity" : "hover:opacity-80 transition-opacity"}
+            onClick={(data) => {
+              if (data.id && onBarClick) {
+                onBarClick(data.id);
+              }
+            }}
           >
             {chartData.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={entry.fill} />

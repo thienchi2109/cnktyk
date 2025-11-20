@@ -6,7 +6,7 @@ import type { ActivityReportFilters } from '@/types/reports';
 import { ActivityDonutChart } from './charts/activity-donut-chart';
 import { ActivityTimelineChart } from './charts/activity-timeline-chart';
 import { ActivityTypeBarChart } from './charts/activity-type-bar-chart';
-import { FileText, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { FileText, Clock, CheckCircle, XCircle, AlertCircle, X } from 'lucide-react';
 
 interface ActivityReportProps {
   unitId: string;
@@ -51,6 +51,12 @@ export function ActivityReport({ unitId, filters }: ActivityReportProps) {
     return getPresetRange('this_month');
   });
 
+  // Chart filter state for drill-down interactions
+  const [chartFilters, setChartFilters] = useState<{
+    month?: string;
+    activityType?: string;
+  }>({});
+
   useEffect(() => {
     if (filters.startDate || filters.endDate) {
       setDateRange({ startDate: filters.startDate, endDate: filters.endDate });
@@ -74,10 +80,9 @@ export function ActivityReport({ unitId, filters }: ActivityReportProps) {
   };
 
   const buttonClass = (preset: typeof rangePreset) =>
-    `px-3 py-1 text-sm rounded-lg border transition-colors ${
-      rangePreset === preset
-        ? 'bg-medical-blue/20 text-medical-blue border-medical-blue/40'
-        : 'bg-white/30 text-gray-700 border-white/60 hover:bg-white/50'
+    `px-3 py-1 text-sm rounded-lg border transition-colors ${rangePreset === preset
+      ? 'bg-medical-blue/20 text-medical-blue border-medical-blue/40'
+      : 'bg-white/30 text-gray-700 border-white/60 hover:bg-white/50'
     }`;
 
   const effectiveFilters = useMemo(
@@ -93,6 +98,52 @@ export function ActivityReport({ unitId, filters }: ActivityReportProps) {
 
   const formatDate = (value?: string | null) =>
     value ? new Date(value).toLocaleDateString('vi-VN') : '—';
+
+  // Drill-down handlers
+  const handleTimelineClick = (month: string) => {
+    setChartFilters((prev) => ({ ...prev, month }));
+  };
+
+  const handleActivityTypeClick = (activityType: string) => {
+    setChartFilters((prev) => ({ ...prev, activityType }));
+  };
+
+  const handleClearChartFilters = () => {
+    setChartFilters({});
+  };
+
+  // Filter recent activities based on chart filters
+  const filteredActivities = useMemo(() => {
+    if (!data?.recentActivities) return [];
+
+    let filtered = data.recentActivities;
+
+    // Filter by month if selected
+    if (chartFilters.month) {
+      filtered = filtered.filter((activity) => {
+        if (!activity.submittedAt) return false;
+        const activityMonth = activity.submittedAt.substring(0, 7); // YYYY-MM format
+        return activityMonth === chartFilters.month;
+      });
+    }
+
+    // Filter by activity type if selected
+    if (chartFilters.activityType) {
+      filtered = filtered.filter(
+        (activity) => activity.type === chartFilters.activityType
+      );
+    }
+
+    return filtered;
+  }, [data?.recentActivities, chartFilters]);
+
+  // Map activity type codes to Vietnamese labels
+  const activityTypeLabels: Record<string, string> = {
+    KhoaHoc: 'Khóa học',
+    HoiThao: 'Hội thảo',
+    NghienCuu: 'Nghiên cứu',
+    BaoCao: 'Báo cáo',
+  };
 
   // Loading state
   if (isLoading) {
@@ -256,7 +307,7 @@ export function ActivityReport({ unitId, filters }: ActivityReportProps) {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Phân bố theo loại hoạt động
           </h3>
-          <ActivityTypeBarChart data={data.byActivityType} />
+          <ActivityTypeBarChart data={data.byActivityType} onBarClick={handleActivityTypeClick} />
         </div>
       </div>
 
@@ -265,7 +316,7 @@ export function ActivityReport({ unitId, filters }: ActivityReportProps) {
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           Xu hướng theo tháng
         </h3>
-        <ActivityTimelineChart data={data.timeline} />
+        <ActivityTimelineChart data={data.timeline} onDataPointClick={handleTimelineClick} />
       </div>
 
       {/* Recent activities table */}
@@ -273,10 +324,49 @@ export function ActivityReport({ unitId, filters }: ActivityReportProps) {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">Hoạt động gần đây</h3>
-            <p className="text-sm text-gray-600">10 hoạt động mới nhất trong phạm vi lọc</p>
+            <p className="text-sm text-gray-600">
+              {chartFilters.month || chartFilters.activityType
+                ? `Đã lọc: ${filteredActivities.length} hoạt động`
+                : '10 hoạt động mới nhất trong phạm vi lọc'}
+            </p>
           </div>
         </div>
-        {data.recentActivities.length === 0 ? (
+
+        {/* Active filter badges */}
+        {(chartFilters.month || chartFilters.activityType) && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {chartFilters.month && (
+              <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-medical-blue/20 text-medical-blue text-sm font-medium">
+                <span>Tháng: {chartFilters.month.split('-').reverse().join('/')}</span>
+                <button
+                  onClick={() => setChartFilters((prev) => ({ ...prev, month: undefined }))}
+                  className="hover:bg-medical-blue/30 rounded-full p-0.5"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+            {chartFilters.activityType && (
+              <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-medical-blue/20 text-medical-blue text-sm font-medium">
+                <span>Loại: {activityTypeLabels[chartFilters.activityType] || chartFilters.activityType}</span>
+                <button
+                  onClick={() => setChartFilters((prev) => ({ ...prev, activityType: undefined }))}
+                  className="hover:bg-medical-blue/30 rounded-full p-0.5"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+            <button
+              onClick={handleClearChartFilters}
+              className="px-3 py-1 rounded-full border border-gray-300 text-gray-700 text-sm hover:bg-gray-50 transition-colors"
+            >
+              Xóa tất cả bộ lọc
+            </button>
+          </div>
+        )}
+
+        {filteredActivities.length === 0 ? (
           <p className="text-sm text-gray-600 text-center py-6">
             Chưa có hoạt động nào trong khoảng thời gian này.
           </p>
@@ -293,7 +383,7 @@ export function ActivityReport({ unitId, filters }: ActivityReportProps) {
                 </tr>
               </thead>
               <tbody>
-                {data.recentActivities.map((item) => (
+                {filteredActivities.map((item) => (
                   <tr key={item.id} className="border-b border-white/10">
                     <td className="py-3 pr-6 text-gray-900 break-words max-w-[24rem]">
                       {item.name}
@@ -302,19 +392,18 @@ export function ActivityReport({ unitId, filters }: ActivityReportProps) {
                     <td className="py-3 pr-4 text-gray-900 font-medium">{item.credits}</td>
                     <td className="py-3 pr-2 text-center">
                       <span
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                          item.status === 'DaDuyet'
-                            ? 'bg-medical-green/20 text-medical-green'
-                            : item.status === 'ChoDuyet'
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${item.status === 'DaDuyet'
+                          ? 'bg-medical-green/20 text-medical-green'
+                          : item.status === 'ChoDuyet'
                             ? 'bg-medical-amber/20 text-medical-amber'
                             : 'bg-medical-red/20 text-medical-red'
-                        }`}
+                          }`}
                       >
                         {item.status === 'DaDuyet'
                           ? 'Đã duyệt'
                           : item.status === 'ChoDuyet'
-                          ? 'Chờ duyệt'
-                          : 'Từ chối'}
+                            ? 'Chờ duyệt'
+                            : 'Từ chối'}
                       </span>
                     </td>
                     <td className="py-3 text-right text-gray-700">{formatDate(item.submittedAt)}</td>

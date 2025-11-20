@@ -11,6 +11,7 @@ import type { ActivityTimeline } from '@/types/reports';
 
 interface ActivityTimelineChartProps {
   data: ActivityTimeline[];
+  onDataPointClick?: (month: string) => void;
 }
 
 // Chart configuration for timeline
@@ -29,7 +30,7 @@ const timelineChartConfig = {
   },
 };
 
-export function ActivityTimelineChart({ data }: ActivityTimelineChartProps) {
+export function ActivityTimelineChart({ data, onDataPointClick }: ActivityTimelineChartProps) {
   if (data.length === 0) {
     return (
       <div className="h-[300px] flex items-center justify-center text-sm text-gray-500">
@@ -44,10 +45,16 @@ export function ActivityTimelineChart({ data }: ActivityTimelineChartProps) {
     monthLabel: item.month.split('-').reverse().join('/'),
   }));
 
+  const handleClick = (data: { month?: string } | null) => {
+    if (onDataPointClick && data?.month) {
+      onDataPointClick(data.month);
+    }
+  };
+
   return (
     <ChartContainer config={timelineChartConfig} className="h-[300px]">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={formattedData}>
+        <LineChart data={formattedData} onClick={handleClick}>
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
           <XAxis
             dataKey="monthLabel"
@@ -72,7 +79,8 @@ export function ActivityTimelineChart({ data }: ActivityTimelineChartProps) {
             stroke={timelineChartConfig.submitted.color}
             strokeWidth={2}
             dot={{ r: 4 }}
-            activeDot={{ r: 6 }}
+            activeDot={{ r: 6, cursor: onDataPointClick ? 'pointer' : 'default' }}
+            cursor={onDataPointClick ? 'pointer' : 'default'}
           />
           <Line
             type="monotone"
@@ -81,7 +89,8 @@ export function ActivityTimelineChart({ data }: ActivityTimelineChartProps) {
             stroke={timelineChartConfig.approved.color}
             strokeWidth={2}
             dot={{ r: 4 }}
-            activeDot={{ r: 6 }}
+            activeDot={{ r: 6, cursor: onDataPointClick ? 'pointer' : 'default' }}
+            cursor={onDataPointClick ? 'pointer' : 'default'}
           />
           <Line
             type="monotone"
@@ -90,7 +99,8 @@ export function ActivityTimelineChart({ data }: ActivityTimelineChartProps) {
             stroke={timelineChartConfig.rejected.color}
             strokeWidth={2}
             dot={{ r: 4 }}
-            activeDot={{ r: 6 }}
+            activeDot={{ r: 6, cursor: onDataPointClick ? 'pointer' : 'default' }}
+            cursor={onDataPointClick ? 'pointer' : 'default'}
           />
         </LineChart>
       </ResponsiveContainer>

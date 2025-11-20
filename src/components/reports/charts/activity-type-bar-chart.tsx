@@ -12,9 +12,10 @@ import type { ActivityTypeDistribution } from '@/types/reports';
 
 interface ActivityTypeBarChartProps {
   data: ActivityTypeDistribution[];
+  onBarClick?: (activityType: string) => void;
 }
 
-export function ActivityTypeBarChart({ data }: ActivityTypeBarChartProps) {
+export function ActivityTypeBarChart({ data, onBarClick }: ActivityTypeBarChartProps) {
   // Map activity type codes to Vietnamese labels
   const typeLabels: Record<string, string> = {
     KhoaHoc: 'Khóa học',
@@ -23,8 +24,15 @@ export function ActivityTypeBarChart({ data }: ActivityTypeBarChartProps) {
     BaoCao: 'Báo cáo',
   };
 
+  // Reverse lookup for Vietnamese labels to type codes
+  const labelToType: Record<string, string> = Object.entries(typeLabels).reduce(
+    (acc, [key, value]) => ({ ...acc, [value]: key }),
+    {}
+  );
+
   const chartData = data.map((item) => ({
     name: typeLabels[item.type] || item.type,
+    type: item.type,
     count: item.count,
     fill: getActivityTypeColor(item.type),
   }));
@@ -36,6 +44,12 @@ export function ActivityTypeBarChart({ data }: ActivityTypeBarChartProps) {
       </div>
     );
   }
+
+  const handleClick = (data: { type?: string } | null) => {
+    if (onBarClick && data?.type) {
+      onBarClick(data.type);
+    }
+  };
 
   return (
     <ChartContainer config={activityTypeChartConfig} className="h-[300px]">
@@ -56,6 +70,8 @@ export function ActivityTypeBarChart({ data }: ActivityTypeBarChartProps) {
           <Bar
             dataKey="count"
             radius={[8, 8, 0, 0]}
+            onClick={handleClick}
+            cursor={onBarClick ? 'pointer' : 'default'}
           >
             {chartData.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={entry.fill} />

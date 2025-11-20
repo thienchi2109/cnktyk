@@ -1,11 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { Building, BarChart3 } from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ReportErrorBoundary } from '@/components/reports/report-error-boundary';
-import type { ReportType, ReportFilters, ComplianceReportFilters, ActivityReportFilters } from '@/types/reports';
+import { FilterPanel } from '@/components/reports/filter-panel';
+import { DateRangeFilter } from '@/components/reports/date-range-filter';
+import { PractitionerSelector } from '@/components/ui/practitioner-selector';
+import { useUnitPractitioners } from '@/hooks/use-unit-practitioners';
+import type { ReportType, ReportFilters, ComplianceReportFilters, ActivityReportFilters, PractitionerDetailFilters } from '@/types/reports';
 import { subDays } from 'date-fns';
 
 // Dynamic imports for code splitting - load reports only when needed
@@ -69,13 +73,35 @@ const ActivityReport = dynamic(
   }
 );
 
+const PractitionerReport = dynamic(
+  () => import('@/components/reports/practitioner-report').then(mod => ({ default: mod.PractitionerReport })),
+  {
+    loading: () => (
+      <div className="space-y-6">
+        <div className="glass-card p-6 animate-pulse">
+          <div className="h-10 bg-gray-300 rounded w-full max-w-md mb-4"></div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="glass-card p-6 animate-pulse col-span-2 h-40"></div>
+          <div className="glass-card p-6 animate-pulse h-40"></div>
+        </div>
+      </div>
+    ),
+  }
+);
+
 interface ReportsPageClientProps {
   unitId: string;
   userId: string;
 }
 
-export function ReportsPageClient({ unitId, userId }: ReportsPageClientProps) {
+export function ReportsPageClient({ unitId }: ReportsPageClientProps) {
   const [selectedReport, setSelectedReport] = useState<ReportType>('performance');
+
+  // Fetch practitioners for the selector in filter panel
+  const { data: practitioners } = useUnitPractitioners({ unitId });
+
+  // Common Filters State
   const [filters, setFilters] = useState<ReportFilters>({
     startDate: subDays(new Date(), 30).toISOString(),
     endDate: new Date().toISOString(),
@@ -97,6 +123,70 @@ export function ReportsPageClient({ unitId, userId }: ReportsPageClientProps) {
     approvalStatus: 'all',
   });
 
+  // Practitioner-specific filters
+  const [practitionerFilters, setPractitionerFilters] = useState<Omit<PractitionerDetailFilters, 'practitionerId'>>({
+    startDate: '',
+    endDate: '',
+    preset: 'current_cycle',
+  });
+  const [selectedPractitionerId, setSelectedPractitionerId] = useState<string>('');
+
+  // Helper to count active filters
+  const getActiveFilterCount = () => {
+    let count = 0;
+    if (selectedReport === 'performance') {
+      if (filters.preset !== 'last_30_days') count++;
+    } else if (selectedReport === 'compliance') {
+      if (complianceFilters.preset !== 'last_30_days') count++;
+      if (complianceFilters.employmentStatus?.length) count++;
+      if (complianceFilters.position) count++;
+    } else if (selectedReport === 'activities') {
+      if (activityFilters.preset !== 'last_30_days') count++;
+      if (activityFilters.activityType) count++;
+      if (activityFilters.approvalStatus !== 'all') count++;
+    } else if (selectedReport === 'practitioner') {
+      if (selectedPractitionerId) count++;
+      if (practitionerFilters.preset !== 'current_cycle') count++;
+    }
+    return count;
+  };
+
+  const handleResetFilters = () => {
+    if (selectedReport === 'performance') {
+      setFilters({
+        startDate: subDays(new Date(), 30).toISOString(),
+        endDate: new Date().toISOString(),
+        preset: 'last_30_days',
+      });
+    } else if (selectedReport === 'compliance') {
+      setComplianceFilters({
+        startDate: subDays(new Date(), 30).toISOString(),
+        endDate: new Date().toISOString(),
+        preset: 'last_30_days',
+      });
+    } else if (selectedReport === 'activities') {
+      setActivityFilters({
+        startDate: subDays(new Date(), 30).toISOString(),
+        endDate: new Date().toISOString(),
+        preset: 'last_30_days',
+        approvalStatus: 'all',
+      });
+    } else if (selectedReport === 'practitioner') {
+      setPractitionerFilters({
+        startDate: '',
+        endDate: '',
+        preset: 'current_cycle',
+      });
+      setSelectedPractitionerId('');
+    }
+  };
+
+  // Drill-down navigation handler
+  const handleNavigateToPractitioner = (practitionerId: string) => {
+    setSelectedPractitionerId(practitionerId);
+    setSelectedReport('practitioner');
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 p-4 md:p-6">
       {/* Header */}
@@ -114,86 +204,161 @@ export function ReportsPageClient({ unitId, userId }: ReportsPageClientProps) {
         </div>
       </div>
 
-      {/* Report Type Tabs */}
-      <Tabs
-        value={selectedReport}
-        onValueChange={(value) => setSelectedReport(value as ReportType)}
-        className="space-y-6"
-      >
-        <TabsList className="glass-card p-1 grid w-full grid-cols-4 gap-1">
-          <TabsTrigger
-            value="performance"
-            className="data-[state=active]:bg-medical-blue/20 data-[state=active]:text-medical-blue transition-all"
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Left Sidebar: Filters */}
+        <div className="lg:col-span-1 space-y-6">
+          <FilterPanel
+            activeFilterCount={getActiveFilterCount()}
+            onReset={handleResetFilters}
+            className="sticky top-6"
           >
-            <span className="hidden sm:inline">Tổng quan</span>
-            <span className="sm:hidden">TQ</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="compliance"
-            className="data-[state=active]:bg-medical-blue/20 data-[state=active]:text-medical-blue transition-all"
+            {selectedReport === 'performance' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Thời gian</label>
+                  <DateRangeFilter
+                    startDate={filters.startDate}
+                    endDate={filters.endDate}
+                    onRangeChange={(range) => setFilters({ ...filters, ...range })}
+                  />
+                </div>
+              </div>
+            )}
+
+            {selectedReport === 'compliance' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Thời gian</label>
+                  <DateRangeFilter
+                    startDate={complianceFilters.startDate}
+                    endDate={complianceFilters.endDate}
+                    onRangeChange={(range) => setComplianceFilters({ ...complianceFilters, ...range })}
+                  />
+                </div>
+              </div>
+            )}
+
+            {selectedReport === 'activities' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Thời gian</label>
+                  <DateRangeFilter
+                    startDate={activityFilters.startDate}
+                    endDate={activityFilters.endDate}
+                    onRangeChange={(range) => setActivityFilters({ ...activityFilters, ...range })}
+                  />
+                </div>
+              </div>
+            )}
+
+            {selectedReport === 'practitioner' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Người hành nghề</label>
+                  <PractitionerSelector
+                    practitioners={practitioners || []}
+                    value={selectedPractitionerId}
+                    onValueChange={setSelectedPractitionerId}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Thời gian</label>
+                  <DateRangeFilter
+                    startDate={practitionerFilters.startDate}
+                    endDate={practitionerFilters.endDate}
+                    onRangeChange={(range) => setPractitionerFilters({ ...practitionerFilters, ...range })}
+                  />
+                </div>
+              </div>
+            )}
+          </FilterPanel>
+        </div>
+
+        {/* Right Content: Report Tabs */}
+        <div className="lg:col-span-3">
+          <Tabs
+            value={selectedReport}
+            onValueChange={(value) => setSelectedReport(value as ReportType)}
+            className="space-y-6"
           >
-            <span className="hidden sm:inline">Tuân thủ</span>
-            <span className="sm:hidden">TT</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="activities"
-            className="data-[state=active]:bg-medical-blue/20 data-[state=active]:text-medical-blue transition-all"
-          >
-            <span className="hidden sm:inline">Hoạt động</span>
-            <span className="sm:hidden">HĐ</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="practitioner"
-            className="data-[state=active]:bg-medical-blue/20 data-[state=active]:text-medical-blue transition-all"
-          >
-            <span className="hidden sm:inline">Chi tiết</span>
-            <span className="sm:hidden">CT</span>
-          </TabsTrigger>
-        </TabsList>
+            <TabsList className="glass-card p-1 grid w-full grid-cols-4 gap-1">
+              <TabsTrigger
+                value="performance"
+                className="data-[state=active]:bg-medical-blue/20 data-[state=active]:text-medical-blue transition-all"
+              >
+                <span className="hidden sm:inline">Tổng quan</span>
+                <span className="sm:hidden">TQ</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="compliance"
+                className="data-[state=active]:bg-medical-blue/20 data-[state=active]:text-medical-blue transition-all"
+              >
+                <span className="hidden sm:inline">Tuân thủ</span>
+                <span className="sm:hidden">TT</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="activities"
+                className="data-[state=active]:bg-medical-blue/20 data-[state=active]:text-medical-blue transition-all"
+              >
+                <span className="hidden sm:inline">Hoạt động</span>
+                <span className="sm:hidden">HĐ</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="practitioner"
+                className="data-[state=active]:bg-medical-blue/20 data-[state=active]:text-medical-blue transition-all"
+              >
+                <span className="hidden sm:inline">Chi tiết</span>
+                <span className="sm:hidden">CT</span>
+              </TabsTrigger>
+            </TabsList>
 
-        {/* Performance Summary Report */}
-        <TabsContent value="performance" className="space-y-6">
-          <ReportErrorBoundary>
-            <PerformanceSummaryReport unitId={unitId} filters={filters} />
-          </ReportErrorBoundary>
-        </TabsContent>
+            {/* Performance Summary Report */}
+            <TabsContent value="performance" className="space-y-6 mt-0">
+              <ReportErrorBoundary>
+                <PerformanceSummaryReport unitId={unitId} filters={filters} />
+              </ReportErrorBoundary>
+            </TabsContent>
 
-        {/* Compliance Report */}
-        <TabsContent value="compliance" className="space-y-6">
-          <ReportErrorBoundary>
-            <ComplianceReport unitId={unitId} filters={complianceFilters} />
-          </ReportErrorBoundary>
-        </TabsContent>
+            {/* Compliance Report */}
+            <TabsContent value="compliance" className="space-y-6 mt-0">
+              <ReportErrorBoundary>
+                <ComplianceReport
+                  unitId={unitId}
+                  filters={complianceFilters}
+                  onNavigateToPractitioner={handleNavigateToPractitioner}
+                />
+              </ReportErrorBoundary>
+            </TabsContent>
 
-        {/* Activity Report */}
-        <TabsContent value="activities" className="space-y-6">
-          <ReportErrorBoundary>
-            <ActivityReport
-              unitId={unitId}
-              filters={{
-                startDate: activityFilters.startDate ? new Date(activityFilters.startDate) : undefined,
-                endDate: activityFilters.endDate ? new Date(activityFilters.endDate) : undefined,
-                activityType: activityFilters.activityType,
-                approvalStatus: activityFilters.approvalStatus,
-                practitionerId: activityFilters.practitionerId,
-              }}
-            />
-          </ReportErrorBoundary>
-        </TabsContent>
+            {/* Activity Report */}
+            <TabsContent value="activities" className="space-y-6 mt-0">
+              <ReportErrorBoundary>
+                <ActivityReport
+                  unitId={unitId}
+                  filters={{
+                    startDate: activityFilters.startDate ? new Date(activityFilters.startDate) : undefined,
+                    endDate: activityFilters.endDate ? new Date(activityFilters.endDate) : undefined,
+                    activityType: activityFilters.activityType,
+                    approvalStatus: activityFilters.approvalStatus,
+                    practitionerId: activityFilters.practitionerId,
+                  }}
+                />
+              </ReportErrorBoundary>
+            </TabsContent>
 
-        {/* Practitioner Detail - Placeholder for Phase 3 */}
-        <TabsContent value="practitioner" className="space-y-6">
-          <div className="glass-card p-12 text-center">
-            <Building className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">
-              Báo cáo chi tiết cá nhân
-            </h3>
-            <p className="text-gray-600">
-              Tính năng này sẽ được triển khai trong Phase 3
-            </p>
-          </div>
-        </TabsContent>
-      </Tabs>
+            {/* Practitioner Detail Report */}
+            <TabsContent value="practitioner" className="space-y-6 mt-0">
+              <ReportErrorBoundary>
+                <PractitionerReport
+                  unitId={unitId}
+                  filters={practitionerFilters}
+                  practitionerId={selectedPractitionerId}
+                />
+              </ReportErrorBoundary>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
     </div>
   );
 }

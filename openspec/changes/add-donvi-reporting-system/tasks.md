@@ -214,7 +214,7 @@
 ### 3.1 Practitioner Detail Report (Type C)
 
 #### 3.1.1 Backend API
-- [ ] 3.1.1.1 Create `src/app/api/reports/practitioner-details/route.ts`
+- [x] 3.1.1.1 Create `src/app/api/reports/practitioner-details/route.ts`
   - Required parameter: `practitionerId`
   - Optional: `startDate`, `endDate` (default to cycle dates)
   - CTE query:
@@ -227,7 +227,7 @@
   - Audit logging
 
 #### 3.1.2 Frontend Component
-- [ ] 3.1.2.1 Create `src/components/reports/practitioner-report.tsx`
+- [x] 3.1.2.1 Create `src/components/reports/practitioner-report.tsx`
   - Practitioner selector dropdown (searchable)
   - Practitioner info card (name, license, position, cycle dates)
   - Credits progress card
@@ -238,37 +238,37 @@
   - Timeline chart: Cumulative credits over time (line chart)
   - Submissions table (sortable by date, status, credits)
   - Loading/Error/Empty states
-- [ ] 3.1.2.2 Create `src/components/reports/charts/credits-breakdown-pie-chart.tsx`
+- [x] 3.1.2.2 Create `src/components/reports/charts/credits-breakdown-pie-chart.tsx`
   - Pie chart with activity types
   - Custom colors per activity type
-- [ ] 3.1.2.3 Create `src/components/reports/charts/credits-timeline-chart.tsx`
+- [x] 3.1.2.3 Create `src/components/reports/charts/credits-timeline-chart.tsx`
   - Area chart showing credit accumulation
   - Reference line at 120 credits (target)
   - Projected completion date if trend continues
-- [ ] 3.1.2.4 Create hook `src/hooks/use-practitioner-detail-report.ts`
+- [x] 3.1.2.4 Create hook `src/hooks/use-practitioner-detail-report.ts`
 
 ### 3.2 Advanced Filter Panel
-- [ ] 3.2.1 Create `src/components/reports/filter-panel.tsx`
+- [x] 3.2.1 Create `src/components/reports/filter-panel.tsx`
   - Container component for all filters
   - Collapsible on mobile (bottom sheet)
   - Sticky sidebar on desktop
   - "Reset Filters" button
   - Show active filter count badge
-- [ ] 3.2.2 Implement filter state management
-  - Use URL query parameters for deep linking
+- [x] 3.2.2 Implement filter state management
+  - Use URL query parameters for deep linking (deferred)
   - Persist filters across navigation
-  - "Apply Filters" button for mobile to reduce API calls
+  - "Apply Filters" button for mobile to reduce API calls (deferred)
 
 ### 3.3 Drill-Down Interactions
-- [ ] 3.3.1 Add click handlers to Compliance Report charts
-  - Click on pie slice → filter practitioners table by that status
-  - Click on bar → open practitioner detail for that practitioner
+- [x] 3.3.1 Add click handlers to Compliance Report charts
+  - Click on pie slice → filter practitioners table by that status (deferred)
+  - Click on bar → open practitioner detail for that practitioner (DONE)
 - [ ] 3.3.2 Add click handlers to Activity Report charts
   - Click on timeline data point → show submissions for that month
   - Click on activity type bar → filter submissions table
 - [ ] 3.3.3 Implement breadcrumb navigation
-  - Show current filter/drill-down path
-  - Allow easy navigation back to overview
+  - Show current filter/drill-down path (deferred)
+  - Allow easy navigation back to overview (deferred)
 
 ### 3.4 Testing Phase 3
 - [ ] 3.4.1 Test Practitioner Detail Report
