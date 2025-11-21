@@ -6,7 +6,7 @@ import type { ActivityReportFilters } from '@/types/reports';
 import { ActivityDonutChart } from './charts/activity-donut-chart';
 import { ActivityTimelineChart } from './charts/activity-timeline-chart';
 import { ActivityTypeBarChart } from './charts/activity-type-bar-chart';
-import { FileText, Clock, CheckCircle, XCircle, AlertCircle, X } from 'lucide-react';
+import { FileText, Clock, CheckCircle, XCircle, AlertCircle, X, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface ActivityReportProps {
   unitId: string;
@@ -51,6 +51,9 @@ export function ActivityReport({ unitId, filters }: ActivityReportProps) {
     return getPresetRange('this_month');
   });
 
+  // Timeline expansion state
+  const [showAllTimeline, setShowAllTimeline] = useState(false);
+
   // Chart filter state for drill-down interactions
   const [chartFilters, setChartFilters] = useState<{
     month?: string;
@@ -94,7 +97,7 @@ export function ActivityReport({ unitId, filters }: ActivityReportProps) {
     [filters, dateRange.startDate, dateRange.endDate]
   );
 
-  const { data, isLoading, error } = useActivityReport(unitId, effectiveFilters);
+  const { data, isLoading, error } = useActivityReport(unitId, effectiveFilters, { showAll: showAllTimeline });
 
   const formatDate = (value?: string | null) =>
     value ? new Date(value).toLocaleDateString('vi-VN') : '—';
@@ -313,9 +316,33 @@ export function ActivityReport({ unitId, filters }: ActivityReportProps) {
 
       {/* Timeline Chart */}
       <div className="glass-card p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Xu hướng theo tháng
-        </h3>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Xu hướng theo tháng
+            </h3>
+            <p className="text-sm text-gray-600 mt-1">
+              {showAllTimeline ? 'Tất cả thời gian' : '12 tháng gần nhất'}
+            </p>
+          </div>
+          <button
+            onClick={() => setShowAllTimeline(!showAllTimeline)}
+            disabled={isLoading}
+            className="px-4 py-2 bg-medical-blue/10 hover:bg-medical-blue/20 text-medical-blue rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {showAllTimeline ? (
+              <>
+                <ChevronUp className="w-4 h-4" />
+                <span>Thu gọn</span>
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-4 h-4" />
+                <span>Xem tất cả</span>
+              </>
+            )}
+          </button>
+        </div>
         <ActivityTimelineChart data={data.timeline} onDataPointClick={handleTimelineClick} />
       </div>
 

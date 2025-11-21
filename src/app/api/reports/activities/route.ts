@@ -26,6 +26,8 @@ const ActivityReportFiltersSchema = z.object({
   activityType: z.enum(['KhoaHoc', 'HoiThao', 'NghienCuu', 'BaoCao']).optional(),
   approvalStatus: z.enum(['ChoDuyet', 'DaDuyet', 'TuChoi', 'all']).optional(),
   practitionerId: z.string().uuid().optional(),
+  // Timeline expansion parameter
+  showAll: z.coerce.boolean().optional().default(false),
 });
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -50,6 +52,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       activityType: searchParams.get('activityType') || undefined,
       approvalStatus: searchParams.get('approvalStatus') || undefined,
       practitionerId: searchParams.get('practitionerId') || undefined,
+      showAll: searchParams.get('showAll') || undefined,
     });
 
     // 4. Tenant isolation check
@@ -101,6 +104,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const whereClause = `WHERE ${whereClauses.join('\n          AND ')}`;
 
     // 6. Build optimized CTE query (reuse whereClause for recent list)
+    // Timeline limit: last 12 months by default (unless showAll=true)
+    const timelineFilter = filters.showAll
+      ? ''
+      : `WHERE "Month" >= TO_CHAR(CURRENT_DATE - INTERVAL '12 months', 'YYYY-MM')`;
+
     const query = `
       WITH activity_data AS (
         SELECT
@@ -168,6 +176,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           SUM(CASE WHEN "TrangThaiDuyet" = 'DaDuyet' THEN 1 ELSE 0 END) as approved,
           SUM(CASE WHEN "TrangThaiDuyet" = 'TuChoi' THEN 1 ELSE 0 END) as rejected
         FROM activity_data
+        ${timelineFilter}
         GROUP BY "Month"
         ORDER BY "Month" ASC
       ),

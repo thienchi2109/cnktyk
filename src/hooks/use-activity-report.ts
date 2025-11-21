@@ -1,12 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
 import type { ActivityReportData, ActivityReportFilters } from '@/types/reports';
 
+interface UseActivityReportOptions {
+  showAll?: boolean;
+}
+
 export function useActivityReport(
   unitId: string,
-  filters: Omit<ActivityReportFilters, 'startDate' | 'endDate'> & { startDate?: Date; endDate?: Date }
+  filters: Omit<ActivityReportFilters, 'startDate' | 'endDate'> & { startDate?: Date; endDate?: Date },
+  options?: UseActivityReportOptions
 ) {
   return useQuery({
-    queryKey: ['reports', 'activities', unitId, filters],
+    queryKey: ['reports', 'activities', unitId, filters, options?.showAll],
     queryFn: async (): Promise<ActivityReportData> => {
       const params = new URLSearchParams({ unitId });
 
@@ -25,6 +30,9 @@ export function useActivityReport(
       }
       if (filters.practitionerId) {
         params.append('practitionerId', filters.practitionerId);
+      }
+      if (options?.showAll !== undefined) {
+        params.append('showAll', String(options.showAll));
       }
 
       const response = await fetch(`/api/reports/activities?${params.toString()}`);
