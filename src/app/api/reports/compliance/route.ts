@@ -157,11 +157,7 @@ export async function GET(request: NextRequest) {
             WHEN total_credits >= 84 THEN 'at_risk'
             ELSE 'critical'
           END as status,
-          CASE
-            WHEN total_credits >= 108 THEN ROUND((total_credits / 120.0) * 100)
-            WHEN total_credits >= 84 THEN ROUND((total_credits / 120.0) * 100)
-            ELSE ROUND((total_credits / 120.0) * 100)
-          END as compliance_percent
+          ROUND((total_credits / 120.0) * 100) as compliance_percent
         FROM practitioner_credits
       ),
       -- CTE 3: Aggregate counts by status
