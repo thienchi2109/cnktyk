@@ -141,15 +141,26 @@
 - Expected improvement: ~85% smaller initial payload for units with 500+ practitioners
 - Status: Deployed to branch, ready for functional testing
 
-### 4.2 Activity Report Limits
-- [ ] 4.2.1 Update `src/app/api/reports/activities/route.ts`:
+### 4.2 Activity Report Limits ✅ COMPLETED
+- [x] 4.2.1 Update `src/app/api/reports/activities/route.ts`:
   - Keep `LIMIT 10` on `recent_activities` CTE (already exists)
   - Add `showAll` query parameter for full timeline (default: false)
   - When `showAll=false`, limit timeline to 12 months
-- [ ] 4.2.2 Update `src/components/reports/activity-report.tsx`:
-  - Add "View All Activities" expansion button
-  - Show "Last 12 months" indicator by default
+- [x] 4.2.2 Update `src/components/reports/activity-report.tsx`:
+  - Add "Xem tất cả / Thu gọn" expansion button
+  - Show "12 tháng gần nhất" indicator by default
   - Fetch full dataset when expansion clicked
+- [x] 4.2.3 Update `src/hooks/use-activity-report.ts`:
+  - Add showAll parameter to options
+  - Include in query key for proper caching
+
+**Phase 4.2 Results:**
+- Commit: 78efff4 (timeline expansion implementation)
+- Files changed: 3 files (+51 insertions, -7 deletions)
+- Default behavior: Show last 12 months only
+- Timeline filter: `WHERE Month >= TO_CHAR(CURRENT_DATE - INTERVAL '12 months', 'YYYY-MM')`
+- Expected improvement: Reduced initial payload for units with >2 years of history
+- Status: Deployed to branch, ready for functional testing
 
 ### 4.3 Query Optimization
 - [ ] 4.3.1 Review compliance report CTE (route.ts:102-213):
