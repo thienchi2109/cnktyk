@@ -51,7 +51,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const showAllParam = searchParams.get('showAll');
     const showAllValue = showAllParam === 'true';
 
-    const filters = ActivityReportFiltersSchema.parse({
+    // DEBUG: Log all query parameters
+    console.log('[Activity Report API] Query Parameters:', {
+      unitId: searchParams.get('unitId'),
+      startDate: searchParams.get('startDate'),
+      endDate: searchParams.get('endDate'),
+      activityType: searchParams.get('activityType'),
+      approvalStatus: searchParams.get('approvalStatus'),
+      practitionerId: searchParams.get('practitionerId'),
+      showAllParam,
+      showAllValue,
+    });
+
+    const rawFilters = {
       unitId: searchParams.get('unitId') || session.user.unitId,
       startDate: searchParams.get('startDate') || undefined,
       endDate: searchParams.get('endDate') || undefined,
@@ -59,7 +71,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       approvalStatus: searchParams.get('approvalStatus') || undefined,
       practitionerId: searchParams.get('practitionerId') || undefined,
       showAll: showAllValue,
-    });
+    };
+
+    console.log('[Activity Report API] Raw filters before validation:', rawFilters);
+
+    const filters = ActivityReportFiltersSchema.parse(rawFilters);
 
     // 4. Tenant isolation check
     if (filters.unitId !== session.user.unitId) {
@@ -288,13 +304,18 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json(reportData);
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error('[Activity Report API] Zod Validation Error:', {
+        issues: error.issues,
+        errors: error.errors,
+        formattedError: error.format(),
+      });
       return NextResponse.json(
         { error: 'Invalid query parameters', details: error.issues },
         { status: 400 }
       );
     }
 
-    console.error('Error generating activity report:', error);
+    console.error('[Activity Report API] Unexpected Error:', error);
     return NextResponse.json(
       { error: 'Failed to generate activity report' },
       { status: 500 }
