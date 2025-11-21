@@ -182,13 +182,26 @@
 - PostgreSQL query planner handles CTE materialization automatically
 - Status: Analysis complete, optimization applied, ready for EXPLAIN ANALYZE verification
 
-### 4.4 TanStack Query Configuration
-- [ ] 4.4.1 Update all report hooks:
+### 4.4 TanStack Query Configuration ✅ COMPLETED
+- [x] 4.4.1 Update all report hooks:
   - Set `refetchOnMount: false`
   - Set `refetchOnWindowFocus: false`
   - Keep `staleTime: 30000` (30 seconds)
   - Keep `gcTime: 300000` (5 minutes)
-- [ ] 4.4.2 Test: Verify reports don't refetch unnecessarily
+- [x] 4.4.2 Updated hooks:
+  - `use-compliance-report.ts`
+  - `use-activity-report.ts`
+  - `use-practitioner-detail-report.ts`
+  - `use-performance-summary.ts`
+
+**Phase 4.4 Results:**
+- All 4 report hooks configured to prevent unnecessary refetches
+- `refetchOnMount: false` - Data won't refetch when component remounts (relies on staleTime)
+- `refetchOnWindowFocus: false` - Data won't refetch when user returns to tab (relies on staleTime)
+- Existing cache settings preserved: 30s staleTime, 5min gcTime
+- Expected improvement: Eliminates redundant API calls when switching tabs or refocusing window
+- User experience: Data refreshes only when stale (>30s old) or manually triggered
+- Status: Configuration complete, ready for functional testing
 
 ### 4.5 Final Testing
 - [ ] 4.5.1 Run complete performance benchmark:

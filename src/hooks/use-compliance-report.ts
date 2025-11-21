@@ -78,6 +78,8 @@ export function useComplianceReport(
     },
     staleTime: 30000, // 30 seconds
     gcTime: 300000, // 5 minutes
+    refetchOnMount: false, // Prevent refetch on component mount (rely on staleTime)
+    refetchOnWindowFocus: false, // Prevent refetch on window focus (rely on staleTime)
     enabled: options?.enabled ?? true,
     refetchInterval: options?.refetchInterval,
   });

@@ -45,6 +45,8 @@ export function useActivityReport(
     },
     staleTime: 30 * 1000, // 30 seconds
     gcTime: 5 * 60 * 1000, // 5 minutes (formerly cacheTime)
+    refetchOnMount: false, // Prevent refetch on component mount (rely on staleTime)
+    refetchOnWindowFocus: false, // Prevent refetch on window focus (rely on staleTime)
     enabled: !!unitId,
   });
 }
