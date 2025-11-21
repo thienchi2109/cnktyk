@@ -26,8 +26,8 @@ const ActivityReportFiltersSchema = z.object({
   activityType: z.enum(['KhoaHoc', 'HoiThao', 'NghienCuu', 'BaoCao']).optional(),
   approvalStatus: z.enum(['ChoDuyet', 'DaDuyet', 'TuChoi', 'all']).optional(),
   practitionerId: z.string().uuid().optional(),
-  // Timeline expansion parameter
-  showAll: z.coerce.boolean().optional().default(false),
+  // Timeline expansion parameter (parsed manually before validation)
+  showAll: z.boolean().optional().default(false),
 });
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -45,6 +45,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     // 3. Parse and validate query parameters
     const searchParams = request.nextUrl.searchParams;
+
+    // Parse showAll boolean explicitly (z.coerce.boolean doesn't handle "false" string correctly)
+    const showAllParam = searchParams.get('showAll');
+    const showAllValue = showAllParam === 'true' ? true : showAllParam === 'false' ? false : undefined;
+
     const filters = ActivityReportFiltersSchema.parse({
       unitId: searchParams.get('unitId') || session.user.unitId,
       startDate: searchParams.get('startDate') || undefined,
@@ -52,7 +57,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       activityType: searchParams.get('activityType') || undefined,
       approvalStatus: searchParams.get('approvalStatus') || undefined,
       practitionerId: searchParams.get('practitionerId') || undefined,
-      showAll: searchParams.get('showAll') || undefined,
+      showAll: showAllValue,
     });
 
     // 4. Tenant isolation check
