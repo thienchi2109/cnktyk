@@ -26,8 +26,8 @@ const ActivityReportFiltersSchema = z.object({
   activityType: z.enum(['KhoaHoc', 'HoiThao', 'NghienCuu', 'BaoCao']).optional(),
   approvalStatus: z.enum(['ChoDuyet', 'DaDuyet', 'TuChoi', 'all']).optional(),
   practitionerId: z.string().uuid().optional(),
-  // Timeline expansion parameter (parsed manually before validation)
-  showAll: z.boolean().optional().default(false),
+  // Timeline expansion parameter (parsed manually before validation, always receives boolean)
+  showAll: z.boolean().default(false),
 });
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -47,8 +47,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const searchParams = request.nextUrl.searchParams;
 
     // Parse showAll boolean explicitly (z.coerce.boolean doesn't handle "false" string correctly)
+    // Returns true only if param is explicitly "true", false otherwise
     const showAllParam = searchParams.get('showAll');
-    const showAllValue = showAllParam === 'true' ? true : showAllParam === 'false' ? false : undefined;
+    const showAllValue = showAllParam === 'true';
 
     const filters = ActivityReportFiltersSchema.parse({
       unitId: searchParams.get('unitId') || session.user.unitId,
