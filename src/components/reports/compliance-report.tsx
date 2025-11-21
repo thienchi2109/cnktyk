@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { GlassCard } from '@/components/ui/glass-card';
 import {
   DashboardKpiSkeleton,
@@ -14,6 +14,7 @@ import {
   XCircle,
   TrendingDown,
   TrendingUp,
+  ChevronDown,
 } from 'lucide-react';
 import { useComplianceReport } from '@/hooks/use-compliance-report';
 import { CompliancePieChart } from '@/components/reports/charts/compliance-pie-chart';
@@ -27,8 +28,24 @@ interface ComplianceReportProps {
 }
 
 export function ComplianceReport({ unitId, filters, onNavigateToPractitioner }: ComplianceReportProps) {
-  const { data, isLoading, error } = useComplianceReport(unitId, filters);
+  const [page, setPage] = useState(1);
   const [showTopPerformers, setShowTopPerformers] = useState(true);
+  const limit = 50; // Default limit as per API
+
+  const { data: response, isLoading, error } = useComplianceReport(unitId, filters, { page, limit });
+  const data = response?.data;
+  const pagination = response?.pagination;
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [filters]);
+
+  const handleLoadMore = () => {
+    if (pagination && page < pagination.totalPages) {
+      setPage((prev) => prev + 1);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -192,6 +209,40 @@ export function ComplianceReport({ unitId, filters, onNavigateToPractitioner }: 
           />
         </GlassCard>
       </div>
+
+      {/* Pagination Section */}
+      {pagination && pagination.totalCount > 0 && (
+        <GlassCard className="p-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-sm text-gray-600">
+              Hiển thị{' '}
+              <span className="font-semibold text-gray-800">
+                {Math.min(page * limit, pagination.totalCount)}
+              </span>{' '}
+              trong tổng số{' '}
+              <span className="font-semibold text-gray-800">
+                {pagination.totalCount}
+              </span>{' '}
+              người hành nghề
+            </div>
+
+            {page < pagination.totalPages && (
+              <button
+                onClick={handleLoadMore}
+                disabled={isLoading}
+                className="px-4 py-2 bg-medical-blue/10 hover:bg-medical-blue/20 text-medical-blue rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <span>Tải thêm</span>
+                <ChevronDown className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          <div className="mt-2 text-xs text-gray-500 text-center">
+            Trang {pagination.page} / {pagination.totalPages}
+          </div>
+        </GlassCard>
+      )}
 
       {/* Summary Footer */}
       <GlassCard className="p-4">

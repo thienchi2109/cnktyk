@@ -4,6 +4,18 @@ import type { ComplianceReportFilters, ComplianceReportData, ApiResponse } from 
 interface UseComplianceReportOptions {
   enabled?: boolean;
   refetchInterval?: number;
+  page?: number;
+  limit?: number;
+}
+
+interface ComplianceReportResponse {
+  data: ComplianceReportData;
+  pagination: {
+    page: number;
+    limit: number;
+    totalCount: number;
+    totalPages: number;
+  };
 }
 
 export function useComplianceReport(
@@ -12,8 +24,8 @@ export function useComplianceReport(
   options?: UseComplianceReportOptions
 ) {
   return useQuery({
-    queryKey: ['reports', 'compliance', unitId, filters],
-    queryFn: async (): Promise<ComplianceReportData> => {
+    queryKey: ['reports', 'compliance', unitId, filters, options?.page, options?.limit],
+    queryFn: async (): Promise<ComplianceReportResponse> => {
       const params = new URLSearchParams();
 
       // Add date filters if provided
@@ -34,19 +46,35 @@ export function useComplianceReport(
         params.append('position', filters.position);
       }
 
+      // Add pagination parameters
+      if (options?.page) {
+        params.append('page', options.page.toString());
+      }
+      if (options?.limit) {
+        params.append('limit', options.limit.toString());
+      }
+
       const response = await fetch(`/api/reports/compliance?${params.toString()}`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch compliance report');
       }
 
-      const result: ApiResponse<ComplianceReportData> = await response.json();
+      const result: ApiResponse<ComplianceReportData> & { pagination?: ComplianceReportResponse['pagination'] } = await response.json();
 
       if (!result.success || !result.data) {
         throw new Error(result.error || 'Failed to load compliance report');
       }
 
-      return result.data;
+      return {
+        data: result.data,
+        pagination: result.pagination || {
+          page: options?.page || 1,
+          limit: options?.limit || 50,
+          totalCount: 0,
+          totalPages: 0,
+        },
+      };
     },
     staleTime: 30000, // 30 seconds
     gcTime: 300000, // 5 minutes
