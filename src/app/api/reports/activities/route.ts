@@ -83,8 +83,21 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     // 4.5. Validate date range
+    console.log('[Activity Report API] Validating date range:', {
+      startDate: filters.startDate,
+      endDate: filters.endDate,
+    });
+
     const dateValidation = validateDateRange(filters.startDate, filters.endDate);
+
+    console.log('[Activity Report API] Date validation result:', dateValidation);
+
     if (!dateValidation.isValid) {
+      console.error('[Activity Report API] Date validation failed:', {
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+        error: dateValidation.error,
+      });
       return NextResponse.json({ error: dateValidation.error }, { status: 400 });
     }
 
