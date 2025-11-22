@@ -114,8 +114,8 @@ export async function GET(request: NextRequest) {
       approved_activities AS (
         SELECT
           g."MaGhiNhan",
-          dm."TenDanhMuc" as activity_name,
-          dm."LoaiHoatDong"::text as activity_type,
+          COALESCE(g."TenHoatDong", dm."TenDanhMuc") as activity_name,
+          COALESCE(dm."LoaiHoatDong"::text, 'Khác') as activity_type,
           g."NgayGhiNhan",
           g."NgayDuyet",
           COALESCE(
@@ -143,8 +143,8 @@ export async function GET(request: NextRequest) {
       all_submissions AS (
         SELECT
           g."MaGhiNhan",
-          dm."TenDanhMuc" as activity_name,
-          dm."LoaiHoatDong"::text as activity_type,
+          COALESCE(g."TenHoatDong", dm."TenDanhMuc") as activity_name,
+          COALESCE(dm."LoaiHoatDong"::text, 'Khác') as activity_type,
           g."NgayGhiNhan",
           g."NgayDuyet",
           g."TrangThaiDuyet",
@@ -203,8 +203,8 @@ export async function GET(request: NextRequest) {
         -- Submissions List
         (SELECT COALESCE(json_agg(json_build_object(
           'id', "MaGhiNhan",
-          'activityName', COALESCE(activity_name, 'Unknown Activity'),
-          'type', COALESCE(activity_type, 'Other'),
+          'activityName', activity_name,
+          'type', activity_type,
           'credits', credits,
           'status', "TrangThaiDuyet",
           'submittedDate', "NgayGhiNhan",

@@ -170,6 +170,7 @@ const getNavigationItems = (
         id: 'activity-management',
         label: 'Quản lý hoạt động',
         icon: <Activity className="h-4 w-4" />,
+        badge: pending > 0 ? pending : undefined,
         children: [
           {
             id: 'submissions',
