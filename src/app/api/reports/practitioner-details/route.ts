@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
         SELECT
           g."MaGhiNhan",
           dm."TenDanhMuc" as activity_name,
-          dm."LoaiHoatDong" as activity_type,
+          dm."LoaiHoatDong"::text as activity_type,
           g."NgayGhiNhan",
           g."NgayDuyet",
           COALESCE(
@@ -144,7 +144,7 @@ export async function GET(request: NextRequest) {
         SELECT
           g."MaGhiNhan",
           dm."TenDanhMuc" as activity_name,
-          dm."LoaiHoatDong" as activity_type,
+          dm."LoaiHoatDong"::text as activity_type,
           g."NgayGhiNhan",
           g."NgayDuyet",
           g."TrangThaiDuyet",
