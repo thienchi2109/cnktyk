@@ -319,7 +319,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (error instanceof z.ZodError) {
       console.error('[Activity Report API] Zod Validation Error:', {
         issues: error.issues,
-        errors: error.errors,
         formattedError: error.format(),
       });
       return NextResponse.json(
