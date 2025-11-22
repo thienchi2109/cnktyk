@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
+import { UUIDSchema } from '@/lib/db/schemas';
 import { NhatKyHeThongRepository } from '@/lib/db/repositories';
-import { z } from 'zod';
+import { asyncAuditLog } from '@/lib/utils/async-audit';
 import type { ActivityReportData } from '@/types/reports';
 import { monitorPerformance, validateDateRange } from '@/lib/utils/performance';
 
@@ -18,13 +20,15 @@ const DateParamSchema = z
 
 // Validation schema for query parameters
 const ActivityReportFiltersSchema = z.object({
-  unitId: z.string().uuid(),
+  unitId: UUIDSchema,
   // Accept either YYYY-MM-DD or full ISO datetime
   startDate: DateParamSchema.optional(),
   endDate: DateParamSchema.optional(),
   activityType: z.enum(['KhoaHoc', 'HoiThao', 'NghienCuu', 'BaoCao']).optional(),
   approvalStatus: z.enum(['ChoDuyet', 'DaDuyet', 'TuChoi', 'all']).optional(),
-  practitionerId: z.string().uuid().optional(),
+  practitionerId: UUIDSchema.optional(),
+  // Timeline expansion parameter (parsed manually before validation, always receives boolean)
+  showAll: z.boolean().default(false),
 });
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -42,14 +46,23 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     // 3. Parse and validate query parameters
     const searchParams = request.nextUrl.searchParams;
-    const filters = ActivityReportFiltersSchema.parse({
+
+    // Parse showAll boolean explicitly (z.coerce.boolean doesn't handle "false" string correctly)
+    // Returns true only if param is explicitly "true", false otherwise
+    const showAllParam = searchParams.get('showAll');
+    const showAllValue = showAllParam === 'true';
+
+    const rawFilters = {
       unitId: searchParams.get('unitId') || session.user.unitId,
       startDate: searchParams.get('startDate') || undefined,
       endDate: searchParams.get('endDate') || undefined,
       activityType: searchParams.get('activityType') || undefined,
       approvalStatus: searchParams.get('approvalStatus') || undefined,
       practitionerId: searchParams.get('practitionerId') || undefined,
-    });
+      showAll: showAllValue,
+    };
+
+    const filters = ActivityReportFiltersSchema.parse(rawFilters);
 
     // 4. Tenant isolation check
     if (filters.unitId !== session.user.unitId) {
@@ -100,6 +113,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const whereClause = `WHERE ${whereClauses.join('\n          AND ')}`;
 
     // 6. Build optimized CTE query (reuse whereClause for recent list)
+    // Timeline limit: last 12 months by default (unless showAll=true)
+    const timelineFilter = filters.showAll
+      ? ''
+      : `WHERE "Month" >= TO_CHAR(CURRENT_DATE - INTERVAL '12 months', 'YYYY-MM')`;
+
     const query = `
       WITH activity_data AS (
         SELECT
@@ -167,6 +185,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           SUM(CASE WHEN "TrangThaiDuyet" = 'DaDuyet' THEN 1 ELSE 0 END) as approved,
           SUM(CASE WHEN "TrangThaiDuyet" = 'TuChoi' THEN 1 ELSE 0 END) as rejected
         FROM activity_data
+        ${timelineFilter}
         GROUP BY "Month"
         ORDER BY "Month" ASC
       ),
@@ -247,9 +266,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       recentActivities: result.recentActivities,
     };
 
-    // 8. Audit logging
+    // 8. Async audit logging (non-blocking)
     const auditRepo = new NhatKyHeThongRepository();
-    await auditRepo.create({
+    asyncAuditLog(auditRepo, {
       MaTaiKhoan: session.user.id,
       HanhDong: 'READ',
       Bang: 'GhiNhanHoatDong',
@@ -268,7 +287,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       DiaChiIP: request.headers.get('x-forwarded-for') || 'unknown',
     });
 
-    // 9. Return report data
+    // 9. Return report data immediately (don't wait for audit log)
     return NextResponse.json(reportData);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -278,7 +297,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    console.error('Error generating activity report:', error);
     return NextResponse.json(
       { error: 'Failed to generate activity report' },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/server';
 import { db } from '@/lib/db/client';
 import { NhatKyHeThongRepository } from '@/lib/db/repositories';
+import { asyncAuditLog, createReportAuditData } from '@/lib/utils/async-audit';
 import type { PractitionerDetailReportData } from '@/types/reports';
 import { z } from 'zod';
 import { monitorPerformance, validateDateRange } from '@/lib/utils/performance';
@@ -114,9 +115,9 @@ export async function GET(request: NextRequest) {
         SELECT
           g."MaGhiNhan",
           dm."TenDanhMuc" as activity_name,
-          dm."LoaiHoatDong" as activity_type,
+          dm."LoaiHoatDong"::text as activity_type,
           g."NgayGhiNhan",
-          g."ThoiGianDuyet",
+          g."NgayDuyet",
           COALESCE(
             CASE
               WHEN (
@@ -143,9 +144,9 @@ export async function GET(request: NextRequest) {
         SELECT
           g."MaGhiNhan",
           dm."TenDanhMuc" as activity_name,
-          dm."LoaiHoatDong" as activity_type,
+          dm."LoaiHoatDong"::text as activity_type,
           g."NgayGhiNhan",
-          g."ThoiGianDuyet",
+          g."NgayDuyet",
           g."TrangThaiDuyet",
           COALESCE(g."SoGioTinChiQuyDoi", 0) as credits
         FROM "GhiNhanHoatDong" g
@@ -207,7 +208,7 @@ export async function GET(request: NextRequest) {
           'credits', credits,
           'status', "TrangThaiDuyet",
           'submittedDate', "NgayGhiNhan",
-          'approvedDate', "ThoiGianDuyet"
+          'approvedDate', "NgayDuyet"
         )), '[]'::json) FROM all_submissions) as submissions,
         
         -- Timeline
@@ -232,21 +233,16 @@ export async function GET(request: NextRequest) {
             timeline: result.timeline,
         };
 
-        // 9. Audit log
+        // 9. Async audit log (non-blocking)
         const auditRepo = new NhatKyHeThongRepository();
-        await auditRepo.create({
-            MaTaiKhoan: session.user.id,
-            HanhDong: 'VIEW_REPORT',
-            Bang: 'Reports',
-            KhoaChinh: 'practitioner-details',
-            NoiDung: {
-                reportType: 'practitioner-details',
-                filters: params,
-            },
-            DiaChiIP: request.headers.get('x-forwarded-for') || 'unknown',
-        });
+        asyncAuditLog(auditRepo, createReportAuditData(
+            session.user.id,
+            'practitioner-details',
+            params,
+            request.headers.get('x-forwarded-for') || 'unknown'
+        ));
 
-        // 10. Return success response
+        // 10. Return success response immediately (don't wait for audit log)
         return NextResponse.json({
             success: true,
             data: responseData,

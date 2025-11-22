@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/server';
 import { db } from '@/lib/db/client';
 import { NhatKyHeThongRepository } from '@/lib/db/repositories';
+import { asyncAuditLog, createReportAuditData } from '@/lib/utils/async-audit';
 import type { PerformanceSummaryData } from '@/types/reports';
 import { z } from 'zod';
 
@@ -226,23 +227,20 @@ export async function GET(request: NextRequest) {
       // Comparison period and trends will be added in future iterations
     };
 
-    // 9. Audit log
+    // 9. Async audit log (non-blocking)
     const auditRepo = new NhatKyHeThongRepository();
-    await auditRepo.create({
-      MaTaiKhoan: session.user.id,
-      HanhDong: 'VIEW_REPORT',
-      Bang: 'Reports',
-      KhoaChinh: 'performance-summary',
-      NoiDung: {
-        reportType: 'performance-summary',
+    asyncAuditLog(auditRepo, createReportAuditData(
+      session.user.id,
+      'performance-summary',
+      {
         period: params.period,
         startDate: start.toISOString(),
         endDate: end.toISOString(),
       },
-      DiaChiIP: request.headers.get('x-forwarded-for') || 'unknown',
-    });
+      request.headers.get('x-forwarded-for') || 'unknown'
+    ));
 
-    // 10. Return success response
+    // 10. Return success response immediately (don't wait for audit log)
     return NextResponse.json({
       success: true,
       data: responseData,

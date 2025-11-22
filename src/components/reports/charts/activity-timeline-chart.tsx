@@ -1,7 +1,8 @@
 // @ts-nocheck
 'use client';
 
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
+import { useEffect, useRef, useState } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import {
   ChartContainer,
   ChartTooltip,
@@ -45,6 +46,26 @@ export function ActivityTimelineChart({ data, onDataPointClick }: ActivityTimeli
     monthLabel: item.month.split('-').reverse().join('/'),
   }));
 
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element || typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      setDimensions({ width, height });
+    });
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  const chartWidth = Math.max(dimensions.width, 320);
+  const chartHeight = Math.max(dimensions.height, 300);
+
   const handleClick = (data: { month?: string } | null) => {
     if (onDataPointClick && data?.month) {
       onDataPointClick(data.month);
@@ -52,58 +73,56 @@ export function ActivityTimelineChart({ data, onDataPointClick }: ActivityTimeli
   };
 
   return (
-    <ChartContainer config={timelineChartConfig} className="h-[300px]">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={formattedData} onClick={handleClick}>
-          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-          <XAxis
-            dataKey="monthLabel"
-            tick={{ fontSize: 12 }}
-            tickLine={false}
-          />
-          <YAxis
-            tick={{ fontSize: 12 }}
-            tickLine={false}
-            axisLine={false}
-          />
-          <ChartTooltip content={<ChartTooltipContent />} />
-          <Legend
-            verticalAlign="top"
-            height={36}
-            iconType="line"
-          />
-          <Line
-            type="monotone"
-            dataKey="submitted"
-            name={timelineChartConfig.submitted.label}
-            stroke={timelineChartConfig.submitted.color}
-            strokeWidth={2}
-            dot={{ r: 4 }}
-            activeDot={{ r: 6, cursor: onDataPointClick ? 'pointer' : 'default' }}
-            cursor={onDataPointClick ? 'pointer' : 'default'}
-          />
-          <Line
-            type="monotone"
-            dataKey="approved"
-            name={timelineChartConfig.approved.label}
-            stroke={timelineChartConfig.approved.color}
-            strokeWidth={2}
-            dot={{ r: 4 }}
-            activeDot={{ r: 6, cursor: onDataPointClick ? 'pointer' : 'default' }}
-            cursor={onDataPointClick ? 'pointer' : 'default'}
-          />
-          <Line
-            type="monotone"
-            dataKey="rejected"
-            name={timelineChartConfig.rejected.label}
-            stroke={timelineChartConfig.rejected.color}
-            strokeWidth={2}
-            dot={{ r: 4 }}
-            activeDot={{ r: 6, cursor: onDataPointClick ? 'pointer' : 'default' }}
-            cursor={onDataPointClick ? 'pointer' : 'default'}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+    <ChartContainer ref={containerRef} config={timelineChartConfig} className="h-[300px] w-full min-w-0">
+      <LineChart width={chartWidth} height={chartHeight} data={formattedData} onClick={handleClick}>
+        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+        <XAxis
+          dataKey="monthLabel"
+          tick={{ fontSize: 12 }}
+          tickLine={false}
+        />
+        <YAxis
+          tick={{ fontSize: 12 }}
+          tickLine={false}
+          axisLine={false}
+        />
+        <ChartTooltip content={<ChartTooltipContent />} />
+        <Legend
+          verticalAlign="top"
+          height={36}
+          iconType="line"
+        />
+        <Line
+          type="monotone"
+          dataKey="submitted"
+          name={timelineChartConfig.submitted.label}
+          stroke={timelineChartConfig.submitted.color}
+          strokeWidth={2}
+          dot={{ r: 4 }}
+          activeDot={{ r: 6, cursor: onDataPointClick ? 'pointer' : 'default' }}
+          cursor={onDataPointClick ? 'pointer' : 'default'}
+        />
+        <Line
+          type="monotone"
+          dataKey="approved"
+          name={timelineChartConfig.approved.label}
+          stroke={timelineChartConfig.approved.color}
+          strokeWidth={2}
+          dot={{ r: 4 }}
+          activeDot={{ r: 6, cursor: onDataPointClick ? 'pointer' : 'default' }}
+          cursor={onDataPointClick ? 'pointer' : 'default'}
+        />
+        <Line
+          type="monotone"
+          dataKey="rejected"
+          name={timelineChartConfig.rejected.label}
+          stroke={timelineChartConfig.rejected.color}
+          strokeWidth={2}
+          dot={{ r: 4 }}
+          activeDot={{ r: 6, cursor: onDataPointClick ? 'pointer' : 'default' }}
+          cursor={onDataPointClick ? 'pointer' : 'default'}
+        />
+      </LineChart>
     </ChartContainer>
   );
 }

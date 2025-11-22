@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/server';
 import { db } from '@/lib/db/client';
 import { NhatKyHeThongRepository } from '@/lib/db/repositories';
+import { asyncAuditLog, createReportAuditData } from '@/lib/utils/async-audit';
 import type { ComplianceReportData } from '@/types/reports';
 import { z } from 'zod';
 import { monitorPerformance, validateDateRange } from '@/lib/utils/performance';
@@ -23,6 +24,9 @@ const QuerySchema = z.object({
   endDate: DateParamSchema.optional(),
   employmentStatus: z.enum(['DangLamViec', 'DaNghi', 'TamHoan']).array().optional(),
   position: z.string().optional(),
+  // Pagination parameters
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(500).optional().default(50),
 });
 
 // GET /api/reports/compliance
@@ -46,6 +50,8 @@ export async function GET(request: NextRequest) {
       endDate: searchParams.get('endDate') || undefined,
       employmentStatus: searchParams.get('employmentStatus')?.split(',') as any,
       position: searchParams.get('position') || undefined,
+      page: searchParams.get('page') || undefined,
+      limit: searchParams.get('limit') || undefined,
     });
 
     // 4. Tenant isolation - use user's unit ID
@@ -94,6 +100,9 @@ export async function GET(request: NextRequest) {
       dateFilter += ` AND g."NgayGhiNhan" <= $${paramIndex++}`;
       queryParams.push(params.endDate);
     }
+
+    // 5.5. Calculate pagination offset
+    const offset = (params.page - 1) * params.limit;
 
     // 6. Fetch compliance data using optimized CTE query with performance monitoring
     const complianceResult: any = await monitorPerformance(
@@ -148,11 +157,7 @@ export async function GET(request: NextRequest) {
             WHEN total_credits >= 84 THEN 'at_risk'
             ELSE 'critical'
           END as status,
-          CASE
-            WHEN total_credits >= 108 THEN ROUND((total_credits / 120.0) * 100)
-            WHEN total_credits >= 84 THEN ROUND((total_credits / 120.0) * 100)
-            ELSE ROUND((total_credits / 120.0) * 100)
-          END as compliance_percent
+          ROUND((total_credits / 120.0) * 100) as compliance_percent
         FROM practitioner_credits
       ),
       -- CTE 3: Aggregate counts by status
@@ -176,8 +181,23 @@ export async function GET(request: NextRequest) {
             ELSE 0
           END as compliance_rate
         FROM categorized_practitioners
+      ),
+      -- CTE 5: Paginated practitioners
+      paginated_practitioners AS (
+        SELECT
+          "MaNhanVien",
+          "HoVaTen",
+          "SoCCHN",
+          total_credits,
+          credits_required,
+          status,
+          compliance_percent
+        FROM categorized_practitioners
+        ORDER BY total_credits DESC
+        LIMIT $${paramIndex}
+        OFFSET $${paramIndex + 1}
       )
-      -- Final SELECT: Return all data
+      -- Final SELECT: Return all data with pagination
       SELECT
         json_build_object(
           'totalPractitioners', ss.total_practitioners,
@@ -204,11 +224,12 @@ export async function GET(request: NextRequest) {
             'creditsRequired', credits_required,
             'status', status,
             'compliancePercent', compliance_percent
-          ) ORDER BY total_credits DESC)
-          FROM categorized_practitioners
-        ) as practitioners
+          ))
+          FROM paginated_practitioners
+        ) as practitioners,
+        ss.total_practitioners as total_count
       FROM summary_stats ss`,
-      queryParams
+      [...queryParams, params.limit, offset]
     ),
       { unitId, filters: params }
     );
@@ -216,6 +237,9 @@ export async function GET(request: NextRequest) {
     const result = complianceResult[0] || {};
 
     // 7. Parse and format results
+    const totalCount = result.total_count || 0;
+    const totalPages = Math.ceil(totalCount / params.limit);
+
     const responseData: ComplianceReportData = {
       summary: result.summary || {
         totalPractitioners: 0,
@@ -229,24 +253,25 @@ export async function GET(request: NextRequest) {
       practitioners: result.practitioners || [],
     };
 
-    // 8. Audit log
+    // 8. Async audit log (non-blocking)
     const auditRepo = new NhatKyHeThongRepository();
-    await auditRepo.create({
-      MaTaiKhoan: session.user.id,
-      HanhDong: 'VIEW_REPORT',
-      Bang: 'Reports',
-      KhoaChinh: 'compliance',
-      NoiDung: {
-        reportType: 'compliance',
-        filters: params,
-      },
-      DiaChiIP: request.headers.get('x-forwarded-for') || 'unknown',
-    });
+    asyncAuditLog(auditRepo, createReportAuditData(
+      session.user.id,
+      'compliance',
+      params,
+      request.headers.get('x-forwarded-for') || 'unknown'
+    ));
 
-    // 9. Return success response
+    // 9. Return success response with pagination metadata
     return NextResponse.json({
       success: true,
       data: responseData,
+      pagination: {
+        page: params.page,
+        limit: params.limit,
+        totalCount,
+        totalPages,
+      },
     });
 
   } catch (error) {

@@ -1,7 +1,8 @@
 // @ts-nocheck
 'use client';
 
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { useEffect, useRef, useState } from 'react';
+import { PieChart, Pie, Cell } from 'recharts';
 import {
   ChartContainer,
   ChartTooltip,
@@ -38,34 +39,54 @@ export function ActivityDonutChart({ data }: ActivityDonutChartProps) {
     );
   }
 
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element || typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      setDimensions({ width, height });
+    });
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  const chartWidth = Math.max(dimensions.width, 320);
+  const chartHeight = Math.max(dimensions.height, 300);
+  const outerRadius = Math.max(Math.min(chartWidth, chartHeight) / 2 - 24, 80);
+  const innerRadius = Math.max(outerRadius - 30, 50);
+
   return (
-    <ChartContainer config={approvalStatusChartConfig} className="h-[300px]">
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-          <Pie
-            data={chartData}
-            cx="50%"
-            cy="50%"
-            labelLine={false}
-            label={({ name, percent }) =>
-              `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`
-            }
-            outerRadius={80}
-            innerRadius={50}
-            fill="#8884d8"
-            dataKey="value"
-          >
-            {chartData.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={entry.fill}
-              />
-            ))}
-          </Pie>
-          <ChartTooltip content={<ChartTooltipContent />} />
-          <ChartLegend content={<ChartLegendContent />} />
-        </PieChart>
-      </ResponsiveContainer>
+    <ChartContainer ref={containerRef} config={approvalStatusChartConfig} className="h-[300px] w-full min-w-0">
+      <PieChart width={chartWidth} height={chartHeight}>
+        <Pie
+          data={chartData}
+          cx="50%"
+          cy="50%"
+          labelLine={false}
+          label={({ name, percent }) =>
+            `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`
+          }
+          outerRadius={outerRadius}
+          innerRadius={innerRadius}
+          fill="#8884d8"
+          dataKey="value"
+        >
+          {chartData.map((entry, index) => (
+            <Cell
+              key={`cell-${index}`}
+              fill={entry.fill}
+            />
+          ))}
+        </Pie>
+        <ChartTooltip content={<ChartTooltipContent />} />
+        <ChartLegend content={<ChartLegendContent />} />
+      </PieChart>
     </ChartContainer>
   );
 }
