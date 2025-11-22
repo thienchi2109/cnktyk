@@ -52,18 +52,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const showAllParam = searchParams.get('showAll');
     const showAllValue = showAllParam === 'true';
 
-    // DEBUG: Log all query parameters
-    console.log('[Activity Report API] Query Parameters:', {
-      unitId: searchParams.get('unitId'),
-      startDate: searchParams.get('startDate'),
-      endDate: searchParams.get('endDate'),
-      activityType: searchParams.get('activityType'),
-      approvalStatus: searchParams.get('approvalStatus'),
-      practitionerId: searchParams.get('practitionerId'),
-      showAllParam,
-      showAllValue,
-    });
-
     const rawFilters = {
       unitId: searchParams.get('unitId') || session.user.unitId,
       startDate: searchParams.get('startDate') || undefined,
@@ -74,8 +62,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       showAll: showAllValue,
     };
 
-    console.log('[Activity Report API] Raw filters before validation:', rawFilters);
-
     const filters = ActivityReportFiltersSchema.parse(rawFilters);
 
     // 4. Tenant isolation check
@@ -84,21 +70,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     // 4.5. Validate date range
-    console.log('[Activity Report API] Validating date range:', {
-      startDate: filters.startDate,
-      endDate: filters.endDate,
-    });
-
     const dateValidation = validateDateRange(filters.startDate, filters.endDate);
-
-    console.log('[Activity Report API] Date validation result:', dateValidation);
-
     if (!dateValidation.isValid) {
-      console.error('[Activity Report API] Date validation failed:', {
-        startDate: filters.startDate,
-        endDate: filters.endDate,
-        error: dateValidation.error,
-      });
       return NextResponse.json({ error: dateValidation.error }, { status: 400 });
     }
 
@@ -318,17 +291,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json(reportData);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      console.error('[Activity Report API] Zod Validation Error:', {
-        issues: error.issues,
-        formattedError: error.format(),
-      });
       return NextResponse.json(
         { error: 'Invalid query parameters', details: error.issues },
         { status: 400 }
       );
     }
 
-    console.error('[Activity Report API] Unexpected Error:', error);
     return NextResponse.json(
       { error: 'Failed to generate activity report' },
       { status: 500 }
