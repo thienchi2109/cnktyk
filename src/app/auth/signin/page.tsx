@@ -93,24 +93,24 @@ function SignInForm() {
     <>
       <LoadingOverlay isVisible={isLoading} />
       
-      <div className="min-h-screen w-full flex overflow-hidden bg-white">
+      <div className="min-h-screen w-full flex bg-white">
         {/* Left Panel - Form Section (40%) */}
-        <div className="w-full lg:w-[40%] flex flex-col justify-center p-8 lg:p-12 relative z-10 bg-white">
+        <div className="w-full lg:w-[40%] flex flex-col justify-center p-8 lg:p-12 relative z-10 bg-white overflow-y-auto">
           <div className="max-w-md w-full mx-auto animate-in slide-in-from-bottom-4 fade-in duration-700 delay-150 ease-out">
-            {/* Mobile Logo (Visible only on small screens) */}
-            <div className="lg:hidden mb-8 flex justify-center">
-               <div className="w-16 h-16 relative">
+            {/* Logo - Visible on all screens */}
+            <div className="mb-6 flex justify-center">
+               <div className="w-24 h-24 relative">
                  <Image src="/logo.png" alt="Logo" fill className="object-contain" />
                </div>
             </div>
 
             {/* Header */}
-            <div className="mb-8 text-center lg:text-left">
+            <div className="mb-8 text-center">
               <h1 className="text-3xl font-bold text-slate-900 mb-2 tracking-tight">
                 Chào mừng trở lại
               </h1>
               <p className="text-slate-500">
-                Đăng nhập vào Hệ thống Quản lý Đào tạo Y tế
+                Hệ thống quản lý cập nhật kiến thức y khoa liên tục
               </p>
             </div>
 
@@ -132,7 +132,7 @@ function SignInForm() {
                   />
                   <Label 
                     htmlFor="TenDangNhap" 
-                    className="absolute left-10 top-4 text-slate-500 text-sm transition-all duration-200 peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-base peer-focus:top-1.5 peer-focus:text-xs peer-focus:text-blue-600 cursor-text pointer-events-none"
+                    className="absolute left-10 top-1.5 text-slate-500 text-xs transition-all duration-200 peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-base peer-focus:top-1.5 peer-focus:text-xs peer-focus:text-blue-600 cursor-text pointer-events-none"
                   >
                     Tên đăng nhập
                   </Label>
@@ -156,7 +156,7 @@ function SignInForm() {
                   />
                   <Label 
                     htmlFor="MatKhau" 
-                    className="absolute left-10 top-4 text-slate-500 text-sm transition-all duration-200 peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-base peer-focus:top-1.5 peer-focus:text-xs peer-focus:text-blue-600 cursor-text pointer-events-none"
+                    className="absolute left-10 top-1.5 text-slate-500 text-xs transition-all duration-200 peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-base peer-focus:top-1.5 peer-focus:text-xs peer-focus:text-blue-600 cursor-text pointer-events-none"
                   >
                     Mật khẩu
                   </Label>
@@ -280,25 +280,15 @@ function SignInForm() {
            </div>
 
            {/* Content Overlay */}
-           <div className="absolute inset-0 flex flex-col justify-between p-16 z-20">
-              {/* Logo Area */}
-              <div className="flex items-center gap-4">
-                 <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 flex items-center justify-center">
-                    <Image src="/logo.png" alt="Logo" width={32} height={32} className="object-contain brightness-0 invert" />
-                 </div>
-                 <div>
-                    <h3 className="text-white font-bold tracking-wide text-lg">CNKTYKLT Platform</h3>
-                    <p className="text-slate-400 text-xs uppercase tracking-wider">Sở Y Tế Cần Thơ</p>
-                 </div>
-              </div>
-
+           <div className="absolute inset-0 flex flex-col p-16 z-20">
               {/* Main Visual Content */}
-              <div className="space-y-8 max-w-2xl">
-                 <h2 className="text-4xl xl:text-5xl font-bold text-white leading-tight">
-                    Nâng cao chất lượng <br/>
+              <div className="flex-1 flex flex-col justify-center space-y-8 max-w-3xl">
+                 <h2 className="text-5xl xl:text-6xl font-bold text-white leading-tight">
+                    Hệ thống quản lý <br/>
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
-                       Nhân lực Y tế
-                    </span>
+                       Cập nhật kiến thức y&nbsp;khoa&nbsp;liên&nbsp;tục
+                    </span>{" "}
+                    cho người hành nghề y&nbsp;dược
                  </h2>
                  <p className="text-slate-300 text-lg leading-relaxed max-w-lg">
                     Hệ thống quản lý toàn diện cho phép theo dõi, đánh giá và cấp chứng chỉ đào tạo liên tục một cách minh bạch, chính xác và hiệu quả.
