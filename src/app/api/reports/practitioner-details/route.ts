@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
           dm."TenDanhMuc" as activity_name,
           dm."LoaiHoatDong" as activity_type,
           g."NgayGhiNhan",
-          g."ThoiGianDuyet",
+          g."NgayDuyet",
           COALESCE(
             CASE
               WHEN (
@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
           dm."TenDanhMuc" as activity_name,
           dm."LoaiHoatDong" as activity_type,
           g."NgayGhiNhan",
-          g."ThoiGianDuyet",
+          g."NgayDuyet",
           g."TrangThaiDuyet",
           COALESCE(g."SoGioTinChiQuyDoi", 0) as credits
         FROM "GhiNhanHoatDong" g
@@ -207,7 +207,7 @@ export async function GET(request: NextRequest) {
           'credits', credits,
           'status', "TrangThaiDuyet",
           'submittedDate', "NgayGhiNhan",
-          'approvedDate', "ThoiGianDuyet"
+          'approvedDate', "NgayDuyet"
         )), '[]'::json) FROM all_submissions) as submissions,
         
         -- Timeline
