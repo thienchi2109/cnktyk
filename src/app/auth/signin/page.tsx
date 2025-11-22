@@ -7,7 +7,15 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
 import {
   Loader2,
   Shield,
@@ -23,7 +31,10 @@ import {
   ShieldCheck,
   ChevronDown,
   ArrowRight,
-  Stethoscope
+  Stethoscope,
+  Phone,
+  Mail,
+  X,
 } from "lucide-react";
 import Image from "next/image";
 import { LoadingOverlay } from "@/components/auth/loading-overlay";
@@ -207,10 +218,71 @@ function SignInForm() {
                  <a href="#" className="hover:text-blue-600 transition-colors">Điều khoản</a>
                  <a href="#" className="hover:text-blue-600 transition-colors">Bảo mật</a>
                </div>
-               <div className="flex items-center gap-2">
-                 <HeartPulse className="h-4 w-4 text-red-500" />
-                 <span>Hỗ trợ kỹ thuật</span>
-               </div>
+               
+               <Dialog>
+                 <DialogTrigger asChild>
+                   <button className="flex items-center gap-3 px-5 py-2.5 bg-white border border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 rounded-full shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 group">
+                     <div className="p-1.5 rounded-full bg-red-50 group-hover:bg-red-100 transition-colors">
+                        <HeartPulse className="h-4 w-4 text-red-500 group-hover:animate-pulse" />
+                     </div>
+                     <span className="font-semibold text-slate-600 group-hover:text-blue-700">Hỗ trợ kỹ thuật</span>
+                   </button>
+                 </DialogTrigger>
+                 <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden bg-white border-0 shadow-2xl rounded-2xl gap-0 [&>button:last-child]:hidden">
+                    {/* Custom Close Button */}
+                    <DialogClose className="absolute right-4 top-4 z-50 rounded-full bg-white/10 p-2 text-white/90 hover:bg-white hover:text-blue-600 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/50 active:scale-95 backdrop-blur-sm">
+                      <X className="h-5 w-5" />
+                      <span className="sr-only">Đóng</span>
+                    </DialogClose>
+
+                    {/* Header Background */}
+                    <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-blue-600 to-cyan-600 z-0" />
+                    
+                    <div className="relative z-10 p-6 pt-12">
+                       {/* Avatar / Icon */}
+                       <div className="mx-auto w-20 h-20 rounded-full bg-white p-1 shadow-lg mb-4 flex items-center justify-center">
+                          <div className="w-full h-full rounded-full bg-slate-50 flex items-center justify-center">
+                             <UserCog className="h-10 w-10 text-blue-600" />
+                          </div>
+                       </div>
+
+                       <DialogHeader className="text-center mb-6 space-y-1">
+                          <DialogTitle className="text-xl font-bold text-slate-900">Nguyễn Thiện Chí</DialogTitle>
+                          <DialogDescription className="text-slate-500 font-medium">
+                             Kỹ sư phần mềm & Quản trị hệ thống
+                          </DialogDescription>
+                       </DialogHeader>
+
+                       <div className="space-y-3">
+                          <a href="tel:0907984746" className="flex items-center gap-4 p-3 rounded-xl bg-slate-50 hover:bg-blue-50 hover:text-blue-700 transition-all group border border-transparent hover:border-blue-100">
+                             <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:shadow-md transition-all shrink-0">
+                                <Phone className="h-5 w-5 text-slate-600 group-hover:text-blue-600" />
+                             </div>
+                             <div className="flex-1 min-w-0">
+                                <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-0.5">Điện thoại / Zalo</p>
+                                <p className="font-semibold text-slate-900 truncate">0907 984 746</p>
+                             </div>
+                          </a>
+
+                          <a href="mailto:thienchi2109@gmail.com" className="flex items-center gap-4 p-3 rounded-xl bg-slate-50 hover:bg-blue-50 hover:text-blue-700 transition-all group border border-transparent hover:border-blue-100">
+                             <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:shadow-md transition-all shrink-0">
+                                <Mail className="h-5 w-5 text-slate-600 group-hover:text-blue-600" />
+                             </div>
+                             <div className="flex-1 min-w-0">
+                                <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-0.5">Email</p>
+                                <p className="font-semibold text-slate-900 truncate">thienchi2109@gmail.com</p>
+                             </div>
+                          </a>
+                       </div>
+
+                       <div className="mt-6 text-center">
+                          <p className="text-xs text-slate-400 px-4 leading-relaxed">
+                             Vui lòng liên hệ trực tiếp để được hỗ trợ xử lý các vấn đề về tài khoản, kỹ thuật hoặc báo cáo sự cố hệ thống.
+                          </p>
+                       </div>
+                    </div>
+                 </DialogContent>
+               </Dialog>
             </div>
 
             {/* Development Quick Login */}
