@@ -707,6 +707,11 @@ export async function POST(request: Request) {
 }
 ```
 
+### Current API Notes (Nov 2025)
+- Activity Report API: parse `showAll` manually (`searchParams.get('showAll') === 'true'`) before Zod validation and avoid leaving debug `console.log` statements; keep only structured performance logs.
+- Practitioner Detail Report: use `COALESCE(g."TenHoatDong", dm."TenDanhMuc")` for activity names and cast `dm."LoaiHoatDong"` to text with a `'Khac'` fallback to prevent enum casting errors.
+- Prefer the shared `UUIDSchema` for query/path IDs to support legacy UUIDs.
+
 ---
 
 ## Security Guidelines
