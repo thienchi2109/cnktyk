@@ -1,7 +1,8 @@
 // @ts-nocheck
 'use client';
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Cell } from 'recharts';
+import { useEffect, useRef, useState } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell } from 'recharts';
 import {
   ChartContainer,
   ChartTooltip,
@@ -51,34 +52,52 @@ export function ActivityTypeBarChart({ data, onBarClick }: ActivityTypeBarChartP
     }
   };
 
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element || typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      setDimensions({ width, height });
+    });
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  const chartWidth = Math.max(dimensions.width, 320);
+  const chartHeight = Math.max(dimensions.height, 300);
+
   return (
-    <ChartContainer config={activityTypeChartConfig} className="h-[300px]">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-          <XAxis
-            dataKey="name"
-            tick={{ fontSize: 12 }}
-            tickLine={false}
-          />
-          <YAxis
-            tick={{ fontSize: 12 }}
-            tickLine={false}
-            axisLine={false}
-          />
-          <ChartTooltip content={<ChartTooltipContent />} />
-          <Bar
-            dataKey="count"
-            radius={[8, 8, 0, 0]}
-            onClick={handleClick}
-            cursor={onBarClick ? 'pointer' : 'default'}
-          >
-            {chartData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.fill} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+    <ChartContainer ref={containerRef} config={activityTypeChartConfig} className="h-[300px] w-full min-w-0">
+      <BarChart width={chartWidth} height={chartHeight} data={chartData}>
+        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+        <XAxis
+          dataKey="name"
+          tick={{ fontSize: 12 }}
+          tickLine={false}
+        />
+        <YAxis
+          tick={{ fontSize: 12 }}
+          tickLine={false}
+          axisLine={false}
+        />
+        <ChartTooltip content={<ChartTooltipContent />} />
+        <Bar
+          dataKey="count"
+          radius={[8, 8, 0, 0]}
+          onClick={handleClick}
+          cursor={onBarClick ? 'pointer' : 'default'}
+        >
+          {chartData.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={entry.fill} />
+          ))}
+        </Bar>
+      </BarChart>
     </ChartContainer>
   );
 }

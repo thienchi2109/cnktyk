@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
+import { UUIDSchema } from '@/lib/db/schemas';
 import { NhatKyHeThongRepository } from '@/lib/db/repositories';
 import { asyncAuditLog } from '@/lib/utils/async-audit';
-import { z } from 'zod';
 import type { ActivityReportData } from '@/types/reports';
 import { monitorPerformance, validateDateRange } from '@/lib/utils/performance';
 
@@ -19,13 +20,13 @@ const DateParamSchema = z
 
 // Validation schema for query parameters
 const ActivityReportFiltersSchema = z.object({
-  unitId: z.string().uuid(),
+  unitId: UUIDSchema,
   // Accept either YYYY-MM-DD or full ISO datetime
   startDate: DateParamSchema.optional(),
   endDate: DateParamSchema.optional(),
   activityType: z.enum(['KhoaHoc', 'HoiThao', 'NghienCuu', 'BaoCao']).optional(),
   approvalStatus: z.enum(['ChoDuyet', 'DaDuyet', 'TuChoi', 'all']).optional(),
-  practitionerId: z.string().uuid().optional(),
+  practitionerId: UUIDSchema.optional(),
   // Timeline expansion parameter (parsed manually before validation, always receives boolean)
   showAll: z.boolean().default(false),
 });

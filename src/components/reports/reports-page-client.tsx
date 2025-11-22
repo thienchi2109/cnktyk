@@ -191,6 +191,92 @@ export function ReportsPageClient({ unitId }: ReportsPageClientProps) {
     setSelectedReport('practitioner');
   };
 
+  const renderFilterPanel = () => {
+    const commonProps = {
+      activeFilterCount: getActiveFilterCount(),
+      onReset: handleResetFilters,
+      className: 'glass-card p-4 w-full shadow-sm',
+    };
+
+    if (selectedReport === 'performance') {
+      return (
+        <FilterPanel {...commonProps}>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Thời gian</label>
+              <DateRangeFilter
+                startDate={filters.startDate}
+                endDate={filters.endDate}
+                onRangeChange={(range) => setFilters({ ...filters, ...range })}
+              />
+            </div>
+          </div>
+        </FilterPanel>
+      );
+    }
+
+    if (selectedReport === 'compliance') {
+      return (
+        <FilterPanel {...commonProps}>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Thời gian</label>
+              <DateRangeFilter
+                startDate={complianceFilters.startDate}
+                endDate={complianceFilters.endDate}
+                onRangeChange={(range) => setComplianceFilters({ ...complianceFilters, ...range })}
+              />
+            </div>
+          </div>
+        </FilterPanel>
+      );
+    }
+
+    if (selectedReport === 'activities') {
+      return (
+        <FilterPanel {...commonProps}>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Thời gian</label>
+              <DateRangeFilter
+                startDate={activityFilters.startDate}
+                endDate={activityFilters.endDate}
+                onRangeChange={(range) => setActivityFilters({ ...activityFilters, ...range })}
+              />
+            </div>
+          </div>
+        </FilterPanel>
+      );
+    }
+
+    if (selectedReport === 'practitioner') {
+      return (
+        <FilterPanel {...commonProps}>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Người hành nghề</label>
+              <PractitionerSelector
+                practitioners={practitioners || []}
+                value={selectedPractitionerId}
+                onValueChange={setSelectedPractitionerId}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Thời gian</label>
+              <DateRangeFilter
+                startDate={practitionerFilters.startDate}
+                endDate={practitionerFilters.endDate}
+                onRangeChange={(range) => setPractitionerFilters({ ...practitionerFilters, ...range })}
+              />
+            </div>
+          </div>
+        </FilterPanel>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 p-4 md:p-6">
       {/* Header */}
@@ -208,161 +294,89 @@ export function ReportsPageClient({ unitId }: ReportsPageClientProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Left Sidebar: Filters */}
-        <div className="lg:col-span-1 space-y-6">
-          <FilterPanel
-            activeFilterCount={getActiveFilterCount()}
-            onReset={handleResetFilters}
-            className="sticky top-6"
+      <Tabs
+        value={selectedReport}
+        onValueChange={(value) => setSelectedReport(value as ReportType)}
+        className="space-y-6"
+      >
+        <TabsList className="glass-card p-1 grid w-full grid-cols-4 gap-1">
+          <TabsTrigger
+            value="performance"
+            className="data-[state=active]:bg-medical-blue/20 data-[state=active]:text-medical-blue transition-all"
           >
-            {selectedReport === 'performance' && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Thời gian</label>
-                  <DateRangeFilter
-                    startDate={filters.startDate}
-                    endDate={filters.endDate}
-                    onRangeChange={(range) => setFilters({ ...filters, ...range })}
-                  />
-                </div>
-              </div>
-            )}
-
-            {selectedReport === 'compliance' && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Thời gian</label>
-                  <DateRangeFilter
-                    startDate={complianceFilters.startDate}
-                    endDate={complianceFilters.endDate}
-                    onRangeChange={(range) => setComplianceFilters({ ...complianceFilters, ...range })}
-                  />
-                </div>
-              </div>
-            )}
-
-            {selectedReport === 'activities' && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Thời gian</label>
-                  <DateRangeFilter
-                    startDate={activityFilters.startDate}
-                    endDate={activityFilters.endDate}
-                    onRangeChange={(range) => setActivityFilters({ ...activityFilters, ...range })}
-                  />
-                </div>
-              </div>
-            )}
-
-            {selectedReport === 'practitioner' && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Người hành nghề</label>
-                  <PractitionerSelector
-                    practitioners={practitioners || []}
-                    value={selectedPractitionerId}
-                    onValueChange={setSelectedPractitionerId}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Thời gian</label>
-                  <DateRangeFilter
-                    startDate={practitionerFilters.startDate}
-                    endDate={practitionerFilters.endDate}
-                    onRangeChange={(range) => setPractitionerFilters({ ...practitionerFilters, ...range })}
-                  />
-                </div>
-              </div>
-            )}
-          </FilterPanel>
-        </div>
-
-        {/* Right Content: Report Tabs */}
-        <div className="lg:col-span-3">
-          <Tabs
-            value={selectedReport}
-            onValueChange={(value) => setSelectedReport(value as ReportType)}
-            className="space-y-6"
+            <span className="hidden sm:inline">Tổng quan</span>
+            <span className="sm:hidden">TQ</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="compliance"
+            className="data-[state=active]:bg-medical-blue/20 data-[state=active]:text-medical-blue transition-all"
           >
-            <TabsList className="glass-card p-1 grid w-full grid-cols-4 gap-1">
-              <TabsTrigger
-                value="performance"
-                className="data-[state=active]:bg-medical-blue/20 data-[state=active]:text-medical-blue transition-all"
-              >
-                <span className="hidden sm:inline">Tổng quan</span>
-                <span className="sm:hidden">TQ</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="compliance"
-                className="data-[state=active]:bg-medical-blue/20 data-[state=active]:text-medical-blue transition-all"
-              >
-                <span className="hidden sm:inline">Tuân thủ</span>
-                <span className="sm:hidden">TT</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="activities"
-                className="data-[state=active]:bg-medical-blue/20 data-[state=active]:text-medical-blue transition-all"
-              >
-                <span className="hidden sm:inline">Hoạt động</span>
-                <span className="sm:hidden">HĐ</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="practitioner"
-                className="data-[state=active]:bg-medical-blue/20 data-[state=active]:text-medical-blue transition-all"
-              >
-                <span className="hidden sm:inline">Chi tiết</span>
-                <span className="sm:hidden">CT</span>
-              </TabsTrigger>
-            </TabsList>
+            <span className="hidden sm:inline">Tuân thủ</span>
+            <span className="sm:hidden">TT</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="activities"
+            className="data-[state=active]:bg-medical-blue/20 data-[state=active]:text-medical-blue transition-all"
+          >
+            <span className="hidden sm:inline">Hoạt động</span>
+            <span className="sm:hidden">HĐ</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="practitioner"
+            className="data-[state=active]:bg-medical-blue/20 data-[state=active]:text-medical-blue transition-all"
+          >
+            <span className="hidden sm:inline">Chi tiết</span>
+            <span className="sm:hidden">CT</span>
+          </TabsTrigger>
+        </TabsList>
 
-            {/* Performance Summary Report */}
-            <TabsContent value="performance" className="space-y-6 mt-0">
-              <ReportErrorBoundary>
-                <PerformanceSummaryReport unitId={unitId} filters={filters} />
-              </ReportErrorBoundary>
-            </TabsContent>
+        <div className="w-full">{renderFilterPanel()}</div>
 
-            {/* Compliance Report */}
-            <TabsContent value="compliance" className="space-y-6 mt-0">
-              <ReportErrorBoundary>
-                <ComplianceReport
-                  unitId={unitId}
-                  filters={complianceFilters}
-                  onNavigateToPractitioner={handleNavigateToPractitioner}
-                />
-              </ReportErrorBoundary>
-            </TabsContent>
+        {/* Performance Summary Report */}
+        <TabsContent value="performance" className="space-y-6 mt-0">
+          <ReportErrorBoundary>
+            <PerformanceSummaryReport unitId={unitId} filters={filters} />
+          </ReportErrorBoundary>
+        </TabsContent>
 
-            {/* Activity Report */}
-            <TabsContent value="activities" className="space-y-6 mt-0">
-              <ReportErrorBoundary>
-                <ActivityReport
-                  unitId={unitId}
-                  filters={{
-                    startDate: activityFilters.startDate ? new Date(activityFilters.startDate) : undefined,
-                    endDate: activityFilters.endDate ? new Date(activityFilters.endDate) : undefined,
-                    activityType: activityFilters.activityType,
-                    approvalStatus: activityFilters.approvalStatus,
-                    practitionerId: activityFilters.practitionerId,
-                  }}
-                />
-              </ReportErrorBoundary>
-            </TabsContent>
+        {/* Compliance Report */}
+        <TabsContent value="compliance" className="space-y-6 mt-0">
+          <ReportErrorBoundary>
+            <ComplianceReport
+              unitId={unitId}
+              filters={complianceFilters}
+              onNavigateToPractitioner={handleNavigateToPractitioner}
+            />
+          </ReportErrorBoundary>
+        </TabsContent>
 
-            {/* Practitioner Detail Report */}
-            <TabsContent value="practitioner" className="space-y-6 mt-0">
-              <ReportErrorBoundary>
-                <PractitionerReport
-                  unitId={unitId}
-                  filters={practitionerFilters}
-                  practitionerId={selectedPractitionerId}
-                />
-              </ReportErrorBoundary>
-            </TabsContent>
-          </Tabs>
-        </div>
-      </div>
+        {/* Activity Report */}
+        <TabsContent value="activities" className="space-y-6 mt-0">
+          <ReportErrorBoundary>
+            <ActivityReport
+              unitId={unitId}
+              filters={{
+                startDate: activityFilters.startDate ? new Date(activityFilters.startDate) : undefined,
+                endDate: activityFilters.endDate ? new Date(activityFilters.endDate) : undefined,
+                activityType: activityFilters.activityType,
+                approvalStatus: activityFilters.approvalStatus,
+                practitionerId: activityFilters.practitionerId,
+              }}
+            />
+          </ReportErrorBoundary>
+        </TabsContent>
+
+        {/* Practitioner Detail Report */}
+        <TabsContent value="practitioner" className="space-y-6 mt-0">
+          <ReportErrorBoundary>
+            <PractitionerReport
+              unitId={unitId}
+              filters={practitionerFilters}
+              practitionerId={selectedPractitionerId}
+            />
+          </ReportErrorBoundary>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

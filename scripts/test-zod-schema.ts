@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { UUIDSchema } from '../src/lib/db/schemas';
 
 const DateParamSchema = z
   .string()
@@ -16,12 +17,12 @@ const DateParamSchema = z
   );
 
 const ActivityReportFiltersSchema = z.object({
-  unitId: z.string().uuid(),
+  unitId: UUIDSchema,
   startDate: DateParamSchema.optional(),
   endDate: DateParamSchema.optional(),
   activityType: z.enum(['KhoaHoc', 'HoiThao', 'NghienCuu', 'BaoCao']).optional(),
   approvalStatus: z.enum(['ChoDuyet', 'DaDuyet', 'TuChoi', 'all']).optional(),
-  practitionerId: z.string().uuid().optional(),
+  practitionerId: UUIDSchema.optional(),
   showAll: z.boolean().default(false),
 });
 
