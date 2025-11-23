@@ -37,6 +37,7 @@ export const activityTypeColors = {
   HoiThao: colors.medicalPurple,
   NghienCuu: colors.medicalTeal,
   BaoCao: colors.medicalOrange,
+  Khác: colors.medicalIndigo,
 } as const;
 
 // Chart configurations
@@ -88,6 +89,10 @@ export const activityTypeChartConfig: ChartConfig = {
     label: 'Báo cáo',
     color: activityTypeColors.BaoCao,
   },
+  Khác: {
+    label: 'Khác',
+    color: activityTypeColors.Khác,
+  },
 };
 
 // Helper function to get color by compliance status
@@ -113,8 +118,8 @@ export function getApprovalStatusColor(status: 'ChoDuyet' | 'DaDuyet' | 'TuChoi'
 }
 
 // Helper function to get color by activity type
-export function getActivityTypeColor(type: 'KhoaHoc' | 'HoiThao' | 'NghienCuu' | 'BaoCao'): string {
-  return activityTypeColors[type] || colors.medicalBlue;
+export function getActivityTypeColor(type: 'KhoaHoc' | 'HoiThao' | 'NghienCuu' | 'BaoCao' | 'Khác' | string): string {
+  return activityTypeColors[type as keyof typeof activityTypeColors] || colors.medicalBlue;
 }
 
 // KPI colors for performance summary

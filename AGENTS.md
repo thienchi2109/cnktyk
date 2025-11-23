@@ -110,6 +110,11 @@ General principle: use the most specialized tool for the task (Neon for DB, gkg 
 
 For full details see WARP.md; this section captures the essential rules for assistants.
 
+## Current Implementation Notes (Nov 2025)
+- Activity Report API: manually parse `showAll` as a boolean before Zod validation and keep request logging disabled (only performance logging should remain).
+- Practitioner Detail Report: use `COALESCE(g."TenHoatDong", dm."TenDanhMuc")` and cast `dm."LoaiHoatDong"` to text with a `'Khac'` fallback to avoid enum errors.
+- Prefer the shared `UUIDSchema` for query validation of IDs to support legacy UUIDs.
+
 ## Superpowers System
 
 <EXTREMELY_IMPORTANT>
