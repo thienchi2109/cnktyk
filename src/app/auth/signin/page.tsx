@@ -222,10 +222,12 @@ function SignInForm() {
                
                <Dialog>
                  <DialogTrigger asChild>
-                   <button className="group relative flex items-center gap-3 px-5 py-2.5 bg-white border border-slate-200 hover:border-blue-500 hover:bg-blue-50 rounded-full shadow-sm hover:shadow-xl hover:shadow-blue-500/20 hover:-translate-y-0.5 active:scale-95 transition-all duration-300 overflow-hidden focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:outline-none">
-                     <span aria-hidden className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-100/0 via-blue-200/50 to-blue-100/0 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-400" />
-                     <span aria-hidden className="absolute inset-y-0 left-[-40%] w-1/2 bg-gradient-to-r from-transparent via-white/90 to-transparent blur-sm opacity-0 rotate-12 transition-all duration-800 ease-out group-hover:translate-x-[400%] group-hover:opacity-100 group-focus-visible:translate-x-[400%] group-focus-visible:opacity-100" />
-                     <span aria-hidden className="absolute inset-0 rounded-full border border-blue-300/60 shadow-[0_0_0_10px_rgba(59,130,246,0.08)] opacity-0 scale-95 transition duration-300 group-hover:opacity-100 group-hover:scale-100 group-focus-visible:opacity-100 group-focus-visible:scale-100" />
+                   <button className="group relative flex items-center gap-3 px-5 py-2.5 bg-white border border-slate-200 hover:border-blue-500 hover:bg-blue-50 rounded-full shadow-sm hover:shadow-xl hover:shadow-blue-500/20 hover:-translate-y-0.5 active:scale-95 transition-all duration-300 focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:outline-none">
+                     <span aria-hidden className="pointer-events-none absolute inset-0 rounded-full overflow-hidden">
+                       <span className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-100/0 via-blue-200/50 to-blue-100/0 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-400" />
+                       <span className="absolute inset-y-0 left-[-40%] w-1/2 bg-gradient-to-r from-transparent via-white/90 to-transparent blur-sm opacity-0 rotate-12 transition-all duration-800 ease-out group-hover:translate-x-[400%] group-hover:opacity-100 group-focus-visible:translate-x-[400%] group-focus-visible:opacity-100" />
+                       <span className="absolute inset-0 rounded-full border border-blue-300/60 shadow-[0_0_0_10px_rgba(59,130,246,0.08)] opacity-0 scale-95 transition duration-300 group-hover:opacity-100 group-hover:scale-100 group-focus-visible:opacity-100 group-focus-visible:scale-100" />
+                     </span>
                      <div className="relative z-10 p-1.5 rounded-full bg-red-50 group-hover:bg-red-100 group-focus-visible:bg-red-100 group-hover:scale-110 transition-all duration-300">
                         <HeartPulse className="h-4 w-4 text-red-500 group-hover:animate-pulse" />
                      </div>
