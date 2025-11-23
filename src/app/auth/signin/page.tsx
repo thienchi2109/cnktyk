@@ -217,18 +217,22 @@ function SignInForm() {
             <div className="mt-8 pt-8 border-t border-slate-100 flex justify-between items-center text-sm text-slate-500 animate-in fade-in duration-700 delay-700">
                <div className="flex gap-4">
                  <a href="#" className="hover:text-blue-600 transition-colors">Điều khoản</a>
-                 <a href="#" className="hover:text-blue-600 transition-colors">Bảo mật</a>
-               </div>
+               <a href="#" className="hover:text-blue-600 transition-colors">Bảo mật</a>
+              </div>
                
                <Dialog>
                  <DialogTrigger asChild>
-                   <button className="group relative flex items-center gap-3 px-5 py-2.5 bg-white border border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 rounded-full shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 overflow-hidden">
-                     <span aria-hidden className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-100/0 via-blue-100/70 to-blue-100/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                     <span aria-hidden className="absolute inset-y-0 left-[-30%] w-1/3 bg-white/60 blur-2xl opacity-0 rotate-12 transition duration-500 ease-out group-hover:translate-x-[200%] group-hover:opacity-80" />
-                     <div className="relative z-10 p-1.5 rounded-full bg-red-50 group-hover:bg-red-100 transition-colors">
+                   <button className="group relative flex items-center gap-3 px-5 py-2.5 bg-white border border-slate-200 hover:border-blue-500 hover:bg-blue-50 rounded-full shadow-sm hover:shadow-xl hover:shadow-blue-500/20 hover:-translate-y-0.5 active:scale-95 transition-all duration-300 overflow-hidden focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:outline-none">
+                     <span aria-hidden className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-100/0 via-blue-200/50 to-blue-100/0 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-400" />
+                     <span aria-hidden className="absolute inset-y-0 left-[-40%] w-1/2 bg-gradient-to-r from-transparent via-white/90 to-transparent blur-sm opacity-0 rotate-12 transition-all duration-800 ease-out group-hover:translate-x-[400%] group-hover:opacity-100 group-focus-visible:translate-x-[400%] group-focus-visible:opacity-100" />
+                     <span aria-hidden className="absolute inset-0 rounded-full border border-blue-300/60 shadow-[0_0_0_10px_rgba(59,130,246,0.08)] opacity-0 scale-95 transition duration-300 group-hover:opacity-100 group-hover:scale-100 group-focus-visible:opacity-100 group-focus-visible:scale-100" />
+                     <div className="relative z-10 p-1.5 rounded-full bg-red-50 group-hover:bg-red-100 group-focus-visible:bg-red-100 group-hover:scale-110 transition-all duration-300">
                         <HeartPulse className="h-4 w-4 text-red-500 group-hover:animate-pulse" />
                      </div>
-                     <span className="relative z-10 font-semibold text-slate-600 group-hover:text-blue-700">Hỗ trợ kỹ thuật</span>
+                     <span className="relative z-10 font-semibold text-slate-600 group-hover:text-blue-700 group-focus-visible:text-blue-700 transition-colors duration-300">Hỗ trợ kỹ thuật</span>
+                     <span className="pointer-events-none absolute -top-10 left-1/2 -translate-x-1/2 translate-y-2 px-3 py-1 rounded-full bg-slate-900 text-white text-xs font-medium shadow-lg opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:translate-y-0 group-focus-visible:opacity-100 group-focus-visible:translate-y-0">
+                       Liên hệ hỗ trợ
+                     </span>
                    </button>
                  </DialogTrigger>
                  <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden bg-white border-0 shadow-2xl rounded-2xl gap-0 [&>button:last-child]:hidden">
