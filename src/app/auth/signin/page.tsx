@@ -222,11 +222,13 @@ function SignInForm() {
                
                <Dialog>
                  <DialogTrigger asChild>
-                   <button className="flex items-center gap-3 px-5 py-2.5 bg-white border border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 rounded-full shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 group">
-                     <div className="p-1.5 rounded-full bg-red-50 group-hover:bg-red-100 transition-colors">
+                   <button className="group relative flex items-center gap-3 px-5 py-2.5 bg-white border border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 rounded-full shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 overflow-hidden">
+                     <span aria-hidden className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-100/0 via-blue-100/70 to-blue-100/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                     <span aria-hidden className="absolute inset-y-0 left-[-30%] w-1/3 bg-white/60 blur-2xl opacity-0 rotate-12 transition duration-500 ease-out group-hover:translate-x-[200%] group-hover:opacity-80" />
+                     <div className="relative z-10 p-1.5 rounded-full bg-red-50 group-hover:bg-red-100 transition-colors">
                         <HeartPulse className="h-4 w-4 text-red-500 group-hover:animate-pulse" />
                      </div>
-                     <span className="font-semibold text-slate-600 group-hover:text-blue-700">Hỗ trợ kỹ thuật</span>
+                     <span className="relative z-10 font-semibold text-slate-600 group-hover:text-blue-700">Hỗ trợ kỹ thuật</span>
                    </button>
                  </DialogTrigger>
                  <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden bg-white border-0 shadow-2xl rounded-2xl gap-0 [&>button:last-child]:hidden">
