@@ -113,3 +113,6 @@ temp/
 # Test artifacts
 test-results/
 playwright-report/
+
+#docs
+Bulk Revoke Approvals Feature - Implementation Walkthrough.md
