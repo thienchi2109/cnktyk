@@ -52,7 +52,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useSubmissions, useBulkApproveSubmissions, useBulkDeleteSubmissions } from '@/hooks/use-submissions';
+import { useSubmissions, useBulkApproveSubmissions, useBulkRevokeApprovals, useBulkDeleteSubmissions } from '@/hooks/use-submissions';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useDeleteSubmissionMutation } from '@/hooks/use-submission';
 import { useEvidenceFile } from '@/hooks/use-evidence-file';
@@ -161,6 +161,7 @@ export function SubmissionsList({
 
   const reviewerRole = ['DonVi', 'SoYTe'].includes(userRole);
   const bulkApprove = useBulkApproveSubmissions();
+  const bulkRevoke = useBulkRevokeApprovals();
   const bulkDelete = useBulkDeleteSubmissions();
   const deleteMutation = useDeleteSubmissionMutation();
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -169,6 +170,8 @@ export function SubmissionsList({
   const [unitOptionsLoading, setUnitOptionsLoading] = useState(false);
   const [unitOptionsError, setUnitOptionsError] = useState<string | null>(null);
   const [unitSearchInput, setUnitSearchInput] = useState('');
+  const [showRevokeDialog, setShowRevokeDialog] = useState(false);
+  const [revokeReason, setRevokeReason] = useState('');
 
   const debouncedSearchInput = useDebounce(searchInput, 400);
   const effectiveUnitFilter = userRole === 'SoYTe' && unitFilter !== 'all' ? unitFilter : undefined;
@@ -229,9 +232,9 @@ export function SubmissionsList({
         if (cancelled) return;
         const units = Array.isArray(payload?.units)
           ? payload.units.map((unit: any) => ({
-              id: unit.MaDonVi,
-              name: unit.TenDonVi,
-            }))
+            id: unit.MaDonVi,
+            name: unit.TenDonVi,
+          }))
           : [];
         setUnitOptions(units);
       } catch (unitError) {
@@ -310,10 +313,12 @@ export function SubmissionsList({
   const summaryText = safeTotal === 0
     ? 'Không có hoạt động phù hợp với bộ lọc hiện tại.'
     : `Hiển thị ${startRow.toLocaleString('vi-VN')} - ${endRow.toLocaleString('vi-VN')} trên tổng ${safeTotal.toLocaleString('vi-VN')} hoạt động.`;
-  const pendingIdsOnPage = reviewerRole
-    ? filteredSubmissions.filter((s) => s.TrangThaiDuyet === 'ChoDuyet').map((s) => s.MaGhiNhan)
+  // Determine selectable IDs based on current filter (pending for approve/delete, approved for revoke)
+  const selectableStatuses = statusFilter === 'DaDuyet' ? ['DaDuyet'] : ['ChoDuyet'];
+  const selectableIdsOnPage = reviewerRole
+    ? filteredSubmissions.filter((s) => selectableStatuses.includes(s.TrangThaiDuyet)).map((s) => s.MaGhiNhan)
     : [];
-  const allPendingSelected = pendingIdsOnPage.length > 0 && pendingIdsOnPage.every((id) => selectedIds.includes(id));
+  const allSelectableSelected = selectableIdsOnPage.length > 0 && selectableIdsOnPage.every((id) => selectedIds.includes(id));
 
   const handleSearchTermChange = (value: string) => {
     setSearchInput(value);
@@ -351,8 +356,10 @@ export function SubmissionsList({
   };
 
   const toggleSelectAll = () => {
+    // Allow selecting pending submissions (for approve/delete) or approved submissions (for revoke)
+    const selectableStatuses = statusFilter === 'DaDuyet' ? ['DaDuyet'] : ['ChoDuyet'];
     const pageIds = filteredSubmissions
-      .filter(s => s.TrangThaiDuyet === 'ChoDuyet')
+      .filter(s => selectableStatuses.includes(s.TrangThaiDuyet))
       .map(s => s.MaGhiNhan);
     const allSelected = pageIds.every(id => selectedIds.includes(id));
     setSelectedIds(allSelected ? selectedIds.filter(id => !pageIds.includes(id)) : Array.from(new Set([...selectedIds, ...pageIds])));
@@ -365,6 +372,34 @@ export function SubmissionsList({
       const res = await bulkApprove.mutateAsync({ ids: selectedIds });
       setSelectedIds([]);
       setFeedback({ type: 'success', message: `Đã phê duyệt ${res.processedCount} hoạt động${res.skippedIds?.length ? `, bỏ qua ${res.skippedIds.length}` : ''}.` });
+      // Refresh header badge and page data
+      router.refresh();
+      setTimeout(() => setFeedback(null), 3000);
+    } catch (e) {
+      setFeedback({ type: 'error', message: e instanceof Error ? e.message : 'Thao tác thất bại' });
+      setTimeout(() => setFeedback(null), 3000);
+    }
+  };
+
+  const handleBulkRevoke = async () => {
+    if (selectedIds.length === 0) return;
+    // Open dialog for reason input
+    setShowRevokeDialog(true);
+  };
+
+  const handleConfirmRevoke = async () => {
+    if (!revokeReason.trim()) {
+      setFeedback({ type: 'error', message: 'Vui lòng nhập lý do hủy duyệt' });
+      setTimeout(() => setFeedback(null), 3000);
+      return;
+    }
+
+    try {
+      const res = await bulkRevoke.mutateAsync({ ids: selectedIds, reason: revokeReason });
+      setSelectedIds([]);
+      setShowRevokeDialog(false);
+      setRevokeReason('');
+      setFeedback({ type: 'success', message: `Đã hủy duyệt ${res.processedCount} hoạt động${res.skippedIds?.length ? `, bỏ qua ${res.skippedIds.length}` : ''}.` });
       // Refresh header badge and page data
       router.refresh();
       setTimeout(() => setFeedback(null), 3000);
@@ -493,126 +528,152 @@ export function SubmissionsList({
             </h1>
           </div>
           <p className="text-gray-600">
-            {userRole === 'NguoiHanhNghe' 
+            {userRole === 'NguoiHanhNghe'
               ? `Theo dõi các hoạt động đào tạo liên tục • ${total} bản ghi`
               : `Xem xét và phê duyệt các hoạt động đào tạo liên tục • ${total} bản ghi`}
           </p>
         </div>
-        
+
         {reviewerRole || canCreateSubmission() ? (
-        <div className="flex gap-3">
-          {reviewerRole && (
-            <>
-              {/* Bulk approve button - only visible when items are selected */}
-              {selectedIds.length > 0 && (
-                <>
-                  <Button
-                    onClick={handleBulkApprove}
-                    disabled={bulkApprove.isPending}
-                    variant="medical"
-                    className="gap-2"
-                    size="lg"
-                  >
-                    {bulkApprove.isPending ? (
-                      <>
-                        <div className="h-5 w-5 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                        Đang xử lý...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="h-5 w-5" />
-                        Phê duyệt hàng loạt ({selectedIds.length})
-                      </>
+          <div className="flex gap-3">
+            {reviewerRole && (
+              <>
+                {/* Bulk approve button - only visible when items are selected */}
+                {selectedIds.length > 0 && (
+                  <>
+                    {statusFilter !== 'DaDuyet' && (
+                      <Button
+                        onClick={handleBulkApprove}
+                        disabled={bulkApprove.isPending}
+                        variant="medical"
+                        className="gap-2"
+                        size="lg"
+                      >
+                        {bulkApprove.isPending ? (
+                          <>
+                            <div className="h-5 w-5 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                            Đang xử lý...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="h-5 w-5" />
+                            Phê duyệt hàng loạt ({selectedIds.length})
+                          </>
+                        )}
+                      </Button>
                     )}
-                  </Button>
-                  <Button
-                    onClick={handleBulkDelete}
-                    disabled={bulkDelete.isPending}
-                    variant="destructive"
-                    className="gap-2"
-                    size="lg"
-                  >
-                    {bulkDelete.isPending ? (
-                      <>
-                        <div className="h-5 w-5 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                        Đang xóa...
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 className="h-5 w-5" />
-                        Xóa hàng loạt ({selectedIds.length})
-                      </>
+
+                    {/* Bulk revoke button - only visible when filtering by DaDuyet status */}
+                    {statusFilter === 'DaDuyet' && (
+                      <Button
+                        onClick={handleBulkRevoke}
+                        disabled={bulkRevoke.isPending}
+                        variant="destructive"
+                        className="gap-2"
+                        size="lg"
+                      >
+                        {bulkRevoke.isPending ? (
+                          <>
+                            <div className="h-5 w-5 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                            Đang xử lý...
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="h-5 w-5" />
+                            Hủy duyệt hàng loạt ({selectedIds.length})
+                          </>
+                        )}
+                      </Button>
                     )}
-                  </Button>
-                </>
-              )}
 
-              {/* Add to catalog button */}
-              <Button
-                asChild
-                variant="outline-accent"
-                className="gap-2"
-                size="lg"
-              >
-                <Link href="/activities?action=create">
-                  <FolderPlus className="h-5 w-5" />
-                  Thêm hoạt động mới vào danh mục
-                </Link>
-              </Button>
+                    <Button
+                      onClick={handleBulkDelete}
+                      disabled={bulkDelete.isPending}
+                      variant="destructive"
+                      className="gap-2"
+                      size="lg"
+                    >
+                      {bulkDelete.isPending ? (
+                        <>
+                          <div className="h-5 w-5 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          Đang xóa...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="h-5 w-5" />
+                          Xóa hàng loạt ({selectedIds.length})
+                        </>
+                      )}
+                    </Button>
+                  </>
+                )}
 
-              {/* Dropdown menu for submission actions */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="medical" className="gap-2" size="lg">
-                    <Plus className="h-5 w-5" />
-                    Ghi nhận hoạt động
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem onClick={onCreateSubmission} className="cursor-pointer">
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Ghi nhận cho cá nhân</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link href="/submissions/bulk">
-                      <Users className="mr-2 h-4 w-4" />
-                      <span>Ghi nhận cho hàng loạt</span>
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
-          )}
-          {!reviewerRole && canCreateSubmission() && onCreateSubmission && (
-            <>
-              {/* Add to catalog button for non-reviewers */}
-              <Button
-                asChild
-                variant="outline-accent"
-                className="gap-2"
-                size="lg"
-              >
-                <Link href="/activities?action=create">
-                  <FolderPlus className="h-5 w-5" />
-                  Thêm hoạt động mới vào danh mục
-                </Link>
-              </Button>
+                {/* Add to catalog button */}
+                <Button
+                  asChild
+                  variant="outline-accent"
+                  className="gap-2"
+                  size="lg"
+                >
+                  <Link href="/activities?action=create">
+                    <FolderPlus className="h-5 w-5" />
+                    Thêm hoạt động mới vào danh mục
+                  </Link>
+                </Button>
 
-              {/* Simple button for non-reviewers */}
-              <Button
-                onClick={onCreateSubmission}
-                variant="medical"
-                className="gap-2"
-                size="lg"
-              >
-                <Plus className="h-5 w-5" />
-                Ghi nhận hoạt động
-              </Button>
-            </>
-          )}
-        </div>
-      ) : null}
+                {/* Dropdown menu for submission actions */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="medical" className="gap-2" size="lg">
+                      <Plus className="h-5 w-5" />
+                      Ghi nhận hoạt động
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem onClick={onCreateSubmission} className="cursor-pointer">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Ghi nhận cho cá nhân</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="cursor-pointer">
+                      <Link href="/submissions/bulk">
+                        <Users className="mr-2 h-4 w-4" />
+                        <span>Ghi nhận cho hàng loạt</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            )}
+            {!reviewerRole && canCreateSubmission() && onCreateSubmission && (
+              <>
+                {/* Add to catalog button for non-reviewers */}
+                <Button
+                  asChild
+                  variant="outline-accent"
+                  className="gap-2"
+                  size="lg"
+                >
+                  <Link href="/activities?action=create">
+                    <FolderPlus className="h-5 w-5" />
+                    Thêm hoạt động mới vào danh mục
+                  </Link>
+                </Button>
+
+                {/* Simple button for non-reviewers */}
+                <Button
+                  onClick={onCreateSubmission}
+                  variant="medical"
+                  className="gap-2"
+                  size="lg"
+                >
+                  <Plus className="h-5 w-5" />
+                  Ghi nhận hoạt động
+                </Button>
+              </>
+            )}
+          </div>
+        ) : null}
       </div>
 
       {feedback && (
@@ -662,7 +723,7 @@ export function SubmissionsList({
               >
                 <SelectValue placeholder="Tất cả trạng thái" />
               </SelectTrigger>
-                <SelectContent className="bg-white text-gray-900 border border-gray-200 shadow-xl [&_[data-radix-select-viewport]]:bg-white">
+              <SelectContent className="bg-white text-gray-900 border border-gray-200 shadow-xl [&_[data-radix-select-viewport]]:bg-white">
                 <SelectItem
                   value="all"
                   className="whitespace-normal break-words text-left leading-snug text-gray-900 data-[highlighted]:bg-medical-blue/10 data-[state=checked]:text-medical-blue h-auto py-2"
@@ -792,8 +853,8 @@ export function SubmissionsList({
                         <TableHead className="w-12 px-6 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-700">
                           <input
                             type="checkbox"
-                            aria-label="Chọn tất cả hoạt động chờ duyệt"
-                            checked={allPendingSelected}
+                            aria-label="Chọn tất cả hoạt động"
+                            checked={allSelectableSelected}
                             onChange={toggleSelectAll}
                           />
                         </TableHead>
@@ -814,7 +875,10 @@ export function SubmissionsList({
                       const isActiveEvidenceRow = activeEvidenceSubmissionId === submission.MaGhiNhan;
                       const isViewingEvidence = isActiveEvidenceRow && evidenceFile.activeAction === 'view';
                       const isDownloadingEvidence = isActiveEvidenceRow && evidenceFile.activeAction === 'download';
-                      const isSelectable = submission.TrangThaiDuyet === 'ChoDuyet';
+                      // Allow selecting pending submissions (for approve/delete) or approved submissions (for revoke)
+                      const isSelectable = statusFilter === 'DaDuyet'
+                        ? submission.TrangThaiDuyet === 'DaDuyet'
+                        : submission.TrangThaiDuyet === 'ChoDuyet';
                       const isSelected = selectedIds.includes(submission.MaGhiNhan);
 
                       return (
@@ -1109,6 +1173,75 @@ export function SubmissionsList({
                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Đang xóa...</>
               ) : (
                 <><Trash2 className="h-4 w-4 mr-2" /> Xác nhận xóa</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Revoke Confirmation Dialog */}
+      <Dialog open={showRevokeDialog} onOpenChange={(open) => {
+        setShowRevokeDialog(open);
+        if (!open) setRevokeReason('');
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Hủy duyệt hàng loạt</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-gray-600">
+              Bạn đang hủy duyệt {selectedIds.length} hoạt động đã được phê duyệt.
+              Các hoạt động sẽ quay về trạng thái <strong>Chờ duyệt</strong>.
+            </p>
+
+            <div>
+              <Label htmlFor="revoke-reason">
+                Lý do hủy duyệt <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="revoke-reason"
+                placeholder="Nhập lý do hủy duyệt..."
+                value={revokeReason}
+                onChange={(e) => setRevokeReason(e.target.value)}
+                className="mt-1"
+                autoFocus
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Lý do này sẽ được ghi lại trong lịch sử hoạt động
+              </p>
+            </div>
+
+            <Alert className="border-yellow-200 bg-yellow-50">
+              <AlertTriangle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription className="text-yellow-700 text-sm">
+                Hành động này sẽ hủy phê duyệt và đưa các hoạt động về trạng thái chờ duyệt.
+              </AlertDescription>
+            </Alert>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline-accent"
+              onClick={() => {
+                setShowRevokeDialog(false);
+                setRevokeReason('');
+              }}
+              disabled={bulkRevoke.isPending}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleConfirmRevoke}
+              disabled={bulkRevoke.isPending || !revokeReason.trim()}
+            >
+              {bulkRevoke.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Đang xử lý...</>
+              ) : (
+                <><XCircle className="h-4 w-4 mr-2" /> Xác nhận hủy duyệt</>
               )}
             </Button>
           </DialogFooter>

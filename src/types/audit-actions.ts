@@ -58,6 +58,11 @@ export const AUDIT_ACTIONS = {
    */
   BULK_SUBMISSION_APPROVE: 'BULK_SUBMISSION_APPROVE',
 
+  /**
+   * Bulk revoke of approved submissions (back to pending)
+   */
+  BULK_SUBMISSION_REVOKE: 'BULK_SUBMISSION_REVOKE',
+
   // ============================================================================
   // Activity Catalog Actions (DanhMucHoatDong)
   // ============================================================================

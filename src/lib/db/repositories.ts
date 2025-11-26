@@ -37,33 +37,33 @@ type BulkSubmissionInsertInput = Omit<
   Pick<
     CreateGhiNhanHoatDong,
     |
-      'MaNhanVien'
+    'MaNhanVien'
     |
-      'MaDanhMuc'
+    'MaDanhMuc'
     |
-      'TenHoatDong'
+    'TenHoatDong'
     |
-      'NguoiNhap'
+    'NguoiNhap'
     |
-      'CreationMethod'
+    'CreationMethod'
     |
-      'TrangThaiDuyet'
+    'TrangThaiDuyet'
     |
-      'DonViToChuc'
+    'DonViToChuc'
     |
-      'NgayBatDau'
+    'NgayBatDau'
     |
-      'NgayKetThuc'
+    'NgayKetThuc'
     |
-      'SoTiet'
+    'SoTiet'
     |
-      'SoGioTinChiQuyDoi'
+    'SoGioTinChiQuyDoi'
     |
-      'HinhThucCapNhatKienThucYKhoa'
+    'HinhThucCapNhatKienThucYKhoa'
     |
-      'FileMinhChungUrl'
+    'FileMinhChungUrl'
     |
-      'BangChungSoGiayChungNhan'
+    'BangChungSoGiayChungNhan'
   >,
   'TrangThaiDuyet'
 > & {
@@ -91,7 +91,7 @@ abstract class BaseRepository<T, CreateT, UpdateT> {
     // Use a more generic ordering that works for all tables
     let query = `SELECT * FROM "${this.tableName}"`;
     const params: any[] = [];
-    
+
     // Order by the primary key
     const pkColumn = this.getPrimaryKeyColumn();
     query += ` ORDER BY "${pkColumn}" DESC`;
@@ -166,15 +166,15 @@ export class TaiKhoanRepository extends BaseRepository<TaiKhoan, CreateTaiKhoan,
   async create(data: CreateTaiKhoan): Promise<TaiKhoan> {
     // Hash password before storing
     const hashedPassword = await bcrypt.hash(data.MatKhau, 10);
-    
+
     const userData = {
       ...data,
       MatKhauBam: hashedPassword,
     };
-    
+
     // Remove the plain password
     delete (userData as any).MatKhau;
-    
+
     return db.insert<TaiKhoan>(this.tableName, userData);
   }
 
@@ -887,9 +887,9 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
       INNER JOIN "NhanVien" n ON n."MaNhanVien" = g."MaNhanVien"
       WHERE g."MaGhiNhan" = $1
     `;
-    
+
     const result = await db.queryOne<GhiNhanHoatDong & { MaDonVi: string }>(query, [submissionId]);
-    
+
     if (!result) {
       return { success: false, error: 'Submission not found' };
     }
@@ -987,6 +987,61 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
     return { updatedIds: rows.map(r => r.MaGhiNhan) };
   }
 
+  /**
+   * Bulk revoke approved activities (back to pending status).
+   * If unitId is provided, only records from that unit will be revoked.
+   * Only approved (DaDuyet) items are affected.
+   * Appends revocation reason to existing comments.
+   * 
+   * @param ids - Array of submission IDs to revoke
+   * @param reason - Mandatory reason for revocation (appended to existing comments)
+   * @param unitId - Optional unit ID for tenant isolation (DonVi role)
+   * @returns Object with array of successfully revoked submission IDs
+   */
+  async revokeActivities(ids: string[], reason: string, unitId?: string): Promise<{ updatedIds: string[] }> {
+    if (!ids || ids.length === 0) return { updatedIds: [] };
+    if (!reason || reason.trim() === '') {
+      throw new Error('Revocation reason is required');
+    }
+
+    const revocationNote = `[HỦY DUYỆT: ${new Date().toISOString()}] ${reason.trim()}`;
+
+    if (unitId) {
+      const rows = await db.query<{ MaGhiNhan: string }>(
+        `UPDATE "${this.tableName}" g
+         SET "TrangThaiDuyet" = 'ChoDuyet',
+             "NgayDuyet" = NULL,
+             "GhiChuDuyet" = CASE 
+               WHEN "GhiChuDuyet" IS NULL OR "GhiChuDuyet" = '' THEN $3
+               ELSE "GhiChuDuyet" || E'\\n' || $3
+             END
+         FROM "NhanVien" n
+         WHERE g."MaNhanVien" = n."MaNhanVien"
+           AND g."MaGhiNhan" = ANY($1::uuid[])
+           AND g."TrangThaiDuyet" = 'DaDuyet'
+           AND n."MaDonVi" = $2
+         RETURNING g."MaGhiNhan"`,
+        [ids, unitId, revocationNote]
+      );
+      return { updatedIds: rows.map(r => r.MaGhiNhan) };
+    }
+
+    const rows = await db.query<{ MaGhiNhan: string }>(
+      `UPDATE "${this.tableName}" g
+       SET "TrangThaiDuyet" = 'ChoDuyet',
+           "NgayDuyet" = NULL,
+           "GhiChuDuyet" = CASE 
+             WHEN "GhiChuDuyet" IS NULL OR "GhiChuDuyet" = '' THEN $2
+             ELSE "GhiChuDuyet" || E'\\n' || $2
+           END
+       WHERE g."MaGhiNhan" = ANY($1::uuid[])
+         AND g."TrangThaiDuyet" = 'DaDuyet'
+       RETURNING g."MaGhiNhan"`,
+      [ids, revocationNote]
+    );
+    return { updatedIds: rows.map(r => r.MaGhiNhan) };
+  }
+
   async getActivityStats(unitId?: string): Promise<{
     total: number;
     pending: number;
@@ -1034,7 +1089,7 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
     searchTerm?: string;
     page?: number;
     limit?: number;
-  }): Promise<import('./schemas').PaginatedResult<import('./schemas').SubmissionListItem>> {
+  }): Promise<import('./schemas').PaginatedResult < import('./schemas').SubmissionListItem >> {
     const page = filters.page || 1;
     const limit = filters.limit || 10;
     const offset = (page - 1) * limit;
@@ -1149,11 +1204,11 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
 
       const activityInfo = row.activityCatalog_TenDanhMuc
         ? {
-            YeuCauMinhChung: row.activityCatalog_YeuCauMinhChung ?? false,
-            TyLeQuyDoi: row.activityCatalog_TyLeQuyDoi !== null ? Number(row.activityCatalog_TyLeQuyDoi) : undefined,
-            GioToiThieu: row.activityCatalog_GioToiThieu !== null ? Number(row.activityCatalog_GioToiThieu) : null,
-            GioToiDa: row.activityCatalog_GioToiDa !== null ? Number(row.activityCatalog_GioToiDa) : null,
-          }
+          YeuCauMinhChung: row.activityCatalog_YeuCauMinhChung ?? false,
+          TyLeQuyDoi: row.activityCatalog_TyLeQuyDoi !== null ? Number(row.activityCatalog_TyLeQuyDoi) : undefined,
+          GioToiThieu: row.activityCatalog_GioToiThieu !== null ? Number(row.activityCatalog_GioToiThieu) : null,
+          GioToiDa: row.activityCatalog_GioToiDa !== null ? Number(row.activityCatalog_GioToiDa) : null,
+        }
         : undefined;
 
       const effectiveCredits = calculateEffectiveCredits({
@@ -1175,10 +1230,10 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
         CreationMethod: row.CreationMethod,
         creatorAccount: row.creator_MaTaiKhoan
           ? {
-              MaTaiKhoan: row.creator_MaTaiKhoan,
-              TenDangNhap: row.creator_TenDangNhap ?? 'Hệ thống',
-              QuyenHan: row.creator_QuyenHan ?? 'system',
-            }
+            MaTaiKhoan: row.creator_MaTaiKhoan,
+            TenDangNhap: row.creator_TenDangNhap ?? 'Hệ thống',
+            QuyenHan: row.creator_QuyenHan ?? 'system',
+          }
           : null,
         SoGioTinChiQuyDoi: effectiveCredits,
         NgayBatDau: row.NgayBatDau?.toISOString() || null,
@@ -1199,14 +1254,14 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
         },
         activityCatalog: row.activityCatalog_TenDanhMuc
           ? {
-              TenDanhMuc: row.activityCatalog_TenDanhMuc,
-              LoaiHoatDong: row.activityCatalog_LoaiHoatDong,
-            }
+            TenDanhMuc: row.activityCatalog_TenDanhMuc,
+            LoaiHoatDong: row.activityCatalog_LoaiHoatDong,
+          }
           : null,
         unit: row.unit_TenDonVi
           ? {
-              TenDonVi: row.unit_TenDonVi,
-            }
+            TenDonVi: row.unit_TenDonVi,
+          }
           : null,
       };
     });
@@ -1561,7 +1616,7 @@ export class DanhMucHoatDongRepository extends BaseRepository<DanhMucHoatDong, C
         TaoLuc: new Date(activity.TaoLuc),
         CapNhatLuc: new Date(activity.CapNhatLuc),
       } as DanhMucHoatDong;
-      
+
       if (is_global) {
         global.push(typedActivity);
       } else {
@@ -1659,7 +1714,7 @@ export class DanhMucHoatDongRepository extends BaseRepository<DanhMucHoatDong, C
     unitId: string | null
   ): Promise<DanhMucHoatDong> {
     const now = new Date();
-    
+
     const activityData = {
       ...data,
       MaDonVi: unitId,
@@ -2354,18 +2409,18 @@ export async function getDohUnitComparisonPage({
   const validSorts =
     sort && Array.isArray(sort) && sort.length > 0
       ? sort.filter(
-          (entry) =>
-            entry &&
-            sortColumnMap[entry.field] &&
-            (entry.direction === 'asc' || entry.direction === 'desc')
-        )
+        (entry) =>
+          entry &&
+          sortColumnMap[entry.field] &&
+          (entry.direction === 'asc' || entry.direction === 'desc')
+      )
       : [];
 
   const orderByClause =
     validSorts.length > 0
       ? validSorts
-          .map((entry) => `${sortColumnMap[entry.field]} ${entry.direction.toUpperCase()}`)
-          .join(', ')
+        .map((entry) => `${sortColumnMap[entry.field]} ${entry.direction.toUpperCase()}`)
+        .join(', ')
       : `"compliance_rate" DESC, "name" ASC`;
 
   // tie-breaker to ensure deterministic ordering

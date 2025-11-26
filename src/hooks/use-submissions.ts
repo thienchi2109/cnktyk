@@ -105,6 +105,27 @@ export function useBulkApproveSubmissions() {
   });
 }
 
+export function useBulkRevokeApprovals() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: { ids: string[]; reason: string }) => {
+      const res = await fetch('/api/submissions/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'revoke', ids: args.ids, reason: args.reason }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || 'Failed to bulk revoke');
+      }
+      return data as { processedCount: number; updatedIds: string[]; skippedIds: string[] };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['submissions'] });
+    },
+  });
+}
+
 export function useBulkDeleteSubmissions() {
   const qc = useQueryClient();
   return useMutation({
