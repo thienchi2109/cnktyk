@@ -43,6 +43,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn, formatDate } from '@/lib/utils';
 import { LoadingNotice } from '@/components/ui/loading-notice';
 import {
@@ -546,7 +556,7 @@ export function SubmissionsList({
                         onClick={handleBulkApprove}
                         disabled={bulkApprove.isPending}
                         variant="medical"
-                        className="gap-2"
+                        className="gap-2 border border-white/20 shadow-sm"
                         size="lg"
                       >
                         {bulkApprove.isPending ? (
@@ -568,13 +578,13 @@ export function SubmissionsList({
                       <Button
                         onClick={handleBulkRevoke}
                         disabled={bulkRevoke.isPending}
-                        variant="destructive"
-                        className="gap-2"
+                        variant="outline"
+                        className="gap-2 border-amber-500/40 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800 shadow-sm"
                         size="lg"
                       >
                         {bulkRevoke.isPending ? (
                           <>
-                            <div className="h-5 w-5 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                            <div className="h-5 w-5 mr-2 animate-spin rounded-full border-2 border-amber-700 border-t-transparent" />
                             Đang xử lý...
                           </>
                         ) : (
@@ -590,7 +600,7 @@ export function SubmissionsList({
                       onClick={handleBulkDelete}
                       disabled={bulkDelete.isPending}
                       variant="destructive"
-                      className="gap-2"
+                      className="gap-2 border border-white/20 shadow-sm"
                       size="lg"
                     >
                       {bulkDelete.isPending ? (
@@ -1180,21 +1190,20 @@ export function SubmissionsList({
       </Dialog>
 
       {/* Bulk Revoke Confirmation Dialog */}
-      <Dialog open={showRevokeDialog} onOpenChange={(open) => {
+      <AlertDialog open={showRevokeDialog} onOpenChange={(open) => {
         setShowRevokeDialog(open);
         if (!open) setRevokeReason('');
       }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Hủy duyệt hàng loạt</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <p className="text-sm text-gray-600">
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hủy duyệt hàng loạt</AlertDialogTitle>
+            <AlertDialogDescription>
               Bạn đang hủy duyệt {selectedIds.length} hoạt động đã được phê duyệt.
               Các hoạt động sẽ quay về trạng thái <strong>Chờ duyệt</strong>.
-            </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
 
+          <div className="space-y-4 py-2">
             <div>
               <Label htmlFor="revoke-reason">
                 Lý do hủy duyệt <span className="text-red-500">*</span>
@@ -1220,10 +1229,8 @@ export function SubmissionsList({
             </Alert>
           </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline-accent"
+          <AlertDialogFooter>
+            <AlertDialogCancel
               onClick={() => {
                 setShowRevokeDialog(false);
                 setRevokeReason('');
@@ -1231,22 +1238,24 @@ export function SubmissionsList({
               disabled={bulkRevoke.isPending}
             >
               Hủy
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={handleConfirmRevoke}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault(); // Prevent closing immediately to validate
+                handleConfirmRevoke();
+              }}
               disabled={bulkRevoke.isPending || !revokeReason.trim()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {bulkRevoke.isPending ? (
                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Đang xử lý...</>
               ) : (
                 <><XCircle className="h-4 w-4 mr-2" /> Xác nhận hủy duyệt</>
               )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
