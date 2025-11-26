@@ -1011,6 +1011,7 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
         `UPDATE "${this.tableName}" g
          SET "TrangThaiDuyet" = 'ChoDuyet',
              "NgayDuyet" = NULL,
+             "NguoiDuyet" = NULL,
              "GhiChuDuyet" = CASE 
                WHEN "GhiChuDuyet" IS NULL OR "GhiChuDuyet" = '' THEN $3
                ELSE "GhiChuDuyet" || E'\\n' || $3
@@ -1030,6 +1031,7 @@ export class GhiNhanHoatDongRepository extends BaseRepository<GhiNhanHoatDong, C
       `UPDATE "${this.tableName}" g
        SET "TrangThaiDuyet" = 'ChoDuyet',
            "NgayDuyet" = NULL,
+           "NguoiDuyet" = NULL,
            "GhiChuDuyet" = CASE 
              WHEN "GhiChuDuyet" IS NULL OR "GhiChuDuyet" = '' THEN $2
              ELSE "GhiChuDuyet" || E'\\n' || $2
