@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { LoadingNotice } from '@/components/ui/loading-notice';
+import { DepartmentCombobox } from '@/components/cohorts/department-combobox';
 
 type PractitionerLite = {
   MaNhanVien: string;
@@ -241,7 +242,13 @@ export function CohortBuilder({ initialStatus = 'DangLamViec', onChange }: Cohor
           {/* Khoa/Phòng */}
           <div>
             <Label htmlFor="khoaphong" className="text-sm text-gray-700">Khoa/Phòng</Label>
-            <Input id="khoaphong" value={khoaPhong} onChange={(e) => setKhoaPhong(e.target.value)} className="mt-1" placeholder="VD: Khoa Nội, Khoa Ngoại..." />
+            <DepartmentCombobox
+              id="khoaphong"
+              value={khoaPhong}
+              onChange={setKhoaPhong}
+              placeholder="Chọn khoa/phòng..."
+              triggerClassName="mt-1"
+            />
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">

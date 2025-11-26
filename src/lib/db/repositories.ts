@@ -294,6 +294,43 @@ export class NhanVienRepository extends BaseRepository<NhanVien, CreateNhanVien,
     `, [unitId]);
   }
 
+  async getDistinctDepartments(params: { unitId?: string; search?: string; limit?: number }): Promise<string[]> {
+    const { unitId, search, limit = 20 } = params;
+    const values: any[] = [];
+    let idx = 1;
+
+    let sql = `
+      SELECT DISTINCT ON (normalized) original
+      FROM (
+        SELECT
+          BTRIM("KhoaPhong") AS original,
+          LOWER(BTRIM("KhoaPhong")) AS normalized
+        FROM "${this.tableName}"
+        WHERE "KhoaPhong" IS NOT NULL AND BTRIM("KhoaPhong") <> ''
+    `;
+
+    if (unitId) {
+      sql += ` AND "MaDonVi" = $${idx++}`;
+      values.push(unitId);
+    }
+
+    if (search) {
+      sql += ` AND LOWER(BTRIM("KhoaPhong")) LIKE LOWER($${idx++})`;
+      values.push(`%${search}%`);
+    }
+
+    sql += `
+      ) AS dept
+      ORDER BY normalized ASC
+      LIMIT $${idx++}
+    `;
+
+    values.push(limit);
+
+    const rows = await db.query<{ original: string }>(sql, values);
+    return rows.map((row) => row.original);
+  }
+
   async getComplianceStatus(practitionerId: string): Promise<{
     totalCredits: number;
     requiredCredits: number;
