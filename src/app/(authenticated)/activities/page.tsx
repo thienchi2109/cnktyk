@@ -8,6 +8,7 @@ import { ActivitiesList } from '@/components/activities/activities-list';
 import { ActivityFormSheet } from '@/components/activities/activity-form-sheet';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 import {
   activitiesCatalogBaseKey,
   ActivityCatalogItem,
@@ -16,11 +17,6 @@ import {
   removeActivityCatalogEntry,
   upsertActivityCatalogEntry,
 } from '@/hooks/use-activities';
-
-type FeedbackState =
-  | { type: 'success'; message: string }
-  | { type: 'error'; message: string }
-  | null;
 
 const defaultPermissions: ActivityPermissions = {
   canCreateGlobal: false,
@@ -36,10 +32,10 @@ export default function ActivitiesPage() {
   const queryClient = useQueryClient();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
 
   const [showCreateSheet, setShowCreateSheet] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<ActivityCatalogItem | null>(null);
-  const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [permissions, setPermissions] = useState<ActivityPermissions>(defaultPermissions);
 
   const catalogKey = activitiesCatalogBaseKey;
@@ -92,7 +88,6 @@ export default function ActivitiesPage() {
       return data.activity as ActivityCatalogItem;
     },
     onMutate: async (activityId) => {
-      setFeedback(null);
       await queryClient.cancelQueries({ queryKey: catalogKey });
 
       const previousCatalog = takeCatalogSnapshot();
@@ -110,15 +105,16 @@ export default function ActivitiesPage() {
     },
     onError: (error, _activityId, context) => {
       restoreCatalogSnapshot(context?.previousCatalog);
-      setFeedback({
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Có lỗi xảy ra trong quá trình xóa hoạt động',
+      toast({
+        title: 'Xóa hoạt động thất bại',
+        description: error instanceof Error ? error.message : 'Có lỗi xảy ra trong quá trình xóa hoạt động',
+        variant: 'destructive',
       });
     },
     onSuccess: (activity) => {
-      setFeedback({
-        type: 'success',
-        message: `Đã xóa hoạt động "${activity.TenDanhMuc}".`,
+      toast({
+        title: 'Xóa hoạt động thành công',
+        description: `Đã xóa hoạt động "${activity.TenDanhMuc}".`,
       });
     },
     onSettled: () => {
@@ -150,7 +146,6 @@ export default function ActivitiesPage() {
       return data as ActivityCatalogItem;
     },
     onMutate: async (activityId) => {
-      setFeedback(null);
       await queryClient.cancelQueries({ queryKey: catalogKey });
 
       const previousCatalog = takeCatalogSnapshot();
@@ -183,9 +178,10 @@ export default function ActivitiesPage() {
     },
     onError: (error, _activityId, context) => {
       restoreCatalogSnapshot(context?.previousCatalog);
-      setFeedback({
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Có lỗi xảy ra khi chuyển hoạt động',
+      toast({
+        title: 'Chuyển hoạt động thất bại',
+        description: error instanceof Error ? error.message : 'Có lỗi xảy ra khi chuyển hoạt động',
+        variant: 'destructive',
       });
     },
     onSuccess: (activity) => {
@@ -206,9 +202,9 @@ export default function ActivitiesPage() {
         }
       });
 
-      setFeedback({
-        type: 'success',
-        message: `Đã chuyển hoạt động "${activity.TenDanhMuc}" thành hoạt động hệ thống.`,
+      toast({
+        title: 'Chuyển hoạt động thành công',
+        description: `Đã chuyển hoạt động "${activity.TenDanhMuc}" thành hoạt động hệ thống.`,
       });
     },
     onSettled: () => {
@@ -239,16 +235,16 @@ export default function ActivitiesPage() {
       return data.activity as ActivityCatalogItem;
     },
     onMutate: async () => {
-      setFeedback(null);
       await queryClient.cancelQueries({ queryKey: catalogKey });
       const previousCatalog = takeCatalogSnapshot();
       return { previousCatalog };
     },
     onError: (error, _activityId, context) => {
       restoreCatalogSnapshot(context?.previousCatalog);
-      setFeedback({
-        type: 'error',
-        message: error instanceof Error ? error.message : 'Có lỗi xảy ra khi khôi phục hoạt động',
+      toast({
+        title: 'Khôi phục hoạt động thất bại',
+        description: error instanceof Error ? error.message : 'Có lỗi xảy ra khi khôi phục hoạt động',
+        variant: 'destructive',
       });
     },
     onSuccess: (activity) => {
@@ -263,9 +259,9 @@ export default function ActivitiesPage() {
         }
       });
 
-      setFeedback({
-        type: 'success',
-        message: `Đã khôi phục hoạt động "${activity.TenDanhMuc}".`,
+      toast({
+        title: 'Khôi phục hoạt động thành công',
+        description: `Đã khôi phục hoạt động "${activity.TenDanhMuc}".`,
       });
     },
     onSettled: () => {
@@ -377,11 +373,15 @@ export default function ActivitiesPage() {
   };
 
   const handleSheetUpdate = (result: { type: 'create' | 'update'; activity: ActivityCatalogItem }) => {
-    const message =
+    const title =
+      result.type === 'create'
+        ? 'Tạo hoạt động thành công'
+        : 'Cập nhật hoạt động thành công';
+    const description =
       result.type === 'create'
         ? `Đã tạo hoạt động "${result.activity.TenDanhMuc}".`
         : `Đã cập nhật hoạt động "${result.activity.TenDanhMuc}".`;
-    setFeedback({ type: 'success', message });
+    toast({ title, description });
   };
 
   return (
@@ -390,22 +390,6 @@ export default function ActivitiesPage() {
         <Alert className="mb-4 border-blue-200 bg-blue-50">
           <AlertDescription className="text-blue-700">
             Đang xử lý thao tác, vui lòng đợi...
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {feedback && (
-        <Alert
-          className={
-            feedback.type === 'success'
-              ? 'mb-6 border-green-200 bg-green-50'
-              : 'mb-6 border-red-200 bg-red-50'
-          }
-        >
-          <AlertDescription
-            className={feedback.type === 'success' ? 'text-green-700' : 'text-red-700'}
-          >
-            {feedback.message}
           </AlertDescription>
         </Alert>
       )}
