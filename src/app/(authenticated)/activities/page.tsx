@@ -10,6 +10,17 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Trash2 } from 'lucide-react';
+import {
   activitiesCatalogBaseKey,
   ActivityCatalogItem,
   ActivityPermissions,
@@ -37,6 +48,8 @@ export default function ActivitiesPage() {
   const [showCreateSheet, setShowCreateSheet] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<ActivityCatalogItem | null>(null);
   const [permissions, setPermissions] = useState<ActivityPermissions>(defaultPermissions);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [activityToDelete, setActivityToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const catalogKey = activitiesCatalogBaseKey;
 
@@ -310,22 +323,44 @@ export default function ActivitiesPage() {
     setShowCreateSheet(true);
   };
 
-  const handleDeleteActivity = async (activityId: string) => {
+  const handleDeleteActivity = (activityId: string) => {
     if (deleteMutation.isPending) {
       return;
     }
 
-    const confirmed = window.confirm(
-      'Bạn có chắc chắn muốn xóa hoạt động này? Hoạt động sẽ được đánh dấu xóa mềm và có thể khôi phục sau.'
-    );
-    if (!confirmed) {
+    // Find activity name from the catalog
+    const catalogSnapshot = takeCatalogSnapshot();
+    let activityName = activityId; // fallback to ID if not found
+
+    for (const [, catalog] of catalogSnapshot) {
+      if (catalog) {
+        const activity =
+          catalog.global.find((item) => item.MaDanhMuc === activityId) ||
+          catalog.unit.find((item) => item.MaDanhMuc === activityId);
+        if (activity) {
+          activityName = activity.TenDanhMuc;
+          break;
+        }
+      }
+    }
+
+    setActivityToDelete({ id: activityId, name: activityName });
+    setShowDeleteDialog(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!activityToDelete || deleteMutation.isPending) {
       return;
     }
 
     try {
-      await deleteMutation.mutateAsync(activityId);
+      await deleteMutation.mutateAsync(activityToDelete.id);
+      setShowDeleteDialog(false);
+      setActivityToDelete(null);
     } catch {
-      // Mutation onError already sets feedback
+      // Mutation onError already shows toast
+      setShowDeleteDialog(false);
+      setActivityToDelete(null);
     }
   };
 
@@ -415,6 +450,55 @@ export default function ActivitiesPage() {
         permissions={permissions}
         onUpdate={handleSheetUpdate}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        open={showDeleteDialog}
+        onOpenChange={(open) => {
+          setShowDeleteDialog(open);
+          if (!open) setActivityToDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận xóa hoạt động</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn xóa hoạt động <strong>&quot;{activityToDelete?.name}&quot;</strong>?
+              <br />
+              <br />
+              Hoạt động sẽ được đánh dấu xóa mềm và có thể khôi phục sau.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setActivityToDelete(null);
+              }}
+              disabled={deleteMutation.isPending}
+            >
+              Hủy
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleConfirmDelete();
+              }}
+              disabled={deleteMutation.isPending}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              {deleteMutation.isPending ? (
+                <>Đang xóa...</>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Xóa hoạt động
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
