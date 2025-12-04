@@ -778,16 +778,16 @@ await auditLog({
 
 ### File Upload Security
 
-- **Validate file types** - Check MIME types
-- **Limit file sizes** - Enforce maximum size limits
+- **Validate file types** - Check MIME types AND magic bytes (signature)
+- **Limit file sizes** - Enforce maximum size limits (5MB for PDF, 1MB target for images)
 - **Store checksums** - SHA-256 for integrity verification
 - **Presigned URLs** - Time-limited access (24 hours)
 - **Never serve files directly** - Always use presigned URLs
+- **Audit Logging** - Log any file signature mismatches as security events
 
 ### Common Security Pitfalls
 
 ❌ **AVOID:**
-- Using `any` type (disables type checking)
 - String concatenation in SQL queries (SQL injection)
 - Exposing sensitive data in error messages
 - Skipping authentication checks
