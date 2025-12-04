@@ -22,7 +22,7 @@ export function generateSecureFilename(originalName: string, activityId?: string
 }
 
 export function validateFileType(file: File): boolean {
-  const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+  const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
   return allowedTypes.includes(file.type);
 }
 
@@ -49,7 +49,7 @@ export async function generateFileChecksum(file: File): Promise<string> {
 // Date formatting utilities
 export function formatDate(dateString: string | Date): string {
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-  
+
   if (isNaN(date.getTime())) {
     return 'Invalid date';
   }
@@ -65,7 +65,7 @@ export function formatDate(dateString: string | Date): string {
 
 export function formatDateShort(dateString: string | Date): string {
   const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-  
+
   if (isNaN(date.getTime())) {
     return 'Invalid date';
   }

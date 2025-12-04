@@ -6,7 +6,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/server';
 import { r2Client } from '@/lib/storage/r2-client';
-import { generateSecureFilename, generateFileChecksum, validateFileType, validateFileSize } from '@/lib/utils';
+import { generateSecureFilename, generateFileChecksum, validateFileSize } from '@/lib/utils';
+import { validateFileType } from '@/lib/utils/fileValidation';
 import { FileUploadSchema } from '@/lib/db/schemas';
 
 export async function POST(request: NextRequest) {
@@ -40,18 +41,25 @@ export async function POST(request: NextRequest) {
 
     if (!validationResult.success) {
       return NextResponse.json(
-        { 
+        {
           error: 'File validation failed',
-          details: validationResult.error.issues 
+          details: validationResult.error.issues
         },
         { status: 400 }
       );
     }
 
-    // Additional server-side validation
-    if (!validateFileType(file)) {
+    // Additional server-side validation (MIME + Magic Bytes)
+    const typeValidation = await validateFileType(file);
+
+    if (!typeValidation.isValid) {
+      // Audit Log for potential security threat if signature mismatch
+      if (typeValidation.matchesSignature === false) {
+        console.warn(`[SECURITY AUDIT] File signature mismatch detected. User: ${user.id}, File: ${file.name}, MIME: ${file.type}`);
+      }
+
       return NextResponse.json(
-        { error: 'Invalid file type. Only PDF, JPG, and PNG files are allowed.' },
+        { error: typeValidation.error || 'Invalid file type. Only PDF, JPG, PNG, and WebP files are allowed.' },
         { status: 400 }
       );
     }
@@ -98,7 +106,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('File upload error:', error);
-    
+
     // Handle R2 configuration errors gracefully
     if (error instanceof Error && error.message.includes('Cloudflare R2 is not configured')) {
       return NextResponse.json(
@@ -106,7 +114,7 @@ export async function POST(request: NextRequest) {
         { status: 503 }
       );
     }
-    
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

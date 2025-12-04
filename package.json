@@ -37,6 +37,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "archiver": "^7.0.1",
     "bcryptjs": "^3.0.2",
+    "browser-image-compression": "^2.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
