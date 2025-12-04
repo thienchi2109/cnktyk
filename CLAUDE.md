@@ -788,6 +788,7 @@ await auditLog({
 ### Common Security Pitfalls
 
 ❌ **AVOID:**
+- Using `any` type (disables type checking)
 - String concatenation in SQL queries (SQL injection)
 - Exposing sensitive data in error messages
 - Skipping authentication checks

@@ -174,19 +174,21 @@ export async function compressImage(
         // Perform compression
         const compressedBlob = await imageCompression(file, compressionOptions);
 
-        // Get image dimensions (if available)
-        let dimensions: { width: number; height: number } | undefined;
-        try {
-            const img = await imageCompression.getDataUrlFromFile(compressedBlob);
+        // Get image dimensions (if available). Reject on decode error or timeout to avoid hanging.
+        const img = await imageCompression.getDataUrlFromFile(compressedBlob);
+        const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
             const image = new Image();
-            await new Promise((resolve) => {
-                image.onload = resolve;
-                image.src = img;
-            });
-            dimensions = { width: image.width, height: image.height };
-        } catch {
-            // Dimensions optional, ignore errors
-        }
+            const timeout = setTimeout(() => reject(new Error('Image decode timeout')), 1000);
+            image.onload = () => {
+                clearTimeout(timeout);
+                resolve({ width: image.width, height: image.height });
+            };
+            image.onerror = () => {
+                clearTimeout(timeout);
+                reject(new Error('Image decode failed'));
+            };
+            image.src = img;
+        });
 
         // Convert Blob to File with proper name
         const extension = options.fileType === 'image/webp' ? 'webp' : 'jpg';

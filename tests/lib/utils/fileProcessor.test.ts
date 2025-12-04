@@ -1,13 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import {
-  compressImage,
-  processFile,
-} from '@/lib/utils/fileProcessor';
-import {
-  validatePDF,
-  validateFileType,
-} from '@/lib/utils/fileValidation';
+import { compressImage, processFile } from '@/lib/utils/fileProcessor';
+import { validatePDF, validateFileType } from '@/lib/utils/fileValidation';
 import { FILE_SIGNATURES, MAX_PDF_SIZE_BYTES, MAX_PDF_SIZE_MB } from '@/types/file-processing';
 
 // Polyfill Blob.arrayBuffer for jsdom if missing
@@ -153,5 +147,25 @@ describe('fileProcessor utilities', () => {
     expect(result.success).toBe(false);
     expect(result.category).toBe('pdf');
     expect(result.error?.code).toBe('PDF_TOO_LARGE');
+  });
+
+  it('fails fast when compressed image cannot be decoded', async () => {
+    const ErrorImage = class {
+      width = 0;
+      height = 0;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_value: string) {
+        this.onerror?.(new Error('decode failed') as any);
+      }
+    };
+    // @ts-expect-error override Image to simulate decode failure
+    global.Image = ErrorImage;
+
+    const originalFile = new File([new Uint8Array(1024)], 'bad.webp', { type: 'image/webp' });
+    const result = await compressImage(originalFile, undefined, vi.fn());
+
+    expect(result.success).toBe(false);
+    expect(result.error?.code).toBe('COMPRESSION_FAILED');
   });
 });
