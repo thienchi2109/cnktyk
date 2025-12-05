@@ -179,4 +179,39 @@ describe('fileProcessor utilities', () => {
     expect(result.success).toBe(false);
     expect(result.error?.code).toBe('COMPRESSION_FAILED');
   });
+
+  it('does not hang on malformed WebP in fast-path optimization check', async () => {
+    const ErrorImage = class {
+      width = 0;
+      height = 0;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_value: string) {
+        // Trigger error asynchronously to simulate decode failure
+        queueMicrotask(() => {
+          if (this.onerror) {
+            this.onerror();
+          }
+        });
+      }
+    };
+    // @ts-expect-error override Image to simulate decode failure
+    global.Image = ErrorImage;
+
+    // Small WebP file that would normally take the fast-path
+    const webpSignature = FILE_SIGNATURES['image/webp'];
+    const smallWebP = new File(
+      [new Uint8Array([...webpSignature, ...new Uint8Array(512)])], // 512 bytes < 1MB
+      'malformed.webp',
+      { type: 'image/webp' }
+    );
+
+    // Should not hang - error should be caught and proceed to compression
+    const result = await compressImage(smallWebP, undefined, vi.fn());
+
+    // The fast-path check fails, so it proceeds to compression
+    // Compression will also fail due to ErrorImage mock, resulting in COMPRESSION_FAILED
+    expect(result.success).toBe(false);
+    expect(result.error?.code).toBe('COMPRESSION_FAILED');
+  });
 });

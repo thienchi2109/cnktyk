@@ -143,8 +143,17 @@ export async function compressImage(
             try {
                 const img = await imageCompression.getDataUrlFromFile(file);
                 const image = new Image();
-                await new Promise((resolve) => {
-                    image.onload = resolve;
+                // Add timeout and error handling to prevent hanging on malformed WebP
+                await new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => reject(new Error('Image decode timeout')), 1000);
+                    image.onload = () => {
+                        clearTimeout(timeout);
+                        resolve(undefined);
+                    };
+                    image.onerror = () => {
+                        clearTimeout(timeout);
+                        reject(new Error('Image decode failed'));
+                    };
                     image.src = img;
                 });
 
