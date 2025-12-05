@@ -53,6 +53,7 @@ export interface ValidationResult {
 // Magic byte signatures for file type detection
 export const FILE_SIGNATURES: Record<string, number[]> = {
   'image/jpeg': [0xFF, 0xD8, 0xFF],
+  'image/jpg': [0xFF, 0xD8, 0xFF],  // Same as image/jpeg (non-standard but commonly used)
   'image/png': [0x89, 0x50, 0x4E, 0x47],
   'image/webp': [0x52, 0x49, 0x46, 0x46], // RIFF
   'application/pdf': [0x25, 0x50, 0x44, 0x46],  // %PDF

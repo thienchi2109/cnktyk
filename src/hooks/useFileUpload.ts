@@ -31,10 +31,19 @@ export interface UseFileUploadOptions {
     onError?: (error: string) => void;
     activityId?: string;
     maxFiles?: number;
+    maxSize?: number; // in MB
+    acceptedTypes?: string[];
 }
 
 export function useFileUpload(options: UseFileUploadOptions = {}) {
-    const { onSuccess, onError, activityId, maxFiles = 5 } = options;
+    const {
+        onSuccess,
+        onError,
+        activityId,
+        maxFiles = 5,
+        maxSize,
+        acceptedTypes,
+    } = options;
     const [files, setFiles] = useState<FileWithStatus[]>([]);
     const prevSuccessCountRef = useRef(0);
 
@@ -142,9 +151,31 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
      */
     const addFiles = useCallback(
         async (newFiles: File[]) => {
+            // Validate max files count
             if (files.length + newFiles.length > maxFiles) {
                 onError?.(`Chỉ có thể tải lên tối đa ${maxFiles} tệp.`);
                 return;
+            }
+
+            // Validate each file before adding
+            for (const file of newFiles) {
+                // Check file size if maxSize is specified
+                if (maxSize !== undefined) {
+                    const fileSizeMB = file.size / (1024 * 1024);
+                    if (fileSizeMB > maxSize) {
+                        onError?.(`Tệp "${file.name}" vượt quá kích thước tối đa ${maxSize}MB (${fileSizeMB.toFixed(2)}MB).`);
+                        return;
+                    }
+                }
+
+                // Check file type if acceptedTypes is specified
+                if (acceptedTypes && acceptedTypes.length > 0) {
+                    if (!acceptedTypes.includes(file.type)) {
+                        const acceptedTypesStr = acceptedTypes.join(', ');
+                        onError?.(`Tệp "${file.name}" có định dạng không được chấp nhận. Chỉ chấp nhận: ${acceptedTypesStr}.`);
+                        return;
+                    }
+                }
             }
 
             // Create file status objects
@@ -163,7 +194,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
                 await processAndUploadFile(fileStatus);
             }
         },
-        [files.length, maxFiles, onError, processAndUploadFile]
+        [files.length, maxFiles, maxSize, acceptedTypes, onError, processAndUploadFile]
     );
 
     /**

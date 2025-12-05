@@ -36,6 +36,8 @@ export function FileUpload({
     onError,
     activityId,
     maxFiles,
+    maxSize,
+    acceptedTypes,
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);

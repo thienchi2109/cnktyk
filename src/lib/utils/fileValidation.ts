@@ -66,12 +66,14 @@ export async function validateFileType(file: File): Promise<FileTypeValidation> 
     const expectedSignature = FILE_SIGNATURES[mimeType];
 
     if (!expectedSignature) {
-        // No signature defined for this type, trust MIME
+        // SECURITY: Reject files without defined signatures
+        // This prevents bypass attacks if ACCEPTED_*_TYPES and FILE_SIGNATURES get out of sync
         return {
-            isValid: true,
-            category: isAcceptedImage ? 'image' : 'pdf',
+            isValid: false,
+            category: 'other',
             detectedMimeType: mimeType,
-            matchesSignature: true, // Assume valid
+            matchesSignature: false,
+            error: 'No signature validation available for this MIME type',
         };
     }
 
