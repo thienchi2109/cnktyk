@@ -156,13 +156,24 @@ describe('fileProcessor utilities', () => {
       onload: (() => void) | null = null;
       onerror: (() => void) | null = null;
       set src(_value: string) {
-        this.onerror?.(new Error('decode failed') as any);
+        // Use queueMicrotask to trigger error in next microtask
+        queueMicrotask(() => {
+          if (this.onerror) {
+            this.onerror();
+          }
+        });
       }
     };
     // @ts-expect-error override Image to simulate decode failure
     global.Image = ErrorImage;
 
-    const originalFile = new File([new Uint8Array(1024)], 'bad.webp', { type: 'image/webp' });
+    // Use JPEG so it goes through compression path (not WebP optimization check)
+    const jpegSignature = FILE_SIGNATURES['image/jpeg'];
+    const originalFile = new File(
+      [new Uint8Array([...jpegSignature, ...new Uint8Array(1024)])],
+      'bad.jpg',
+      { type: 'image/jpeg' }
+    );
     const result = await compressImage(originalFile, undefined, vi.fn());
 
     expect(result.success).toBe(false);
