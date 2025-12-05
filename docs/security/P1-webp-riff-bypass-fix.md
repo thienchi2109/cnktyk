@@ -73,10 +73,10 @@ Updated `FILE_SIGNATURES` to check the **full WebP header**:
 
 ```typescript
 // FIXED CODE (After)
-export const FILE_SIGNATURES: Record<string, number[]> = {
+export const FILE_SIGNATURES: Record<string, (number | null)[]> = {
   'image/webp': [
     0x52, 0x49, 0x46, 0x46, // 'RIFF' header (bytes 0-3)
-    0xFF, 0xFF, 0xFF, 0xFF, // File size (bytes 4-7) - wildcard
+    null, null, null, null, // File size (bytes 4-7) - wildcard (skip)
     0x57, 0x45, 0x42, 0x50  // 'WEBP' marker (bytes 8-11) ✅
   ],
   // ...
@@ -85,24 +85,28 @@ export const FILE_SIGNATURES: Record<string, number[]> = {
 
 **Key Changes:**
 - Bytes 0-3: `RIFF` (required)
-- Bytes 4-7: File size (variable, skipped with `0xFF` wildcard)
+- Bytes 4-7: File size (variable, skipped with `null` wildcard)
 - Bytes 8-11: `WEBP` marker (required - **this is what distinguishes WebP from AVI/WAV**)
+
+**Note:** We use `null` (not `0xFF`) as the wildcard sentinel to avoid conflicts with JPEG signatures that contain `0xFF` as required bytes.
 
 ### 2. Wildcard Support in Signature Matching
 
 Updated `fileValidation.ts` to support skip bytes:
 
 ```typescript
-// Compare signatures (0xFF = wildcard/skip byte)
+// Compare signatures (null = wildcard/skip byte)
 const matchesSignature = expectedSignature.every(
-    (byte, index) => byte === 0xFF || signature[index] === byte
+    (byte, index) => byte === null || signature[index] === byte
 );
 ```
 
 This allows us to:
 - Check bytes 0-3 (`RIFF`)
-- **Skip** bytes 4-7 (file size - varies per file)
+- **Skip** bytes 4-7 (file size - varies per file, marked as `null`)
 - Check bytes 8-11 (`WEBP`)
+
+**Why `null` instead of `0xFF`?** Using `0xFF` as a wildcard would conflict with JPEG signatures that legitimately contain `0xFF` as required bytes. The `null` sentinel is type-safe and cannot appear in actual byte data.
 
 ### 3. Increased Byte Read Length
 
@@ -272,9 +276,10 @@ console.log(result.isValid); // Should be FALSE ✅
 
 - **P1 Bug #1:** `image/jpg` MIME bypass (Fixed in previous commit)
 - **P1 Bug #2:** `FileUpload` props bypass (Fixed in previous commit)
-- **P1 Bug #3:** WebP RIFF bypass (This fix)
+- **P1 Bug #3:** WebP RIFF bypass (This fix - commit 428fe62)
+- **P1 Regression:** JPEG wildcard bypass (Introduced by using `0xFF` as wildcard, fixed in commit 0095cf9 by changing to `null`)
 
-All three P1 file upload vulnerabilities are now **CLOSED**.
+All file upload vulnerabilities and regressions are now **CLOSED**.
 
 ---
 
