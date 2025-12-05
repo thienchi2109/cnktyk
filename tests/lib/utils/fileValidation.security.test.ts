@@ -132,7 +132,11 @@ describe('fileValidation - Security Tests', () => {
 
         it('should ACCEPT valid WebP', async () => {
             const validFile = createFileWithSignature(
-                [0x52, 0x49, 0x46, 0x46], // RIFF
+                [
+                    0x52, 0x49, 0x46, 0x46, // RIFF
+                    0x1A, 0x00, 0x00, 0x00, // Size (26 bytes)
+                    0x57, 0x45, 0x42, 0x50  // WEBP marker
+                ],
                 'image/webp',
                 'image.webp'
             );

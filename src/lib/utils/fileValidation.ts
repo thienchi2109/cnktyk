@@ -77,9 +77,9 @@ export async function validateFileType(file: File): Promise<FileTypeValidation> 
         };
     }
 
-    // Compare signatures
+    // Compare signatures (0xFF = wildcard/skip byte for variable-length fields)
     const matchesSignature = expectedSignature.every(
-        (byte, index) => signature[index] === byte
+        (byte, index) => byte === 0xFF || signature[index] === byte
     );
 
     if (!matchesSignature) {
@@ -104,7 +104,7 @@ export async function validateFileType(file: File): Promise<FileTypeValidation> 
  * Read first N bytes of file to get magic bytes signature
  */
 export async function readFileSignature(file: File): Promise<number[]> {
-    const BYTES_TO_READ = 8; // Read first 8 bytes
+    const BYTES_TO_READ = 12; // Read first 12 bytes (needed for WebP: RIFF + size + WEBP)
     const slice = file.slice(0, BYTES_TO_READ);
     const buffer = await slice.arrayBuffer();
     return Array.from(new Uint8Array(buffer));
