@@ -49,8 +49,8 @@ export const TaiKhoanSchema = z.object({
   TaoLuc: z.date(),
 });
 
-export const CreateTaiKhoanSchema = TaiKhoanSchema.omit({ 
-  MaTaiKhoan: true, 
+export const CreateTaiKhoanSchema = TaiKhoanSchema.omit({
+  MaTaiKhoan: true,
   TaoLuc: true,
   MatKhauBam: true,
 }).extend({
@@ -114,7 +114,7 @@ export const DanhMucHoatDongSchema = z.object({
   YeuCauMinhChung: z.boolean().default(true),
   HieuLucTu: z.date().nullable(),
   HieuLucDen: z.date().nullable(),
-  
+
   // Unit scoping and ownership (added 2025-11-02)
   MaDonVi: UUIDSchema.nullable(),
   NguoiTao: UUIDSchema.nullable(),
@@ -149,7 +149,7 @@ export const DanhMucHoatDongSchema = z.object({
 
 // Create schema: omit auto-generated/server-managed fields
 // Note: MaDonVi is injected by API layer based on user role
-export const CreateDanhMucHoatDongSchema = DanhMucHoatDongSchema.omit({ 
+export const CreateDanhMucHoatDongSchema = DanhMucHoatDongSchema.omit({
   MaDanhMuc: true,
   NguoiTao: true,
   NguoiCapNhat: true,
@@ -228,8 +228,8 @@ export const GhiNhanHoatDongSchema = z.object({
   }
 );
 
-export const CreateGhiNhanHoatDongSchema = GhiNhanHoatDongSchema.omit({ 
-  MaGhiNhan: true, 
+export const CreateGhiNhanHoatDongSchema = GhiNhanHoatDongSchema.omit({
+  MaGhiNhan: true,
   NgayGhiNhan: true
 });
 
@@ -244,11 +244,11 @@ export const FileUploadSchema = z.object({
   activityId: UUIDSchema.optional(),
 }).refine(
   (data) => {
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
     return allowedTypes.includes(data.file.type);
   },
   {
-    message: 'File must be PDF, JPG, or PNG format',
+    message: 'File must be PDF, JPG, PNG, or WebP format',
     path: ['file'],
   }
 ).refine(
@@ -366,9 +366,9 @@ export const NhatKyHeThongSchema = z.object({
   DiaChiIP: z.string().nullable(),
 });
 
-export const CreateNhatKyHeThongSchema = NhatKyHeThongSchema.omit({ 
-  MaNhatKy: true, 
-  ThoiGian: true 
+export const CreateNhatKyHeThongSchema = NhatKyHeThongSchema.omit({
+  MaNhatKy: true,
+  ThoiGian: true
 });
 
 // ThongBao (Notification) schema
@@ -382,9 +382,9 @@ export const ThongBaoSchema = z.object({
   TaoLuc: z.date(),
 });
 
-export const CreateThongBaoSchema = ThongBaoSchema.omit({ 
-  MaThongBao: true, 
-  TaoLuc: true 
+export const CreateThongBaoSchema = ThongBaoSchema.omit({
+  MaThongBao: true,
+  TaoLuc: true
 });
 
 export const UpdateThongBaoSchema = CreateThongBaoSchema.partial().extend({

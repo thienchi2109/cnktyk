@@ -1,10 +1,14 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useRef, useCallback } from 'react';
 import { Upload, X, File, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { GlassCard } from './glass-card';
 import { Button } from './button';
 import { formatFileSize } from '@/lib/utils';
+import { useFileUpload, type UploadedFile, type FileWithStatus } from '@/hooks/useFileUpload';
+import { formatCompressionRatio } from '@/lib/utils/fileProcessor';
+
+export type { UploadedFile };
 
 export interface FileUploadProps {
   onUpload?: (files: UploadedFile[]) => void;
@@ -17,140 +21,35 @@ export interface FileUploadProps {
   className?: string;
 }
 
-export interface UploadedFile {
-  filename: string;
-  originalName: string;
-  size: number;
-  mimeType: string;
-  checksum: string;
-  url: string;
-  uploadedAt: string;
-  activityId?: string;
-}
-
-interface FileWithProgress extends File {
-  id: string;
-  progress: number;
-  status: 'pending' | 'uploading' | 'success' | 'error';
-  error?: string;
-  uploadedFile?: UploadedFile;
-}
-
 export function FileUpload({
   onUpload,
   onError,
   maxFiles = 5,
   maxSize = 5,
-  acceptedTypes = ['application/pdf', 'image/jpeg', 'image/png'],
+  acceptedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
   activityId,
   disabled = false,
   className = '',
 }: FileUploadProps) {
-  const [files, setFiles] = useState<FileWithProgress[]>([]);
-  const [isDragOver, setIsDragOver] = useState(false);
+  const { files, addFiles, removeFile, isUploading } = useFileUpload({
+    onSuccess: onUpload,
+    onError,
+    activityId,
+    maxFiles,
+    maxSize,
+    acceptedTypes,
+  });
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragOver, setIsDragOver] = React.useState(false);
 
-  const validateFile = useCallback((file: File): string | null => {
-    if (!acceptedTypes.includes(file.type)) {
-      return 'Loại tệp không được hỗ trợ. Chỉ chấp nhận PDF, JPG, PNG.';
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = e.target.files;
+    if (selectedFiles && selectedFiles.length > 0) {
+      addFiles(Array.from(selectedFiles));
     }
-    if (file.size > maxSize * 1024 * 1024) {
-      return `Kích thước tệp vượt quá ${maxSize}MB.`;
-    }
-    return null;
-  }, [acceptedTypes, maxSize]);
-
-  const uploadFile = async (file: FileWithProgress): Promise<void> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    if (activityId) {
-      formData.append('activityId', activityId);
-    }
-
-    try {
-      setFiles(prev => prev.map(f => 
-        f.id === file.id ? { ...f, status: 'uploading', progress: 0 } : f
-      ));
-
-      const response = await fetch('/api/files/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Upload failed');
-      }
-
-      setFiles(prev => prev.map(f => 
-        f.id === file.id 
-          ? { ...f, status: 'success', progress: 100, uploadedFile: result.file }
-          : f
-      ));
-
-      // Notify parent component
-      if (onUpload) {
-        const uploadedFiles = files
-          .filter(f => f.status === 'success' && f.uploadedFile)
-          .map(f => f.uploadedFile!);
-        uploadedFiles.push(result.file);
-        onUpload(uploadedFiles);
-      }
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
-      setFiles(prev => prev.map(f => 
-        f.id === file.id 
-          ? { ...f, status: 'error', error: errorMessage }
-          : f
-      ));
-      
-      if (onError) {
-        onError(errorMessage);
-      }
-    }
-  };
-
-  const handleFiles = useCallback((newFiles: FileList | File[]) => {
-    const fileArray = Array.from(newFiles);
-    
-    if (files.length + fileArray.length > maxFiles) {
-      if (onError) {
-        onError(`Chỉ có thể tải lên tối đa ${maxFiles} tệp.`);
-      }
-      return;
-    }
-
-    const validFiles: FileWithProgress[] = [];
-    
-    for (const file of fileArray) {
-      const error = validateFile(file);
-      if (error) {
-        if (onError) {
-          onError(`${file.name}: ${error}`);
-        }
-        continue;
-      }
-
-      const fileWithProgress: FileWithProgress = Object.assign(file, {
-        id: `${Date.now()}-${Math.random().toString(36).substring(2)}`,
-        progress: 0,
-        status: 'pending' as const,
-      });
-
-      validFiles.push(fileWithProgress);
-    }
-
-    if (validFiles.length > 0) {
-      setFiles(prev => [...prev, ...validFiles]);
-      
-      // Start uploading files
-      validFiles.forEach(file => {
-        uploadFile(file);
-      });
-    }
-  }, [files.length, maxFiles, validateFile, onError]);
+    e.target.value = '';
+  }, [addFiles]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -167,27 +66,14 @@ export function FileUpload({
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
-    
+
     if (disabled) return;
-    
+
     const droppedFiles = e.dataTransfer.files;
     if (droppedFiles.length > 0) {
-      handleFiles(droppedFiles);
+      addFiles(Array.from(droppedFiles));
     }
-  }, [disabled, handleFiles]);
-
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = e.target.files;
-    if (selectedFiles && selectedFiles.length > 0) {
-      handleFiles(selectedFiles);
-    }
-    // Reset input value to allow selecting the same file again
-    e.target.value = '';
-  }, [handleFiles]);
-
-  const removeFile = useCallback((fileId: string) => {
-    setFiles(prev => prev.filter(f => f.id !== fileId));
-  }, []);
+  }, [disabled, addFiles]);
 
   const openFileDialog = useCallback(() => {
     if (!disabled && fileInputRef.current) {
@@ -195,8 +81,10 @@ export function FileUpload({
     }
   }, [disabled]);
 
-  const getStatusIcon = (file: FileWithProgress) => {
+  const getStatusIcon = (file: FileWithStatus) => {
     switch (file.status) {
+      case 'processing':
+        return <Loader2 className="h-4 w-4 animate-spin text-blue-600" />;
       case 'uploading':
         return <Loader2 className="h-4 w-4 animate-spin text-medical-blue" />;
       case 'success':
@@ -208,19 +96,33 @@ export function FileUpload({
     }
   };
 
+  const renderCompressionStats = (file: FileWithStatus) => {
+    if (!file.processedResult?.stats) return null;
+
+    const { compressionRatio } = file.processedResult.stats;
+    // Only show if there was actual compression (ratio > 0)
+    if (compressionRatio <= 0) return null;
+
+    return (
+      <span className="text-medical-green text-xs ml-1">
+        (Giảm {formatCompressionRatio(compressionRatio)})
+      </span>
+    );
+  };
+
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Upload Area */}
       <GlassCard
         className={`
           relative border-2 border-dashed transition-all duration-200 cursor-pointer
-          ${isDragOver 
-            ? 'border-medical-blue bg-medical-blue/5' 
+          ${isDragOver
+            ? 'border-medical-blue bg-medical-blue/5'
             : 'border-gray-300 hover:border-medical-blue/50'
           }
-          ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+          ${disabled || isUploading ? 'opacity-50 cursor-not-allowed' : ''}
         `}
-        onClick={openFileDialog}
+        onClick={!isUploading ? openFileDialog : undefined}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -230,7 +132,7 @@ export function FileUpload({
             mx-auto h-12 w-12 mb-4 transition-colors
             ${isDragOver ? 'text-medical-blue' : 'text-gray-400'}
           `} />
-          
+
           <div className="space-y-2">
             <p className="text-lg font-medium text-gray-700">
               {isDragOver ? 'Thả tệp vào đây' : 'Tải lên tệp minh chứng'}
@@ -239,7 +141,7 @@ export function FileUpload({
               Kéo thả tệp hoặc nhấp để chọn
             </p>
             <p className="text-xs text-gray-400">
-              Hỗ trợ: PDF, JPG, PNG • Tối đa {maxSize}MB • Tối đa {maxFiles} tệp
+              Hỗ trợ: PDF, JPG, PNG, WebP • Tối đa {maxSize}MB • Tối đa {maxFiles} tệp
             </p>
           </div>
         </div>
@@ -251,7 +153,7 @@ export function FileUpload({
           accept={acceptedTypes.join(',')}
           onChange={handleFileSelect}
           className="hidden"
-          disabled={disabled}
+          disabled={disabled || isUploading}
         />
       </GlassCard>
 
@@ -259,27 +161,33 @@ export function FileUpload({
       {files.length > 0 && (
         <div className="space-y-2">
           <h4 className="text-sm font-medium text-gray-700">Tệp đã chọn:</h4>
-          
+
           {files.map((file) => (
             <GlassCard key={file.id} className="p-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3 flex-1 min-w-0">
                   {getStatusIcon(file)}
-                  
+
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-700 truncate">
-                      {file.name}
+                      {file.file.name}
                     </p>
                     <div className="flex items-center space-x-2 text-xs text-gray-500">
-                      <span>{formatFileSize(file.size)}</span>
+                      <span>{formatFileSize(file.file.size)}</span>
+                      {file.status === 'processing' && (
+                        <span className="text-blue-600">• Đang xử lý {file.progress}%</span>
+                      )}
                       {file.status === 'uploading' && (
-                        <span>• Đang tải lên {file.progress}%</span>
+                        <span className="text-medical-blue">• Đang tải lên {file.progress}%</span>
                       )}
                       {file.status === 'error' && file.error && (
                         <span className="text-medical-red">• {file.error}</span>
                       )}
                       {file.status === 'success' && (
-                        <span className="text-medical-green">• Tải lên thành công</span>
+                        <>
+                          <span className="text-medical-green">• Tải lên thành công</span>
+                          {renderCompressionStats(file)}
+                        </>
                       )}
                     </div>
                   </div>
@@ -290,20 +198,24 @@ export function FileUpload({
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
-                    removeFile(file.id);
+                    if (file.status !== 'uploading' && file.status !== 'processing') {
+                      removeFile(file.id);
+                    }
                   }}
                   className="text-gray-400 hover:text-medical-red"
+                  disabled={file.status === 'uploading' || file.status === 'processing'}
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
 
               {/* Progress Bar */}
-              {file.status === 'uploading' && (
+              {(file.status === 'uploading' || file.status === 'processing') && (
                 <div className="mt-2">
                   <div className="w-full bg-gray-200 rounded-full h-1">
-                    <div 
-                      className="bg-medical-blue h-1 rounded-full transition-all duration-300"
+                    <div
+                      className={`h-1 rounded-full transition-all duration-300 ${file.status === 'processing' ? 'bg-blue-500' : 'bg-medical-blue'
+                        }`}
                       style={{ width: `${file.progress}%` }}
                     />
                   </div>
