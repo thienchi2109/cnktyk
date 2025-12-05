@@ -89,7 +89,7 @@ describe('fileProcessor utilities', () => {
   });
 
   it('validates JPEG file signatures before processing', async () => {
-    const jpegSignature = FILE_SIGNATURES['image/jpeg'];
+    const jpegSignature = FILE_SIGNATURES['image/jpeg'].filter((b): b is number => b !== null);
     const paddedBytes = new Uint8Array([...jpegSignature, 0x00, 0x11, 0x22]);
     const jpegFile = new File([paddedBytes], 'photo.jpg', { type: 'image/jpeg' });
 
@@ -101,7 +101,7 @@ describe('fileProcessor utilities', () => {
   });
 
   it('rejects files when MIME type and signature do not match', async () => {
-    const pngSignature = FILE_SIGNATURES['image/png'];
+    const pngSignature = FILE_SIGNATURES['image/png'].filter((b): b is number => b !== null);
     const fakePdf = new File([new Uint8Array([...pngSignature, 0x00, 0x01])], 'fake.pdf', {
       type: 'application/pdf',
     });
@@ -114,7 +114,7 @@ describe('fileProcessor utilities', () => {
   });
 
   it('processes valid images end-to-end through compression flow', async () => {
-    const jpegSignature = FILE_SIGNATURES['image/jpeg'];
+    const jpegSignature = FILE_SIGNATURES['image/jpeg'].filter((b): b is number => b !== null);
     const paddedBytes = new Uint8Array([...jpegSignature, ...new Uint8Array(1024)]);
     const imageFile = new File([paddedBytes], 'image.jpg', { type: 'image/jpeg' });
 
@@ -137,7 +137,7 @@ describe('fileProcessor utilities', () => {
   });
 
   it('halts processing for oversized PDFs with proper error code', async () => {
-    const pdfSignature = FILE_SIGNATURES['application/pdf'];
+    const pdfSignature = FILE_SIGNATURES['application/pdf'].filter((b): b is number => b !== null);
     const tooLargeBytes = new Uint8Array(MAX_PDF_SIZE_BYTES + 10);
     tooLargeBytes.set(pdfSignature, 0); // Set signature at start
     const pdfFile = new File([tooLargeBytes], 'oversized.pdf', { type: 'application/pdf' });
@@ -168,7 +168,7 @@ describe('fileProcessor utilities', () => {
     global.Image = ErrorImage;
 
     // Use JPEG so it goes through compression path (not WebP optimization check)
-    const jpegSignature = FILE_SIGNATURES['image/jpeg'];
+    const jpegSignature = FILE_SIGNATURES['image/jpeg'].filter((b): b is number => b !== null);
     const originalFile = new File(
       [new Uint8Array([...jpegSignature, ...new Uint8Array(1024)])],
       'bad.jpg',
@@ -199,7 +199,7 @@ describe('fileProcessor utilities', () => {
     global.Image = ErrorImage;
 
     // Small WebP file that would normally take the fast-path
-    const webpSignature = FILE_SIGNATURES['image/webp'];
+    const webpSignature = FILE_SIGNATURES['image/webp'].filter((b): b is number => b !== null);
     const smallWebP = new File(
       [new Uint8Array([...webpSignature, ...new Uint8Array(512)])], // 512 bytes < 1MB
       'malformed.webp',

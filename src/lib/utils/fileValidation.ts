@@ -77,9 +77,9 @@ export async function validateFileType(file: File): Promise<FileTypeValidation> 
         };
     }
 
-    // Compare signatures (0xFF = wildcard/skip byte for variable-length fields)
+    // Compare signatures (null = wildcard/skip byte for variable-length fields)
     const matchesSignature = expectedSignature.every(
-        (byte, index) => byte === 0xFF || signature[index] === byte
+        (byte, index) => byte === null || signature[index] === byte
     );
 
     if (!matchesSignature) {
