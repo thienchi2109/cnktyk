@@ -1,7 +1,7 @@
 # P1 Security Bugs Fixed - Summary Report
 
-**Date:** 2025-12-05  
-**Status:** ✅ ALL THREE FIXED & TESTED  
+**Date:** 2025-12-09
+**Status:** ✅ ALL FOUR FIXED & TESTED  
 **Priority:** P1 (Critical Security)
 
 ## Overview
@@ -202,3 +202,22 @@ All three bugs have been fixed, comprehensively tested, and documented.
 ---
 
 **Summary:** All three P1 security bugs have been successfully fixed, comprehensively tested (34 tests total: 15 + 11 + 8), and fully documented. The system now provides multiple layers of validation to prevent malicious file uploads, distinguish WebP from other RIFF formats, and enforce caller-specified constraints.
+
+---
+
+## Bug #4: Next.js CVE-2025-66478 (RCE)
+
+### The Problem
+- **Vulnerability:** CVE-2025-66478 (Critical)
+- **Description:** A critical vulnerability in the React Server Components protocol allowed untrusted inputs to influence server-side execution behavior, potentially leading to remote code execution.
+- **Affected Versions:** Next.js 15.x (specifically `15.5.2` which was in use).
+
+### The Fix
+1. ✅ Upgraded `next` from `15.5.2` to `15.5.7` (patched version).
+2. ✅ Upgraded `eslint-config-next` to `15.5.7`.
+3. ✅ Verified build with `npm run build`.
+
+### Verification
+- [x] Dependencies updated in `package.json`
+- [x] Build successful (`npm run build`)
+- [x] Documentation created (`docs/security/CVE-2025-66478-fix.md`)
