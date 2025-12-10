@@ -113,6 +113,7 @@ export function DohDashboard({ userId, initialUnitId = null }: DohDashboardProps
   const [pendingInitialUnitId, setPendingInitialUnitId] = useState<string | null>(
     initialUnitId ?? null,
   );
+  const [exportLoading, setExportLoading] = useState(false);
   const detailTriggerRef = useRef<HTMLButtonElement | null>(null);
   const initialUnitLookupRef = useRef<string | null>(null);
 
@@ -400,6 +401,40 @@ export function DohDashboard({ userId, initialUnitId = null }: DohDashboardProps
     return () => controller.abort();
   }, [debouncedSearchTerm, unitSorts, unitPage, unitPageSize, unitsRefreshKey]);
 
+  const handleExportReport = async () => {
+    try {
+      setExportLoading(true);
+      const response = await fetch('/api/dashboard/export');
+
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Lỗi khi xuất báo cáo');
+      }
+
+      // Download the file
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+
+      // Extract filename from Content-Disposition header or use default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      const filenameMatch = contentDisposition?.match(/filename="?(.+)"?/);
+      const filename = filenameMatch ? filenameMatch[1] : `BaoCao_CNKYKLT_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error exporting report:', error);
+      alert('Không thể xuất báo cáo. Vui lòng thử lại.');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections(prev => ({
       ...prev,
@@ -441,9 +476,11 @@ export function DohDashboard({ userId, initialUnitId = null }: DohDashboardProps
               variant="outline-accent"
               size="sm"
               className="hidden md:flex items-center gap-2"
+              onClick={handleExportReport}
+              disabled={exportLoading || metricsLoading}
             >
               <Download className="w-4 h-4" />
-              Xuất báo cáo
+              {exportLoading ? 'Đang xuất...' : 'Xuất báo cáo'}
             </Button>
           </div>
         </div>
@@ -461,9 +498,11 @@ export function DohDashboard({ userId, initialUnitId = null }: DohDashboardProps
               variant="outline-accent"
               size="sm"
               className="flex items-center gap-2"
+              onClick={handleExportReport}
+              disabled={exportLoading || metricsLoading}
             >
               <Download className="w-4 h-4" />
-              Xuất báo cáo
+              {exportLoading ? 'Đang xuất...' : 'Xuất báo cáo'}
             </Button>
           </div>
 
