@@ -16,6 +16,17 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Hệ thống quản lý đào tạo nhân lực ngành y tế",
   description: "Healthcare practitioner compliance tracking system for the Department of Health",
+  manifest: "/site.webmanifest",
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-icon.png" },
+    ],
+  },
 };
 
 export default async function RootLayout({
